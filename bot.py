@@ -1,32 +1,42 @@
 import asyncio
+import time
 from marine_agent import MarineAgent
-from ichatbio.types import ArtifactMessage, TextMessage, ProcessMessage  # keep for future use
+from ichatbio.types import ArtifactMessage, TextMessage, ProcessMessage
 
 async def main():
     agent = MarineAgent()
     while True:
-        query = input("\nTry asking this agent anything about the marine world! (or 'exit'): ")
+        query = input("\nAsk anything about the marine world (or type 'exit'): ")
         if query.strip().lower() in ("exit", "quit"):
             break
-        print("\n[Agent steps:]")
-        async for msg in agent.run(query, "get_marine_info", None):
-            # Handle ProcessMessage (step updates)
-            if isinstance(msg, ProcessMessage):
-                print(f"- {msg.summary}: {msg.description}")
 
-            # Handle TextMessage (final answer as text fallback)
-            elif isinstance(msg, TextMessage):
-                print(f"\n[Final Answer]:\n{msg.text}")
+        try:
+            start_time = time.time()
 
-            # Handle ArtifactMessage (disabled for now)
-            # elif isinstance(msg, ArtifactMessage):
-            #     print("\n[Artifact Output]")
-            #     print("Content:\n", msg.content)
-            #     print("Metadata:\n", msg.metadata)
+            async for msg in agent.run(query, "get_marine_info", None):
 
-            # Catch-all (optional)
-            else:
-                print("\n[Other Message]:", msg)
+                # step messages 
+                if isinstance(msg, ProcessMessage):
+                    print(f"- {msg.summary}: {msg.description}")
+
+                # final answer
+                elif isinstance(msg, TextMessage):
+                    print(f"\n[Final Answer]:\n{msg.text}")
+
+                # artifacts commented for now
+                # elif isinstance(msg, ArtifactMessage):
+                #     print("\n[Artifact Output]")
+                #     print("Content:\n", msg.content)
+                #     print("Metadata:\n", msg.metadata)
+
+                # else:
+                #     print("\n[Other Message]:", msg)
+
+            end_time = time.time()
+            print(f"\n[Time Taken]: {end_time - start_time:.2f} seconds")
+
+        except Exception as e:
+            print(f"\nAn error occurred: {str(e)}")
 
 if __name__ == "__main__":
     asyncio.run(main())

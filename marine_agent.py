@@ -11,7 +11,7 @@ import httpx
 
 dotenv.load_dotenv()
 
-##Configs for LLM and woRMS
+# Configs for LLM and woRMS
 
 class Config:
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -19,7 +19,7 @@ class Config:
     WORMS_BASE_URL = "https://www.marinespecies.org/rest"
     MODEL_NAME = "llama3-70b-8192"
 
-#Data Models
+# Data Models
 
 class MarineQueryModel(BaseModel):
     scientificname: str = Field(..., description="Scientific name of the marine animal, e.g. Orcinus orca")
@@ -66,13 +66,12 @@ class ChildTaxon(BaseModel):
     scientificname: str
     rank: str
 
-
-## woRMS API Client
+# woRMS API Client
 
 class WoRMSClient:
     def __init__(self, base_url: str = Config.WORMS_BASE_URL):
         self.base_url = base_url
-    
+
     async def fetch_json(self, client: httpx.AsyncClient, endpoint: str):
         try:
             url = f"{self.base_url}{endpoint}"
@@ -82,33 +81,32 @@ class WoRMSClient:
             return resp.json()
         except Exception:
             return None
-    
+
     async def get_species_by_name(self, client: httpx.AsyncClient, scientific_name: str):
         endpoint = f"/AphiaRecordsByName/{scientific_name}?like=false&marine_only=true"
         return await self.fetch_json(client, endpoint)
-    
+
     async def get_synonyms(self, client: httpx.AsyncClient, aphia_id: int):
         endpoint = f"/AphiaSynonymsByAphiaID/{aphia_id}"
         return await self.fetch_json(client, endpoint)
-    
+
     async def get_distribution(self, client: httpx.AsyncClient, aphia_id: int):
         endpoint = f"/AphiaDistributionsByAphiaID/{aphia_id}"
         return await self.fetch_json(client, endpoint)
-    
+
     async def get_vernaculars(self, client: httpx.AsyncClient, aphia_id: int):
         endpoint = f"/AphiaVernacularsByAphiaID/{aphia_id}"
         return await self.fetch_json(client, endpoint)
-    
+
     async def get_classification(self, client: httpx.AsyncClient, aphia_id: int):
         endpoint = f"/AphiaClassificationByAphiaID/{aphia_id}"
         return await self.fetch_json(client, endpoint)
-    
+
     async def get_children(self, client: httpx.AsyncClient, aphia_id: int):
         endpoint = f"/AphiaChildrenByAphiaID/{aphia_id}"
         return await self.fetch_json(client, endpoint)
 
-
-## Data Processing
+# Data Processing
 
 class MarineDataProcessor:
     def safe_parse(self, model_class, data):
@@ -117,15 +115,15 @@ class MarineDataProcessor:
         except Exception as e:
             print(f"Skipping invalid records for {model_class.__name__}: {e}")
             return None
-    
+
     def process_list_data(self, model_class, raw_data):
         if not raw_data:
             return []
         parsed_items = [self.safe_parse(model_class, item) for item in raw_data]
         return [item for item in parsed_items if item]
-    
-    def process_all_marine_data(self, species_data, synonyms_data, distribution_data, 
-                               vernaculars_data, classification_data, children_data):
+
+    def process_all_marine_data(self, species_data, synonyms_data, distribution_data,
+                                 vernaculars_data, classification_data, children_data):
         return {
             'synonyms': self.process_list_data(Synonym, synonyms_data),
             'distribution': self.process_list_data(Distribution, distribution_data),
@@ -134,7 +132,8 @@ class MarineDataProcessor:
             'children': self.process_list_data(ChildTaxon, children_data)
         }
 
-## Main Agent class
+# Main Agent class
+
 class MarineAgent(IChatBioAgent):
     def __init__(self):
         self.worms_client = WoRMSClient()
@@ -163,7 +162,7 @@ class MarineAgent(IChatBioAgent):
             base_url=Config.GROQ_BASE_URL,
         )
         instructor_client = instructor.patch(openai_client)
-        
+
         marine_query = await instructor_client.chat.completions.create(
             model=Config.MODEL_NAME,
             response_model=MarineQueryModel,
@@ -183,48 +182,59 @@ class MarineAgent(IChatBioAgent):
 
     async def fetch_all_marine_data(self, scientific_name: str):
         async with httpx.AsyncClient() as client:
-            # Get main species record
             records = await self.worms_client.get_species_by_name(client, scientific_name)
             if not records:
                 return None, None
-            
+
             species_data = records[0] if isinstance(records, list) else records
             species = MarineSpecies(**species_data)
             aphia_id = species.AphiaID
-            
-            # Fetch all related data
+
             synonyms_data = await self.worms_client.get_synonyms(client, aphia_id)
             distribution_data = await self.worms_client.get_distribution(client, aphia_id)
             vernaculars_data = await self.worms_client.get_vernaculars(client, aphia_id)
             classification_data = await self.worms_client.get_classification(client, aphia_id)
             children_data = await self.worms_client.get_children(client, aphia_id)
-            
-            # Process all data
+
             processed_data = self.data_processor.process_all_marine_data(
-                species_data, synonyms_data, distribution_data, 
+                species_data, synonyms_data, distribution_data,
                 vernaculars_data, classification_data, children_data
             )
-            
+
             return species, processed_data
+
+    @staticmethod
+    def build_structured_prompt(species, processed_data):
+        lines = [
+            f"Scientific Name: {species.scientificname}",
+            f"Authority: {species.authority or 'N/A'}",
+            f"Rank: {species.rank or 'N/A'}",
+            f"Status: {species.status or 'N/A'}",
+            "",
+            "Classification Hierarchy:",
+            *[f"  - {cl.rank}: {cl.scientificname}" for cl in processed_data['classification']],
+            "",
+            "Synonyms:",
+            *[f"  - {syn.scientificname} ({syn.status or 'N/A'})" for syn in processed_data['synonyms']],
+            "",
+            "Distribution:",
+            *[f"  - {dist.locality} ({dist.status or 'N/A'})" for dist in processed_data['distribution']],
+            "",
+            "Vernacular Names:",
+            *[f"  - {vern.vernacular} ({vern.language or 'N/A'})" for vern in processed_data['vernaculars']],
+            "",
+            "Children Taxa:",
+            *[f"  - {ch.scientificname} ({ch.rank})" for ch in processed_data['children']],
+        ]
+        return "\n".join(lines)
 
     async def synthesize_response(self, species: MarineSpecies, processed_data: dict) -> str:
         openai_client = AsyncOpenAI(
             api_key=Config.GROQ_API_KEY,
             base_url=Config.GROQ_BASE_URL,
         )
-        
-        prompt_lines = [
-            f"User asked about: {species.scientificname}",
-            "Here is the structured data from WoRMS:",
-            f"Species info: {species.model_dump_json(indent=2)}",
-            f"Synonyms: {[syn.scientificname for syn in processed_data['synonyms']]}",
-            f"Distribution: {[dist.locality for dist in processed_data['distribution']]}",
-            f"Vernacular names: {[vern.vernacular for vern in processed_data['vernaculars']]}",
-            f"Classification hierarchy: {[f'{cl.rank}: {cl.scientificname}' for cl in processed_data['classification']]}",
-            f"Children taxa: {[ch.scientificname for ch in processed_data['children']]}",
-            "Please answer the user's question in a clear, friendly, scientific way using this information."
-        ]
-        detailed_prompt = "\n".join(prompt_lines)
+
+        detailed_prompt = self.build_structured_prompt(species, processed_data)
 
         response = await openai_client.chat.completions.create(
             model=Config.MODEL_NAME,
@@ -235,35 +245,31 @@ class MarineAgent(IChatBioAgent):
             max_tokens=700,
             temperature=0.7,
         )
-        
+
         return response.choices[0].message.content
 
     @override
     async def run(self, request: str, entrypoint: str, params: Optional[BaseModel]) -> AsyncGenerator[Message, None]:
         try:
-            # Extracting scientific name
             yield ProcessMessage(summary="Analyzing request", description="Extracting scientific name")
             marine_query = await self.extract_scientific_name(request)
-            
+
             if not marine_query.scientificname.strip():
                 yield TextMessage(text="Sorry, I couldn't detect a scientific name in your prompt.")
                 return
 
             yield ProcessMessage(summary="Species name extracted", description=marine_query.scientificname)
 
-            # Fetching all marine data
             species, processed_data = await self.fetch_all_marine_data(marine_query.scientificname)
-            
+
             if not species:
                 yield TextMessage(text=f"No marine species found for: {marine_query.scientificname}")
                 return
 
             yield ProcessMessage(summary="Species found", description=f"AphiaID: {species.AphiaID}")
 
-            # Synthesize response
             answer = await self.synthesize_response(species, processed_data)
 
-            # Returning results
             yield ArtifactMessage(
                 mimetype="text/markdown",
                 description=f"Marine species info for {species.scientificname}",
