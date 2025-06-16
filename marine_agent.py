@@ -113,7 +113,7 @@ class MarineDataProcessor:
         try:
             return model_class(**data)
         except Exception as e:
-            print(f"Skipping invalid records for {model_class.__name__}: {e}")
+           ## print(f"Skipping invalid records for {model_class.__name__}: {e}")
             return None
 
     def process_list_data(self, model_class, raw_data):
@@ -251,7 +251,7 @@ class MarineAgent(IChatBioAgent):
     @override
     async def run(self, request: str, entrypoint: str, params: Optional[BaseModel]) -> AsyncGenerator[Message, None]:
         try:
-            yield ProcessMessage(summary="Analyzing request", description="Extracting scientific name")
+            yield ProcessMessage(summary="Analyzing your request", description="Extracting scientific name")
             marine_query = await self.extract_scientific_name(request)
 
             if not marine_query.scientificname.strip():

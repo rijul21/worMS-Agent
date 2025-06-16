@@ -6,7 +6,7 @@ from ichatbio.types import ArtifactMessage, TextMessage, ProcessMessage
 async def main():
     agent = MarineAgent()
     while True:
-        query = input("\nAsk anything about the marine world (or type 'exit'): ")
+        query = input("\nAsk anything about the marine world (or type 'exit' or 'quit): ")
         if query.strip().lower() in ("exit", "quit"):
             break
 
