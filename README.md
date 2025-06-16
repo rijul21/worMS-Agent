@@ -29,7 +29,7 @@ Setup & Run
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/your-username/marine_agent_sdk.git
+git clone https://github.com/your-username/marine_agent.git
 cd marine_agent_sdk
 ```
 
