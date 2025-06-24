@@ -11,7 +11,7 @@ import httpx
 
 dotenv.load_dotenv()
 
-# Configs for LLM and woRMS
+#Configs for LLM and woRMS
 
 class Config:
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -19,10 +19,11 @@ class Config:
     WORMS_BASE_URL = "https://www.marinespecies.org/rest"
     MODEL_NAME = "llama3-70b-8192"
 
-# Data Models
+#Data Models
 
 class MarineQueryModel(BaseModel):
-    scientificname: str = Field(..., description="Scientific name of the marine animal, e.g. Orcinus orca")
+    scientificname: Optional[str] = Field(None, description="Scientific name of the marine animal, e.g. Orcinus orca")
+    common_name: Optional[str] = Field(None, description="Common name of the marine animal, e.g. killer whale")
 
 class EmptyModel(BaseModel):
     ...
@@ -66,7 +67,7 @@ class ChildTaxon(BaseModel):
     scientificname: str
     rank: str
 
-# woRMS API Client
+#woRMS API Client
 
 class WoRMSClient:
     def __init__(self, base_url: str = Config.WORMS_BASE_URL):
@@ -84,6 +85,10 @@ class WoRMSClient:
 
     async def get_species_by_name(self, client: httpx.AsyncClient, scientific_name: str):
         endpoint = f"/AphiaRecordsByName/{scientific_name}?like=false&marine_only=true"
+        return await self.fetch_json(client, endpoint)
+
+    async def get_species_by_common_name(self, client: httpx.AsyncClient, common_name: str):
+        endpoint = f"/AphiaRecordsByVernacular/{common_name}?like=true&offset=1"
         return await self.fetch_json(client, endpoint)
 
     async def get_synonyms(self, client: httpx.AsyncClient, aphia_id: int):
@@ -106,7 +111,7 @@ class WoRMSClient:
         endpoint = f"/AphiaChildrenByAphiaID/{aphia_id}"
         return await self.fetch_json(client, endpoint)
 
-# Data Processing
+#Data Processing
 
 class MarineDataProcessor:
     def safe_parse(self, model_class, data):
@@ -132,7 +137,7 @@ class MarineDataProcessor:
             'children': self.process_list_data(ChildTaxon, children_data)
         }
 
-# Main Agent class
+#Main Agent class
 
 class MarineAgent(IChatBioAgent):
     def __init__(self):
@@ -156,7 +161,7 @@ class MarineAgent(IChatBioAgent):
     def get_agent_card(self) -> AgentCard:
         return self.agent_card
 
-    async def extract_scientific_name(self, request: str) -> MarineQueryModel:
+    async def extract_query_info(self, request: str) -> MarineQueryModel:
         openai_client = AsyncOpenAI(
             api_key=Config.GROQ_API_KEY,
             base_url=Config.GROQ_BASE_URL,
@@ -170,8 +175,9 @@ class MarineAgent(IChatBioAgent):
                 {
                     "role": "system",
                     "content": (
-                        "You are a marine taxonomy expert that extracts the scientific name "
-                        "of a marine animal from user questions. If none found, respond accordingly."
+                        "Extract marine animal names from user questions. Look for both scientific names "
+                        "(like 'Orcinus orca') and common names (like 'killer whale', 'great white shark'). "
+                        "If you find either, extract it. Handle conversational queries naturally."
                     )
                 },
                 {"role": "user", "content": request}
@@ -180,11 +186,23 @@ class MarineAgent(IChatBioAgent):
         )
         return marine_query
 
-    async def fetch_all_marine_data(self, scientific_name: str):
+    async def fetch_all_marine_data(self, query: MarineQueryModel):
         async with httpx.AsyncClient() as client:
-            records = await self.worms_client.get_species_by_name(client, scientific_name)
+            records = None
+            search_term = None
+            
+            # Try scientific name first
+            if query.scientificname:
+                records = await self.worms_client.get_species_by_name(client, query.scientificname)
+                search_term = query.scientificname
+            
+            # Try common name if scientific name failed
+            if not records and query.common_name:
+                records = await self.worms_client.get_species_by_common_name(client, query.common_name)
+                search_term = query.common_name
+            
             if not records:
-                return None, None
+                return None, None, search_term
 
             species_data = records[0] if isinstance(records, list) else records
             species = MarineSpecies(**species_data)
@@ -201,7 +219,20 @@ class MarineAgent(IChatBioAgent):
                 vernaculars_data, classification_data, children_data
             )
 
-            return species, processed_data
+            return species, processed_data, search_term
+
+    def build_worms_uris(self, species: MarineSpecies) -> List[str]:
+        
+        uris = []
+        
+        #WoRMS species page
+        uris.append(f"https://www.marinespecies.org/aphia.php?p=taxdetails&id={species.AphiaID}")
+        
+        #If LSID is available, add it
+        if species.lsid:
+            uris.append(species.lsid)
+        
+        return uris
 
     @staticmethod
     def build_structured_prompt(species, processed_data):
@@ -239,7 +270,7 @@ class MarineAgent(IChatBioAgent):
         response = await openai_client.chat.completions.create(
             model=Config.MODEL_NAME,
             messages=[
-                {"role": "system", "content": "You are a marine biology assistant."},
+                {"role": "system", "content": "You are a marine biology assistant. Provide informative, conversational responses."},
                 {"role": "user", "content": detailed_prompt}
             ],
             max_tokens=700,
@@ -251,19 +282,26 @@ class MarineAgent(IChatBioAgent):
     @override
     async def run(self, request: str, entrypoint: str, params: Optional[BaseModel]) -> AsyncGenerator[Message, None]:
         try:
-            yield ProcessMessage(summary="Analyzing your request", description="Extracting scientific name")
-            marine_query = await self.extract_scientific_name(request)
+            yield ProcessMessage(summary="Analyzing your request", description="Understanding your question")
+            marine_query = await self.extract_query_info(request)
 
-            if not marine_query.scientificname.strip():
-                yield TextMessage(text="Sorry, I couldn't detect a scientific name in your prompt.")
+            if not marine_query.scientificname and not marine_query.common_name:
+                yield TextMessage(text="I couldn't identify a marine species in your question. Try asking about a specific marine animal like 'killer whale' or 'Orcinus orca'.")
                 return
 
-            yield ProcessMessage(summary="Species name extracted", description=marine_query.scientificname)
+            search_name = marine_query.scientificname or marine_query.common_name
+            yield ProcessMessage(summary="Species identified", description=search_name)
 
-            species, processed_data = await self.fetch_all_marine_data(marine_query.scientificname)
+            species, processed_data, search_term = await self.fetch_all_marine_data(marine_query)
 
             if not species:
-                yield TextMessage(text=f"No marine species found for: {marine_query.scientificname}")
+                suggestion_msg = f"No marine species found for '{search_term}'. "
+                if search_term and len(search_term) > 3:
+                    suggestion_msg += "Try checking the spelling or using the scientific name."
+                else:
+                    suggestion_msg += "Try being more specific, like 'great white shark' or 'Carcharodon carcharias'."
+                
+                yield TextMessage(text=suggestion_msg)
                 return
 
             yield ProcessMessage(summary="Species found", description=f"AphiaID: {species.AphiaID}")
@@ -274,6 +312,7 @@ class MarineAgent(IChatBioAgent):
                 mimetype="text/markdown",
                 description=f"Marine species info for {species.scientificname}",
                 content=answer,
+                uris=self.build_worms_uris(species),
                 metadata={
                     "AphiaID": species.AphiaID,
                     "scientificname": species.scientificname,
@@ -288,6 +327,6 @@ class MarineAgent(IChatBioAgent):
             yield TextMessage(text=answer)
 
         except InstructorRetryException:
-            yield TextMessage(text="Sorry, I couldn't extract a scientific name from your request.")
+            yield TextMessage(text="I couldn't understand your question. Try asking about a specific marine animal.")
         except Exception as e:
             yield TextMessage(text=f"An error occurred while retrieving marine species info: {str(e)}")
