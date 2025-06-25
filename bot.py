@@ -5,7 +5,7 @@ from ichatbio.types import ArtifactMessage, TextMessage, ProcessMessage
 
 async def main():
     agent = MarineAgent()
-    print("Marine Species Bot - Type 'exit' or 'quit' to stop\n")
+    print("Marine Species Bot- Type 'exit'stop\n")
     
     while True:
         query = input("Enter marine species query: ").strip()
@@ -32,7 +32,7 @@ async def main():
                         print(f"\nReference: {msg.uris[0]}")
 
             print(f"\nCompleted in {time.time() - start_time:.2f}s")
-            print("-" * 50)
+            
 
         except KeyboardInterrupt:
             print("\nGoodbye!")

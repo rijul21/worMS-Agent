@@ -1,4 +1,5 @@
 import os
+import json
 import dotenv
 import instructor
 from instructor.exceptions import InstructorRetryException
@@ -118,7 +119,6 @@ class MarineDataProcessor:
         try:
             return model_class(**data)
         except Exception as e:
-           ## print(f"Skipping invalid records for {model_class.__name__}: {e}")
             return None
 
     def process_list_data(self, model_class, raw_data):
@@ -208,30 +208,35 @@ class MarineAgent(IChatBioAgent):
             species = MarineSpecies(**species_data)
             aphia_id = species.AphiaID
 
+            # Fetch all additional data
             synonyms_data = await self.worms_client.get_synonyms(client, aphia_id)
             distribution_data = await self.worms_client.get_distribution(client, aphia_id)
             vernaculars_data = await self.worms_client.get_vernaculars(client, aphia_id)
             classification_data = await self.worms_client.get_classification(client, aphia_id)
             children_data = await self.worms_client.get_children(client, aphia_id)
 
+            # Return raw data instead of processed
+            raw_data = {
+                'species': species_data,
+                'synonyms': synonyms_data,
+                'distribution': distribution_data,
+                'vernaculars': vernaculars_data,
+                'classification': classification_data,
+                'children': children_data
+            }
+
             processed_data = self.data_processor.process_all_marine_data(
                 species_data, synonyms_data, distribution_data,
                 vernaculars_data, classification_data, children_data
             )
 
-            return species, processed_data, search_term
+            return species, raw_data, processed_data, search_term
 
     def build_worms_uris(self, species: MarineSpecies) -> List[str]:
-        
         uris = []
-        
-        #WoRMS species page
         uris.append(f"https://www.marinespecies.org/aphia.php?p=taxdetails&id={species.AphiaID}")
-        
-        #If LSID is available, add it
         if species.lsid:
             uris.append(species.lsid)
-        
         return uris
 
     @staticmethod
@@ -292,7 +297,7 @@ class MarineAgent(IChatBioAgent):
             search_name = marine_query.scientificname or marine_query.common_name
             yield ProcessMessage(summary="Species identified", description=search_name)
 
-            species, processed_data, search_term = await self.fetch_all_marine_data(marine_query)
+            species, raw_data, processed_data, search_term = await self.fetch_all_marine_data(marine_query)
 
             if not species:
                 suggestion_msg = f"No marine species found for '{search_term}'. "
@@ -306,21 +311,88 @@ class MarineAgent(IChatBioAgent):
 
             yield ProcessMessage(summary="Species found", description=f"AphiaID: {species.AphiaID}")
 
+            # Create individual artifacts for each raw data type
+            artifact_ids = []
+
+            #1 Species data artifact
+            if raw_data['species']:
+                yield ArtifactMessage(
+                    mimetype="application/json",
+                    description=f"Raw WoRMS species data for {species.scientificname}",
+                    content=json.dumps(raw_data['species'], indent=2),
+                    uris=[f"https://www.marinespecies.org/rest/AphiaRecordsByName/{species.scientificname}"],
+                    metadata={"api_endpoint": "species", "aphia_id": species.AphiaID}
+                )
+                artifact_ids.append("species_raw")
+
+            #2Synonyms data artifact
+            if raw_data['synonyms']:
+                yield ArtifactMessage(
+                    mimetype="application/json",
+                    description=f"Raw synonyms data for {species.scientificname}",
+                    content=json.dumps(raw_data['synonyms'], indent=2),
+                    uris=[f"https://www.marinespecies.org/rest/AphiaSynonymsByAphiaID/{species.AphiaID}"],
+                    metadata={"api_endpoint": "synonyms", "aphia_id": species.AphiaID}
+                )
+                artifact_ids.append("synonyms_raw")
+
+            #3 Distribution data artifact
+            if raw_data['distribution']:
+                yield ArtifactMessage(
+                    mimetype="application/json",
+                    description=f"Raw distribution data for {species.scientificname}",
+                    content=json.dumps(raw_data['distribution'], indent=2),
+                    uris=[f"https://www.marinespecies.org/rest/AphiaDistributionsByAphiaID/{species.AphiaID}"],
+                    metadata={"api_endpoint": "distribution", "aphia_id": species.AphiaID}
+                )
+                artifact_ids.append("distribution_raw")
+
+            #4 Vernaculars data artifact
+            if raw_data['vernaculars']:
+                yield ArtifactMessage(
+                    mimetype="application/json",
+                    description=f"Raw vernacular names data for {species.scientificname}",
+                    content=json.dumps(raw_data['vernaculars'], indent=2),
+                    uris=[f"https://www.marinespecies.org/rest/AphiaVernacularsByAphiaID/{species.AphiaID}"],
+                    metadata={"api_endpoint": "vernaculars", "aphia_id": species.AphiaID}
+                )
+                artifact_ids.append("vernaculars_raw")
+
+            #5 Classification data artifact
+            if raw_data['classification']:
+                yield ArtifactMessage(
+                    mimetype="application/json",
+                    description=f"Raw classification data for {species.scientificname}",
+                    content=json.dumps(raw_data['classification'], indent=2),
+                    uris=[f"https://www.marinespecies.org/rest/AphiaClassificationByAphiaID/{species.AphiaID}"],
+                    metadata={"api_endpoint": "classification", "aphia_id": species.AphiaID}
+                )
+                artifact_ids.append("classification_raw")
+
+            #6 Children data artifact
+            if raw_data['children']:
+                yield ArtifactMessage(
+                    mimetype="application/json",
+                    description=f"Raw children taxa data for {species.scientificname}",
+                    content=json.dumps(raw_data['children'], indent=2),
+                    uris=[f"https://www.marinespecies.org/rest/AphiaChildrenByAphiaID/{species.AphiaID}"],
+                    metadata={"api_endpoint": "children", "aphia_id": species.AphiaID}
+                )
+                artifact_ids.append("children_raw")
+
+            # generate synthesized response
             answer = await self.synthesize_response(species, processed_data)
 
+            #7 Final processed summary artifact
             yield ArtifactMessage(
                 mimetype="text/markdown",
-                description=f"Marine species info for {species.scientificname}",
+                description=f"Marine species summary for {species.scientificname}",
                 content=answer,
                 uris=self.build_worms_uris(species),
                 metadata={
-                    "AphiaID": species.AphiaID,
-                    "scientificname": species.scientificname,
-                    "synonyms": [syn.dict() for syn in processed_data['synonyms']],
-                    "distribution": [dist.dict() for dist in processed_data['distribution']],
-                    "vernaculars": [vern.dict() for vern in processed_data['vernaculars']],
-                    "classification": [cl.dict() for cl in processed_data['classification']],
-                    "children": [ch.dict() for ch in processed_data['children']]
+                    "source_artifacts": artifact_ids,
+                    "aphia_id": species.AphiaID,
+                    "scientificname": species.scientificname
                 }
             )
 
