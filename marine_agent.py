@@ -5,10 +5,12 @@ import instructor
 from instructor.exceptions import InstructorRetryException
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any, AsyncGenerator, override
-from ichatbio.agent import IChatBioAgent
-from ichatbio.types import AgentCard, AgentEntrypoint, ProcessMessage, Message, TextMessage, ArtifactMessage
+from typing import Optional, List, Dict, Any, override
 import httpx
+
+from ichatbio.agent import IChatBioAgent
+from ichatbio.agent_response import ResponseContext, IChatBioAgentProcess, TextPart
+from ichatbio.types import AgentCard, AgentEntrypoint
 
 dotenv.load_dotenv()
 
@@ -23,50 +25,57 @@ class Config:
 #Data Models
 
 class MarineQueryModel(BaseModel):
-    scientificname: Optional[str] = Field(None, description="Scientific name of the marine animal, e.g. Orcinus orca")
-    common_name: Optional[str] = Field(None, description="Common name of the marine animal, e.g. killer whale")
+    scientificname: Optional[str] = Field(
+        None, 
+        description="Scientific binomial name of the marine species (e.g., 'Orcinus orca', 'Carcharodon carcharias', 'Balaenoptera musculus')"
+    )
+    common_name: Optional[str] = Field(
+        None, 
+        description="Common or vernacular name of the marine animal in English (e.g., 'killer whale', 'great white shark', 'blue whale')"
+    )
 
 class EmptyModel(BaseModel):
+    """Empty model for endpoints that don't require parameters"""
     ...
 
 class MarineSpecies(BaseModel):
-    AphiaID: int
-    scientificname: str
-    authority: Optional[str] = None
-    rank: Optional[str] = None
-    status: Optional[str] = None
-    kingdom: Optional[str] = None
-    phylum: Optional[str] = None
-    class_: Optional[str] = Field(None, alias="class")
-    order: Optional[str] = None
-    family: Optional[str] = None
-    genus: Optional[str] = None
-    citation: Optional[str] = None
-    lsid: Optional[str] = None
+    AphiaID: int = Field(description="Unique WoRMS identifier number for this taxonomic record")
+    scientificname: str = Field(description="Currently accepted scientific binomial name of the species")
+    authority: Optional[str] = Field(None, description="Author(s) who first described this species, with publication year")
+    rank: Optional[str] = Field(None, description="Taxonomic rank (e.g., 'Species', 'Genus', 'Family', 'Subspecies')")
+    status: Optional[str] = Field(None, description="Nomenclatural status (e.g., 'accepted', 'synonym', 'unaccepted')")
+    kingdom: Optional[str] = Field(None, description="Kingdom-level taxonomic classification (e.g., 'Animalia')")
+    phylum: Optional[str] = Field(None, description="Phylum-level taxonomic classification (e.g., 'Chordata', 'Cnidaria')")
+    class_: Optional[str] = Field(None, alias="class", description="Class-level taxonomic classification (e.g., 'Mammalia', 'Actinopterygii')")
+    order: Optional[str] = Field(None, description="Order-level taxonomic classification (e.g., 'Cetacea', 'Carcharhiniformes')")
+    family: Optional[str] = Field(None, description="Family-level taxonomic classification (e.g., 'Delphinidae', 'Lamnidae')")
+    genus: Optional[str] = Field(None, description="Genus-level taxonomic classification (e.g., 'Orcinus', 'Carcharodon')")
+    citation: Optional[str] = Field(None, description="Full bibliographic citation for this taxonomic record")
+    lsid: Optional[str] = Field(None, description="Life Science Identifier - persistent unique identifier URI")
 
 class Synonym(BaseModel):
-    AphiaID: int
-    scientificname: str
-    authority: Optional[str] = None
-    status: Optional[str] = None
+    AphiaID: int = Field(description="WoRMS identifier for this synonym record")
+    scientificname: str = Field(description="Synonymous scientific name that refers to the same species")
+    authority: Optional[str] = Field(None, description="Author and year who published this synonymous name")
+    status: Optional[str] = Field(None, description="Status of this synonym (e.g., 'synonym', 'objective synonym')")
 
 class Distribution(BaseModel):
-    locality: str
-    status: Optional[str] = None
-    gazetteer: Optional[str] = None
+    locality: str = Field(description="Geographic location or region where this species is found (e.g., 'Atlantic Ocean', 'Mediterranean Sea')")
+    status: Optional[str] = Field(None, description="Presence status in this location (e.g., 'native', 'introduced', 'uncertain')")
+    gazetteer: Optional[str] = Field(None, description="Geographic reference system or authority used for this location")
 
 class Vernacular(BaseModel):
-    vernacular: str
-    language: Optional[str] = None
+    vernacular: str = Field(description="Common name of the species in local language (e.g., 'killer whale', 'orca')")
+    language: Optional[str] = Field(None, description="Language code or name for this vernacular name (e.g., 'eng', 'fra', 'Spanish')")
 
 class Classification(BaseModel):
-    rank: str
-    scientificname: str
+    rank: str = Field(description="Taxonomic rank level (e.g., 'Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus')")
+    scientificname: str = Field(description="Scientific name at this taxonomic rank level")
 
 class ChildTaxon(BaseModel):
-    AphiaID: int
-    scientificname: str
-    rank: str
+    AphiaID: int = Field(description="WoRMS identifier for this child taxon")
+    scientificname: str = Field(description="Scientific name of the subordinate taxon (species, subspecies, etc.)")
+    rank: str = Field(description="Taxonomic rank of this child taxon (e.g., 'Species', 'Subspecies', 'Variety')")
 
 #woRMS API Client
 
@@ -191,12 +200,12 @@ class MarineAgent(IChatBioAgent):
             records = None
             search_term = None
             
-            # Try scientific name first
+            #trying scientific name first
             if query.scientificname:
                 records = await self.worms_client.get_species_by_name(client, query.scientificname)
                 search_term = query.scientificname
             
-            # Try common name if scientific name failed
+            #common name if scientific name failed
             if not records and query.common_name:
                 records = await self.worms_client.get_species_by_common_name(client, query.common_name)
                 search_term = query.common_name
@@ -208,14 +217,14 @@ class MarineAgent(IChatBioAgent):
             species = MarineSpecies(**species_data)
             aphia_id = species.AphiaID
 
-            # Fetch all additional data
+            #fetching all additional data
             synonyms_data = await self.worms_client.get_synonyms(client, aphia_id)
             distribution_data = await self.worms_client.get_distribution(client, aphia_id)
             vernaculars_data = await self.worms_client.get_vernaculars(client, aphia_id)
             classification_data = await self.worms_client.get_classification(client, aphia_id)
             children_data = await self.worms_client.get_children(client, aphia_id)
 
-            # Return raw data instead of processed
+            #returning raw data instead of processed
             raw_data = {
                 'species': species_data,
                 'synonyms': synonyms_data,
@@ -285,120 +294,82 @@ class MarineAgent(IChatBioAgent):
         return response.choices[0].message.content
 
     @override
-    async def run(self, request: str, entrypoint: str, params: Optional[BaseModel]) -> AsyncGenerator[Message, None]:
-        try:
-            yield ProcessMessage(summary="Analyzing your request", description="Understanding your question")
-            marine_query = await self.extract_query_info(request)
+    async def run(
+        self,
+        context: ResponseContext,
+        request: str,
+        entrypoint: str,
+        params: Optional[BaseModel],
+    ) -> None:
+        async with context.begin_process("Retrieving marine species data") as process:
+            process: IChatBioAgentProcess
 
-            if not marine_query.scientificname and not marine_query.common_name:
-                yield TextMessage(text="I couldn't identify a marine species in your question. Try asking about a specific marine animal like 'killer whale' or 'Orcinus orca'.")
-                return
+            try:
+                await process.log("Extracting marine species info from user query")
+                marine_query = await self.extract_query_info(request)
 
-            search_name = marine_query.scientificname or marine_query.common_name
-            yield ProcessMessage(summary="Species identified", description=search_name)
+                if not marine_query.scientificname and not marine_query.common_name:
+                    
+                    #TextPart instead of TextMessage
+                    await process.send(TextPart(
+                        text="I couldn't identify a marine species in your question. Try asking about a specific marine animal like 'killer whale' or 'Orcinus orca'."
+                    ))
+                    return
 
-            species, raw_data, processed_data, search_term = await self.fetch_all_marine_data(marine_query)
+                search_name = marine_query.scientificname or marine_query.common_name
+                await process.log("Species identified", data={"search_term": search_name})
 
-            if not species:
-                suggestion_msg = f"No marine species found for '{search_term}'. "
-                if search_term and len(search_term) > 3:
-                    suggestion_msg += "Try checking the spelling or using the scientific name."
-                else:
-                    suggestion_msg += "Try being more specific, like 'great white shark' or 'Carcharodon carcharias'."
-                
-                yield TextMessage(text=suggestion_msg)
-                return
+                species, raw_data, processed_data, search_term = await self.fetch_all_marine_data(marine_query)
 
-            yield ProcessMessage(summary="Species found", description=f"AphiaID: {species.AphiaID}")
+                if not species:
+                    suggestion_msg = f"No marine species found for '{search_term}'. "
+                    if search_term and len(search_term) > 3:
+                        suggestion_msg += "Try checking the spelling or using the scientific name."
+                    else:
+                        suggestion_msg += "Try being more specific, like 'great white shark' or 'Carcharodon carcharias'."
+                    await process.send(TextPart(text=suggestion_msg))
+                    return
 
-            # Create individual artifacts for each raw data type
-            artifact_ids = []
+                await process.log("Species found", data={"AphiaID": species.AphiaID})
 
-            #1 Species data artifact
-            if raw_data['species']:
-                yield ArtifactMessage(
-                    mimetype="application/json",
-                    description=f"Raw WoRMS species data for {species.scientificname}",
-                    content=json.dumps(raw_data['species'], indent=2),
-                    uris=[f"https://www.marinespecies.org/rest/AphiaRecordsByName/{species.scientificname}"],
-                    metadata={"api_endpoint": "species", "aphia_id": species.AphiaID}
+                #artifact 1–6: Raw Data
+                for key, endpoint in {
+                    'species': f"AphiaRecordsByName/{species.scientificname}",
+                    'synonyms': f"AphiaSynonymsByAphiaID/{species.AphiaID}",
+                    'distribution': f"AphiaDistributionsByAphiaID/{species.AphiaID}",
+                    'vernaculars': f"AphiaVernacularsByAphiaID/{species.AphiaID}",
+                    'classification': f"AphiaClassificationByAphiaID/{species.AphiaID}",
+                    'children': f"AphiaChildrenByAphiaID/{species.AphiaID}"
+                }.items():
+                    if raw_data.get(key):
+                        await process.create_artifact(
+                            mimetype="application/json",
+                            description=f"Raw {key} data for {species.scientificname}",
+                            content=json.dumps(raw_data[key], indent=2),
+                            uris=[f"https://www.marinespecies.org/rest/{endpoint}"],
+                            metadata={"api_endpoint": key, "aphia_id": species.AphiaID}
+                        )
+
+                await process.log("Generating natural language summary from species data")
+                answer = await self.synthesize_response(species, processed_data)
+
+                #artifact 7: Final summary
+                await process.create_artifact(
+                    mimetype="text/markdown",
+                    description=f"Marine species summary for {species.scientificname}",
+                    content=answer,
+                    uris=self.build_worms_uris(species),
+                    metadata={
+                        "aphia_id": species.AphiaID,
+                        "scientificname": species.scientificname
+                    }
                 )
-                artifact_ids.append("species_raw")
 
-            #2Synonyms data artifact
-            if raw_data['synonyms']:
-                yield ArtifactMessage(
-                    mimetype="application/json",
-                    description=f"Raw synonyms data for {species.scientificname}",
-                    content=json.dumps(raw_data['synonyms'], indent=2),
-                    uris=[f"https://www.marinespecies.org/rest/AphiaSynonymsByAphiaID/{species.AphiaID}"],
-                    metadata={"api_endpoint": "synonyms", "aphia_id": species.AphiaID}
-                )
-                artifact_ids.append("synonyms_raw")
+                await process.send(TextPart(text=answer))
 
-            #3 Distribution data artifact
-            if raw_data['distribution']:
-                yield ArtifactMessage(
-                    mimetype="application/json",
-                    description=f"Raw distribution data for {species.scientificname}",
-                    content=json.dumps(raw_data['distribution'], indent=2),
-                    uris=[f"https://www.marinespecies.org/rest/AphiaDistributionsByAphiaID/{species.AphiaID}"],
-                    metadata={"api_endpoint": "distribution", "aphia_id": species.AphiaID}
-                )
-                artifact_ids.append("distribution_raw")
+            except InstructorRetryException:
+                await process.send(TextPart(text="I couldn't understand your question. Try asking about a specific marine animal."))
+            except Exception as e:
+                await process.send(TextPart(text=f"An error occurred while retrieving marine species info: {str(e)}"))
 
-            #4 Vernaculars data artifact
-            if raw_data['vernaculars']:
-                yield ArtifactMessage(
-                    mimetype="application/json",
-                    description=f"Raw vernacular names data for {species.scientificname}",
-                    content=json.dumps(raw_data['vernaculars'], indent=2),
-                    uris=[f"https://www.marinespecies.org/rest/AphiaVernacularsByAphiaID/{species.AphiaID}"],
-                    metadata={"api_endpoint": "vernaculars", "aphia_id": species.AphiaID}
-                )
-                artifact_ids.append("vernaculars_raw")
-
-            #5 Classification data artifact
-            if raw_data['classification']:
-                yield ArtifactMessage(
-                    mimetype="application/json",
-                    description=f"Raw classification data for {species.scientificname}",
-                    content=json.dumps(raw_data['classification'], indent=2),
-                    uris=[f"https://www.marinespecies.org/rest/AphiaClassificationByAphiaID/{species.AphiaID}"],
-                    metadata={"api_endpoint": "classification", "aphia_id": species.AphiaID}
-                )
-                artifact_ids.append("classification_raw")
-
-            #6 Children data artifact
-            if raw_data['children']:
-                yield ArtifactMessage(
-                    mimetype="application/json",
-                    description=f"Raw children taxa data for {species.scientificname}",
-                    content=json.dumps(raw_data['children'], indent=2),
-                    uris=[f"https://www.marinespecies.org/rest/AphiaChildrenByAphiaID/{species.AphiaID}"],
-                    metadata={"api_endpoint": "children", "aphia_id": species.AphiaID}
-                )
-                artifact_ids.append("children_raw")
-
-            # generate synthesized response
-            answer = await self.synthesize_response(species, processed_data)
-
-            #7 Final processed summary artifact
-            yield ArtifactMessage(
-                mimetype="text/markdown",
-                description=f"Marine species summary for {species.scientificname}",
-                content=answer,
-                uris=self.build_worms_uris(species),
-                metadata={
-                    "source_artifacts": artifact_ids,
-                    "aphia_id": species.AphiaID,
-                    "scientificname": species.scientificname
-                }
-            )
-
-            yield TextMessage(text=answer)
-
-        except InstructorRetryException:
-            yield TextMessage(text="I couldn't understand your question. Try asking about a specific marine animal.")
-        except Exception as e:
-            yield TextMessage(text=f"An error occurred while retrieving marine species info: {str(e)}")
+        await context.reply("Marine species data request completed.")
