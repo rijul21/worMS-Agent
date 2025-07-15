@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from typing import Optional, List, Union
+from typing import Optional, List
 from datetime import datetime
 
 # Core WoRMS Record Model
@@ -12,28 +12,14 @@ class WoRMSRecord(BaseModel):
     scientificname: str
     authority: Optional[str] = None
     status: Optional[str] = None
-    unacceptreason: Optional[str] = None
-    taxonRankID: Optional[int] = None
     rank: Optional[str] = None
-    valid_AphiaID: Optional[int] = None
-    valid_name: Optional[str] = None
-    valid_authority: Optional[str] = None
-    parentNameUsageID: Optional[int] = None
     kingdom: Optional[str] = None
     phylum: Optional[str] = None
     class_: Optional[str] = Field(None, alias="class")
     order: Optional[str] = None
     family: Optional[str] = None
     genus: Optional[str] = None
-    citation: Optional[str] = None
-    lsid: Optional[str] = None
     isMarine: Optional[bool] = None
-    isBrackish: Optional[bool] = None
-    isFreshwater: Optional[bool] = None
-    isTerrestrial: Optional[bool] = None
-    isExtinct: Optional[bool] = None
-    match_type: Optional[str] = None
-    modified: Optional[str] = None
 
 # Synonym Model
 class WoRMSSynonym(BaseModel):
@@ -41,108 +27,30 @@ class WoRMSSynonym(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     
     AphiaID: int
-    url: Optional[str] = None
     scientificname: str
     authority: Optional[str] = None
-    status: Optional[str] = None
-    unacceptreason: Optional[str] = None
-    taxonRankID: Optional[int] = None
-    rank: Optional[str] = None
-    valid_AphiaID: Optional[int] = None
-    valid_name: Optional[str] = None
-    valid_authority: Optional[str] = None
-    kingdom: Optional[str] = None
-    phylum: Optional[str] = None
-    class_: Optional[str] = Field(None, alias="class")
-    order: Optional[str] = None
-    family: Optional[str] = None
-    genus: Optional[str] = None
-    citation: Optional[str] = None
-    lsid: Optional[str] = None
-    isMarine: Optional[bool] = None
-    isBrackish: Optional[bool] = None
-    isFreshwater: Optional[bool] = None
-    isTerrestrial: Optional[bool] = None
-    isExtinct: Optional[bool] = None
-    match_type: Optional[str] = None
-    modified: Optional[str] = None
 
 # Distribution Model
 class WoRMSDistribution(BaseModel):
     """Distribution record from WoRMS"""
     AphiaID: int
-    locationID: Optional[str] = None
     locality: Optional[str] = None
     country: Optional[str] = None
-    country_code: Optional[str] = None
-    ocean: Optional[str] = None
-    FAOarea: Optional[str] = None
-    generalarea: Optional[str] = None
-    specificarea: Optional[str] = None
-    recordtype: Optional[str] = None
-    startdate: Optional[str] = None
-    enddate: Optional[str] = None
-    datecreated: Optional[str] = None
-    datemodified: Optional[str] = None
-    qualitystatus: Optional[str] = None
-    establishmentMeans: Optional[str] = None
-    note: Optional[str] = None
+    geographical_scale: Optional[str] = Field(None, alias="geographicalScale")
 
 # Vernacular Names Model
 class WoRMSVernacular(BaseModel):
     """Vernacular (common) name record from WoRMS"""
     AphiaID: int
     vernacular: str
-    language_code: Optional[str] = None
     language: Optional[str] = None
-    country_code: Optional[str] = None
-    country: Optional[str] = None
 
-# Classification Model
-class WoRMSClassification(BaseModel):
-    """Taxonomic classification record from WoRMS"""
-    model_config = ConfigDict(populate_by_name=True)
-    
-    AphiaID: int
-    rank: str
-    scientificname: str
-    child: Optional['WoRMSClassification'] = None
-
-# Update forward references for recursive model
-WoRMSClassification.model_rebuild()
-
-# Children Model (for taxa that have subtaxa)
-class WoRMSChild(BaseModel):
-    """Child taxon record from WoRMS"""
-    model_config = ConfigDict(populate_by_name=True)
-    
-    AphiaID: int
-    url: Optional[str] = None
-    scientificname: str
-    authority: Optional[str] = None
-    status: Optional[str] = None
-    unacceptreason: Optional[str] = None
-    taxonRankID: Optional[int] = None
-    rank: Optional[str] = None
-    valid_AphiaID: Optional[int] = None
-    valid_name: Optional[str] = None
-    valid_authority: Optional[str] = None
-    parentNameUsageID: Optional[int] = None
-    kingdom: Optional[str] = None
-    phylum: Optional[str] = None
-    class_: Optional[str] = Field(None, alias="class")
-    order: Optional[str] = None
-    family: Optional[str] = None
-    genus: Optional[str] = None
-    citation: Optional[str] = None
-    lsid: Optional[str] = None
-    isMarine: Optional[bool] = None
-    isBrackish: Optional[bool] = None
-    isFreshwater: Optional[bool] = None
-    isTerrestrial: Optional[bool] = None
-    isExtinct: Optional[bool] = None
-    match_type: Optional[str] = None
-    modified: Optional[str] = None
+# Source Model
+class WoRMSSource(BaseModel):
+    """Source (reference) record from WoRMS"""
+    reference: Optional[str] = None
+    author: Optional[str] = None
+    year: Optional[str] = None
 
 # Complete Marine Species Data Model
 class CompleteMarineSpeciesData(BaseModel):
@@ -151,8 +59,8 @@ class CompleteMarineSpeciesData(BaseModel):
     synonyms: Optional[List[WoRMSSynonym]] = None
     distribution: Optional[List[WoRMSDistribution]] = None
     vernaculars: Optional[List[WoRMSVernacular]] = None
-    classification: Optional[List[WoRMSClassification]] = None
-    children: Optional[List[WoRMSChild]] = None
+    sources: Optional[List[WoRMSSource]] = None
+    attributes: Optional[List[dict]] = None
     
     # Metadata
     aphia_id: int
@@ -204,11 +112,7 @@ class MarineParameters(BaseModel):
         True, 
         description="Include vernacular names in the response"
     )
-    include_classification: bool = Field(
+    include_sources: bool = Field(
         True, 
-        description="Include taxonomic classification in the response"
-    )
-    include_children: bool = Field(
-        True, 
-        description="Include child taxa in the response"
+        description="Include source references in the response"
     )
