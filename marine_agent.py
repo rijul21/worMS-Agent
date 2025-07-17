@@ -262,8 +262,7 @@ class MarineAgent(IChatBioAgent):
                         "attributes": attributes,
                         "aphia_id": aphia_id,
                         "scientific_name": primary_species.scientificname,
-                        "search_term": search_name,
-                        "retrieved_at": datetime.now(timezone.utc)
+                        "search_term": search_name
                     }
                     try:
                         complete_data = CompleteMarineSpeciesData(**species_data)
@@ -292,9 +291,15 @@ class MarineAgent(IChatBioAgent):
                             "retrieved_at": datetime.now(timezone.utc).isoformat()
                         }
                     )
-                    # Send artifact response
-                    await context.reply(artifact_response)
-                    await process.log(f"Successfully sent artifact for {primary_species.scientificname}")
+                    # Send artifact data as DirectResponse
+                    artifact_data = {
+                        "mimetype": artifact_response.mimetype,
+                        "description": artifact_response.description,
+                        "uris": artifact_response.uris,
+                        "metadata": artifact_response.metadata
+                    }
+                    await context.reply(f"Marine species data for {primary_species.scientificname}", data=artifact_data)
+                    print(f"DEBUG: Successfully sent artifact data for {primary_species.scientificname} (AphiaID: {aphia_id})")
                     # Prepare and send text summary
                     vernacular_names = [v.vernacular for v in vernaculars] if vernaculars else []
                     synonym_names = [s.scientificname for s in synonyms] if synonyms else []
@@ -314,7 +319,7 @@ class MarineAgent(IChatBioAgent):
                         "The artifact contains detailed taxonomic information, common names, synonyms, distributions, attributes, and sources from WoRMS."
                     )
                     await context.reply(response_text)
-                    await process.log(f"Successfully sent text summary for {primary_species.scientificname}")
+                    # Removed: await process.log(f"Successfully sent text summary for {primary_species.scientificname}")
             except Exception as e:
                 print(f"DEBUG: General error in run method: {str(e)}")
                 await context.reply(f"An error occurred while processing the request: {str(e)}")
