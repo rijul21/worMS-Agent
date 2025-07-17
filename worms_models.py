@@ -20,6 +20,18 @@ class WoRMSRecord(BaseModel):
     family: Optional[str] = None
     genus: Optional[str] = None
     isMarine: Optional[bool] = None
+    isBrackish: Optional[bool] = None
+    isFreshwater: Optional[bool] = None
+    isTerrestrial: Optional[bool] = None
+    isExtinct: Optional[bool] = None
+    match_type: Optional[str] = None
+    modified: Optional[str] = None
+    citation: Optional[str] = None
+    lsid: Optional[str] = None
+    valid_AphiaID: Optional[int] = None
+    valid_name: Optional[str] = None
+    valid_authority: Optional[str] = None
+    parentNameUsageID: Optional[int] = None
 
 # Synonym Model
 class WoRMSSynonym(BaseModel):
@@ -29,32 +41,72 @@ class WoRMSSynonym(BaseModel):
     AphiaID: int
     scientificname: str
     authority: Optional[str] = None
+    status: Optional[str] = None
+    rank: Optional[str] = None
+    valid_AphiaID: Optional[int] = None
+    valid_name: Optional[str] = None
+    valid_authority: Optional[str] = None
+    parentNameUsageID: Optional[int] = None
+    citation: Optional[str] = None
+    lsid: Optional[str] = None
+    isMarine: Optional[bool] = None
+    isBrackish: Optional[bool] = None
+    isFreshwater: Optional[bool] = None
+    isTerrestrial: Optional[bool] = None
+    isExtinct: Optional[bool] = None
+    match_type: Optional[str] = None
+    modified: Optional[str] = None
 
 # Distribution Model
 class WoRMSDistribution(BaseModel):
     """Distribution record from WoRMS"""
-    AphiaID: int
+    model_config = ConfigDict(populate_by_name=True)
+    
+    AphiaID: Optional[int] = None  # Made optional
     locality: Optional[str] = None
-    country: Optional[str] = None
-    geographical_scale: Optional[str] = Field(None, alias="geographicalScale")
+    locationID: Optional[str] = None
+    higherGeography: Optional[str] = None
+    higherGeographyID: Optional[str] = None
+    recordStatus: Optional[str] = None
+    typeStatus: Optional[str] = None
+    establishmentMeans: Optional[str] = None
+    invasiveness: Optional[str] = None
+    occurrence: Optional[str] = None
+    decimalLatitude: Optional[float] = None
+    decimalLongitude: Optional[float] = None
+    qualityStatus: Optional[str] = None
 
 # Vernacular Names Model
 class WoRMSVernacular(BaseModel):
     """Vernacular (common) name record from WoRMS"""
-    AphiaID: int
+    model_config = ConfigDict(populate_by_name=True)
+    
+    AphiaID: Optional[int] = None  # Made optional
     vernacular: str
     language: Optional[str] = None
+    language_code: Optional[str] = None
 
 # Source Model
 class WoRMSSource(BaseModel):
     """Source (reference) record from WoRMS"""
+    model_config = ConfigDict(populate_by_name=True)
+    
+    source_id: Optional[int] = None
     reference: Optional[str] = None
     author: Optional[str] = None
     year: Optional[str] = None
+    page: Optional[str] = None
+    url: Optional[str] = None
+    link: Optional[str] = None
+    fulltext: Optional[str] = None
+    doi: Optional[str] = None
+    use: Optional[str] = None
 
 # Complete Marine Species Data Model
 class CompleteMarineSpeciesData(BaseModel):
     """Complete marine species data combining all WoRMS information"""
+    model_config = ConfigDict(populate_by_name=True)
+    
     species: WoRMSRecord
     synonyms: Optional[List[WoRMSSynonym]] = None
     distribution: Optional[List[WoRMSDistribution]] = None
@@ -66,7 +118,7 @@ class CompleteMarineSpeciesData(BaseModel):
     aphia_id: int
     scientific_name: str
     search_term: str
-    retrieved_at: datetime = Field(default_factory=datetime.now)
+    retrieved_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     @field_validator('aphia_id', mode='before')
     @classmethod
@@ -85,6 +137,8 @@ class CompleteMarineSpeciesData(BaseModel):
 # Query Models for the Agent
 class MarineQueryModel(BaseModel):
     """Model for extracting marine species information from user queries"""
+    model_config = ConfigDict(populate_by_name=True)
+    
     scientificname: Optional[str] = Field(
         None, 
         description="Scientific binomial name of the marine species (e.g., 'Orcinus orca', 'Carcharodon carcharias', 'Balaenoptera musculus')"
@@ -96,6 +150,8 @@ class MarineQueryModel(BaseModel):
 
 class MarineParameters(BaseModel):
     """Parameters for marine species queries"""
+    model_config = ConfigDict(populate_by_name=True)
+    
     species_name: Optional[str] = Field(
         None, 
         description="Name of the marine species (scientific or common name)"
