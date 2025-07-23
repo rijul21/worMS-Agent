@@ -43,16 +43,21 @@ class WoRMSClient:
             print(f"DEBUG: Fetching URL: {url}")
             resp = await client.get(url)
             print(f"DEBUG: Status Code: {resp.status_code}")
-            print(f"DEBUG: Response Text: {resp.text}")
+            # Print first 100 characters of response text
+            response_text = resp.text[:100] + ("..." if len(resp.text) > 100 else "")
+            print(f"DEBUG: Response Text (truncated to 100 chars): {response_text} (total {len(resp.text)} chars)")
             if resp.status_code != 200:
                 print(f"DEBUG: Non-200 status code: {resp.status_code}")
                 return None
             data = resp.json()
-            print(f"DEBUG: Parsed JSON: {data}")
+            # Convert data to string and print first 100 characters
+            data_str = str(data)
+            data_text = data_str[:100] + ("..." if len(data_str) > 100 else "")
+            print(f"DEBUG: Parsed JSON (truncated to 100 chars): {data_text} (total {len(data_str)} chars)")
             return data
         except Exception as e:
             print(f"DEBUG: Error fetching JSON: {str(e)}")
-            return None
+        return None
 
     async def get_species_by_name(self, client: httpx.AsyncClient, scientific_name: str) -> Optional[List[WoRMSRecord]]:
         encoded_name = quote(scientific_name)
