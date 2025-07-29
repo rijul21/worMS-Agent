@@ -148,7 +148,32 @@ class MarineAgent(IChatBioAgent):
             entrypoints=[
                 AgentEntrypoint(
                     id="get_marine_info",
-                    description="Returns marine species data with taxonomic information, common names, synonyms, distributions, attributes, and sources",
+                    description="Get complete marine species data including taxonomy, synonyms, distributions, and sources",
+                    parameters=MarineParameters
+                ),
+                AgentEntrypoint(
+                    id="get_taxonomy",
+                    description="Get basic taxonomic classification for a marine species",
+                    parameters=MarineParameters
+                ),
+                AgentEntrypoint(
+                    id="get_synonyms",
+                    description="Get synonyms and alternative names for a marine species",
+                    parameters=MarineParameters
+                ),
+                AgentEntrypoint(
+                    id="get_distribution",
+                    description="Get geographic distribution data for a marine species",
+                    parameters=MarineParameters
+                ),
+                AgentEntrypoint(
+                    id="get_vernacular_names",
+                    description="Get common names in different languages for a marine species",
+                    parameters=MarineParameters
+                ),
+                AgentEntrypoint(
+                    id="get_sources",
+                    description="Get scientific references and sources for a marine species",
                     parameters=MarineParameters
                 )
             ]
@@ -167,16 +192,26 @@ class MarineAgent(IChatBioAgent):
         print(f"==================")
         
         # Convert params to the expected type
+        if isinstance(params, dict):
+            marine_params = MarineParameters(**params)
+        elif hasattr(params, 'model_dump'):
+            marine_params = MarineParameters(**params.model_dump())
+        else:
+            marine_params = params
+        
+        # Route to specific entrypoint methods
         if entrypoint == "get_marine_info":
-            # Handle the case where params might not be MarineParameters type
-            if isinstance(params, dict):
-                marine_params = MarineParameters(**params)
-            elif hasattr(params, 'model_dump'):
-                marine_params = MarineParameters(**params.model_dump())
-            else:
-                marine_params = params
-            
             await self.run_get_marine_info(context, marine_params)
+        elif entrypoint == "get_taxonomy":
+            await self.run_get_taxonomy(context, marine_params)
+        elif entrypoint == "get_synonyms":
+            await self.run_get_synonyms(context, marine_params)
+        elif entrypoint == "get_distribution":
+            await self.run_get_distribution(context, marine_params)
+        elif entrypoint == "get_vernacular_names":
+            await self.run_get_vernacular_names(context, marine_params)
+        elif entrypoint == "get_sources":
+            await self.run_get_sources(context, marine_params)
         else:
             # Handle unexpected entrypoints 
             await context.reply(f"Unknown entrypoint '{entrypoint}' received.")
@@ -278,47 +313,238 @@ class MarineAgent(IChatBioAgent):
                         }
                     )
                     
-                    # Prepare user-friendly summary following your friend's pattern
+                    # Create user-friendly response like your friend's ALA agent
                     vernacular_names = [v.vernacular for v in vernaculars] if vernaculars else []
                     distribution_locations = [d.locality for d in distributions if d.locality] if distributions else []
                     
-                    response_text = (
-                        f"Retrieved comprehensive data for **{primary_species.scientificname}** (AphiaID: {aphia_id}) from WoRMS.\n\n"
-                        f"**Taxonomic Classification:**\n"
-                        f"- Kingdom: {primary_species.kingdom or 'N/A'}\n"
-                        f"- Phylum: {primary_species.phylum or 'N/A'}\n"
-                        f"- Class: {getattr(primary_species, 'class_', None) or 'N/A'}\n"
-                        f"- Order: {primary_species.order or 'N/A'}\n"
-                        f"- Family: {primary_species.family or 'N/A'}\n"
-                        f"- Genus: {primary_species.genus or 'N/A'}\n\n"
-                    )
-                    
+                    # Build a concise, informative response
                     if vernacular_names:
                         sample_names = ', '.join(vernacular_names[:3])
                         if len(vernacular_names) > 3:
                             sample_names += f" and {len(vernacular_names) - 3} more"
-                        response_text += f"**Common Names:** {sample_names}\n\n"
-                    
-                    if total_synonyms > 0:
-                        response_text += f"**Synonyms:** {total_synonyms} found\n\n"
+                        common_names_text = f"Common names: {sample_names}. "
+                    else:
+                        common_names_text = ""
                     
                     if distribution_locations:
                         sample_locations = ', '.join(distribution_locations[:3])
                         if len(distribution_locations) > 3:
                             sample_locations += f" and {len(distribution_locations) - 3} more"
-                        response_text += f"**Distribution:** {sample_locations}\n\n"
+                        distribution_text = f"Found in: {sample_locations}. "
+                    else:
+                        distribution_text = ""
+                    
+                    # Simple, clear response following your friend's pattern
+                    response_text = (
+                        f"Retrieved marine species data for {primary_species.scientificname} (AphiaID: {aphia_id}) from WoRMS. "
+                        f"Taxonomic classification: {primary_species.kingdom} > {primary_species.phylum} > "
+                        f"{getattr(primary_species, 'class_', 'N/A')} > {primary_species.family}. "
+                        f"{common_names_text}"
+                        f"{distribution_text}"
+                        f"Data includes {total_synonyms} synonyms, {total_distributions} distribution records, "
+                        f"and {total_sources} reference sources. Complete dataset compiled in the attached artifact."
+                    )
+                    if distribution_locations:
+                        sample_locations = ', '.join(distribution_locations[:4])
+                        if len(distribution_locations) > 4:
+                            sample_locations += f" + {len(distribution_locations) - 4} more"
+                        response_text += f"🌍 **FOUND IN**: {sample_locations}\n\n"
+                    
+                    response_text += "📁 **Complete taxonomic data, synonyms, distributions, and references have been compiled.**"
                     
                     if total_sources > 0:
                         response_text += f"**Sources:** {total_sources} references available\n\n"
                     
                     response_text += "The complete dataset has been compiled in the attached artifact."
                     
+                    # Try multiple response approaches to ensure visibility
                     await context.reply(response_text)
+                    
+                    # Also send a follow-up with key data
+                    summary = f"✅ **COMPLETED**: Found {primary_species.scientificname} in WoRMS!\n"
+                    summary += f"🔍 **AphiaID**: {aphia_id}\n"
+                    summary += f"📊 **Data Retrieved**: {total_vernaculars} names, {total_synonyms} synonyms, {total_distributions} locations, {total_sources} sources\n"
+                    summary += f"🌊 **Classification**: {primary_species.kingdom} → {primary_species.phylum} → {getattr(primary_species, 'class_', 'N/A')} → {primary_species.family}\n"
+                    if vernacular_names:
+                        summary += f"🏷️ **Common Names**: {', '.join(vernacular_names[:3])}\n"
+                    summary += f"📋 **Complete data available in JSON artifact above**"
+                    
+                    await context.reply(summary)
                     print(f"SUCCESS: Response sent for {primary_species.scientificname}")
                     
             except Exception as e:
                 print(f"ERROR: Workflow failed: {str(e)[:100]}")
                 await context.reply(f"An error occurred while processing the marine species request: {str(e)}")
+
+    async def run_get_taxonomy(self, context: ResponseContext, params: MarineParameters):
+        """Get basic taxonomic classification for a marine species"""
+        search_term = params.species_name.strip() if params.species_name else None
+        if not search_term:
+            await context.reply("Please provide a marine species name.")
+            return
+
+        async with context.begin_process(f"Getting taxonomy for: {search_term}") as process:
+            try:
+                marine_query = await self.extract_query_info(search_term)
+                search_name = marine_query.scientificname or marine_query.common_name
+                
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    records = await self.worms_client.get_species_by_name(client, search_name)
+                    if not records:
+                        await context.reply(f"No marine species found for '{search_name}' in WoRMS.")
+                        return
+                    
+                    species = records[0]
+                    await context.reply(
+                        f"Taxonomic classification for {species.scientificname} (AphiaID: {species.AphiaID}): "
+                        f"Kingdom: {species.kingdom}, Phylum: {species.phylum}, "
+                        f"Class: {getattr(species, 'class_', 'N/A')}, Order: {species.order}, "
+                        f"Family: {species.family}, Genus: {species.genus}. "
+                        f"Authority: {species.authority or 'N/A'}."
+                    )
+            except Exception as e:
+                await context.reply(f"Error retrieving taxonomy: {str(e)}")
+
+    async def run_get_synonyms(self, context: ResponseContext, params: MarineParameters):
+        """Get synonyms for a marine species"""
+        search_term = params.species_name.strip() if params.species_name else None
+        if not search_term:
+            await context.reply("Please provide a marine species name.")
+            return
+
+        async with context.begin_process(f"Getting synonyms for: {search_term}") as process:
+            try:
+                marine_query = await self.extract_query_info(search_term)
+                search_name = marine_query.scientificname or marine_query.common_name
+                
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    records = await self.worms_client.get_species_by_name(client, search_name)
+                    if not records:
+                        await context.reply(f"No marine species found for '{search_name}' in WoRMS.")
+                        return
+                    
+                    species = records[0]
+                    synonyms = await self.worms_client.get_synonyms_by_aphia_id(client, species.AphiaID)
+                    
+                    if synonyms:
+                        synonym_list = [s.scientificname for s in synonyms]
+                        await context.reply(
+                            f"Found {len(synonyms)} synonyms for {species.scientificname}: "
+                            f"{', '.join(synonym_list[:10])}"
+                            f"{' and more...' if len(synonym_list) > 10 else ''}."
+                        )
+                    else:
+                        await context.reply(f"No synonyms found for {species.scientificname} in WoRMS.")
+            except Exception as e:
+                await context.reply(f"Error retrieving synonyms: {str(e)}")
+
+    async def run_get_distribution(self, context: ResponseContext, params: MarineParameters):
+        """Get geographic distribution for a marine species"""
+        search_term = params.species_name.strip() if params.species_name else None
+        if not search_term:
+            await context.reply("Please provide a marine species name.")
+            return
+
+        async with context.begin_process(f"Getting distribution for: {search_term}") as process:
+            try:
+                marine_query = await self.extract_query_info(search_term)
+                search_name = marine_query.scientificname or marine_query.common_name
+                
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    records = await self.worms_client.get_species_by_name(client, search_name)
+                    if not records:
+                        await context.reply(f"No marine species found for '{search_name}' in WoRMS.")
+                        return
+                    
+                    species = records[0]
+                    distributions = await self.worms_client.get_distributions_by_aphia_id(client, species.AphiaID)
+                    
+                    if distributions:
+                        locations = [d.locality for d in distributions if d.locality]
+                        await context.reply(
+                            f"{species.scientificname} is found in {len(distributions)} recorded locations: "
+                            f"{', '.join(locations[:8])}"
+                            f"{' and more...' if len(locations) > 8 else ''}."
+                        )
+                    else:
+                        await context.reply(f"No distribution data found for {species.scientificname} in WoRMS.")
+            except Exception as e:
+                await context.reply(f"Error retrieving distribution: {str(e)}")
+
+    async def run_get_vernacular_names(self, context: ResponseContext, params: MarineParameters):
+        """Get common names for a marine species"""
+        search_term = params.species_name.strip() if params.species_name else None
+        if not search_term:
+            await context.reply("Please provide a marine species name.")
+            return
+
+        async with context.begin_process(f"Getting common names for: {search_term}") as process:
+            try:
+                marine_query = await self.extract_query_info(search_term)
+                search_name = marine_query.scientificname or marine_query.common_name
+                
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    records = await self.worms_client.get_species_by_name(client, search_name)
+                    if not records:
+                        await context.reply(f"No marine species found for '{search_name}' in WoRMS.")
+                        return
+                    
+                    species = records[0]
+                    vernaculars = await self.worms_client.get_vernaculars_by_aphia_id(client, species.AphiaID)
+                    
+                    if vernaculars:
+                        names_by_lang = {}
+                        for v in vernaculars:
+                            lang = v.language or 'Unknown'
+                            if lang not in names_by_lang:
+                                names_by_lang[lang] = []
+                            names_by_lang[lang].append(v.vernacular)
+                        
+                        response = f"Found {len(vernaculars)} common names for {species.scientificname}. "
+                        for lang, names in list(names_by_lang.items())[:5]:
+                            response += f"{lang}: {', '.join(names[:3])}. "
+                        
+                        await context.reply(response)
+                    else:
+                        await context.reply(f"No common names found for {species.scientificname} in WoRMS.")
+            except Exception as e:
+                await context.reply(f"Error retrieving common names: {str(e)}")
+
+    async def run_get_sources(self, context: ResponseContext, params: MarineParameters):
+        """Get scientific sources for a marine species"""
+        search_term = params.species_name.strip() if params.species_name else None
+        if not search_term:
+            await context.reply("Please provide a marine species name.")
+            return
+
+        async with context.begin_process(f"Getting sources for: {search_term}") as process:
+            try:
+                marine_query = await self.extract_query_info(search_term)
+                search_name = marine_query.scientificname or marine_query.common_name
+                
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    records = await self.worms_client.get_species_by_name(client, search_name)
+                    if not records:
+                        await context.reply(f"No marine species found for '{search_name}' in WoRMS.")
+                        return
+                    
+                    species = records[0]
+                    sources = await self.worms_client.get_sources_by_aphia_id(client, species.AphiaID)
+                    
+                    if sources:
+                        source_refs = []
+                        for s in sources[:5]:  # First 5 sources
+                            ref = s.reference or f"{s.author} ({s.year})" if s.author and s.year else "Reference available"
+                            source_refs.append(ref)
+                        
+                        await context.reply(
+                            f"Found {len(sources)} scientific references for {species.scientificname}. "
+                            f"Sample sources: {'; '.join(source_refs)}."
+                        )
+                    else:
+                        await context.reply(f"No sources found for {species.scientificname} in WoRMS.")
+            except Exception as e:
+                await context.reply(f"Error retrieving sources: {str(e)}")
 
     async def extract_query_info(self, request: Optional[str]) -> MarineQueryModel:
         # Handle None or empty request
