@@ -11,7 +11,61 @@ from datetime import datetime, timezone
 from urllib.parse import quote
 
 from ichatbio.agent import IChatBioAgent
-from ichatbio.agent_response import ResponseContext, ArtifactResponse, DirectResponse, ProcessLogResponse
+# Handle the ResponseContext import issue
+try:
+    from ichatbio.agent_response import ResponseContext
+except (ImportError, AttributeError):
+    # Create a wrapper class if ResponseContext doesn't exist
+    from a2a.server.agent_execution import RequestContext
+    
+    class ResponseContext:
+        """Wrapper for RequestContext to match expected interface"""
+        def __init__(self, request_context: RequestContext):
+            self._context = request_context
+            
+        def __getattr__(self, name):
+            # Delegate all attribute access to the underlying context
+            return getattr(self._context, name)
+            
+        async def reply(self, message: str):
+            """Send a reply message"""
+            # This might need to be adapted based on actual RequestContext API
+            print(f"REPLY: {message}")
+            
+        def begin_process(self, description: str):
+            """Begin a process - return a mock process context"""
+            return MockProcessContext(description, self)
+    
+    class MockProcessContext:
+        """Mock process context for testing"""
+        def __init__(self, description: str, response_context):
+            self.description = description
+            self.response_context = response_context
+            
+        async def __aenter__(self):
+            print(f"DEBUG: Starting process: {self.description}")
+            return self
+            
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            print(f"DEBUG: Ending process: {self.description}")
+            
+        async def log(self, message: str, data: dict = None):
+            """Log a process step"""
+            print(f"PROCESS LOG: {message}")
+            if data:
+                print(f"  Data: {data}")
+                
+        async def create_artifact(self, mimetype: str, description: str, content: str, uris: list = None, metadata: dict = None):
+            """Create an artifact"""
+            print(f"DEBUG: Creating artifact: {description}")
+            print(f"  MIME type: {mimetype}")
+            print(f"  Content length: {len(content)} characters")
+            if uris:
+                print(f"  URIs: {uris}")
+            if metadata:
+                print(f"  Metadata: {metadata}")
+    
+    print("DEBUG: Using mock ResponseContext due to import issues")
 from ichatbio.types import AgentCard, AgentEntrypoint
 
 from worms_models import (
@@ -90,7 +144,7 @@ class WoRMSClient:
             if 'isFreshwater' in data:
                 data['isFreshwater'] = bool(data['isFreshwater']) if data['isFreshwater'] is not None else None
             if 'isTerrestrial' in data:
-                data['isTerrestrial'] = bool(data['isTerrestrial']) if data['isTerrestrial'] is not None else None
+                data['isTerrestrial'] = bool(data['isTerrestrial']) if data['isFreshwater'] is not None else None
             if 'isExtinct' in data:
                 data['isExtinct'] = bool(data['isExtinct']) if data['isExtinct'] is not None else None
             record = WoRMSRecord(**data)
@@ -158,9 +212,11 @@ class WoRMSClient:
 
 class MarineAgent(IChatBioAgent):
     def __init__(self):
+        print("DEBUG: MarineAgent initialized")
         self.worms_client = WoRMSClient()
 
     def get_agent_card(self) -> AgentCard:
+        print("DEBUG: get_agent_card called")
         return AgentCard(
             name="Marine Species Data Agent",
             description="Retrieves marine species information from WoRMS, including taxonomic data, common names, synonyms, distributions, attributes, and sources.",
@@ -176,6 +232,13 @@ class MarineAgent(IChatBioAgent):
         )
 
     async def extract_query_info(self, request: str) -> MarineQueryModel:
+        print(f"DEBUG: extract_query_info called with request: '{request}' (type: {type(request)})")
+        
+        # Handle None or empty request
+        if not request:
+            print("DEBUG: Request is None or empty, returning empty MarineQueryModel")
+            return MarineQueryModel(scientificname=None, common_name=None)
+            
         openai_client = AsyncOpenAI(
             api_key=Config.GROQ_API_KEY,
             base_url=Config.GROQ_BASE_URL,
@@ -215,6 +278,7 @@ class MarineAgent(IChatBioAgent):
             f"https://www.marinespecies.org/rest/AphiaSourcesByAphiaID/{aphia_id}"
         ]
 
+    # ADD MORE DEBUG LOGGING HERE
     async def run(
         self,
         context: ResponseContext,
@@ -222,42 +286,73 @@ class MarineAgent(IChatBioAgent):
         entrypoint: str,
         params: MarineParameters,
     ) -> None:
-        print(f"DEBUG: Run method called with request: {request}, entrypoint: {entrypoint}, params: {params.model_dump()}")
+        print("="*50)
+        print(f"DEBUG: Run method called!")
+        print(f"DEBUG: request: '{request}' (type: {type(request)})")
+        print(f"DEBUG: entrypoint: '{entrypoint}' (type: {type(entrypoint)})")
+        print(f"DEBUG: params: {params.model_dump() if params else 'None'} (type: {type(params)})")
+        print(f"DEBUG: context: {context} (type: {type(context)})")
+        print("="*50)
+        
         if entrypoint != "get_marine_info":
             print(f"DEBUG: Invalid entrypoint: {entrypoint}")
             await context.reply(f"Unknown entrypoint: {entrypoint}")
             return
+            
+        # Handle case where request is None - use params.species_name as fallback
+        search_term = request
+        if not search_term and params and params.species_name:
+            search_term = params.species_name
+            print(f"DEBUG: Using species_name from params: {search_term}")
+        
+        if not search_term:
+            print("DEBUG: No search term available")
+            await context.reply("No species name provided in request or parameters")
+            return
+            
         async with context.begin_process("Analyzing marine species request") as process:
             try:
-                marine_query = await self.extract_query_info(request)
-                print(f"DEBUG: Marine query after extraction: {marine_query.model_dump()}")
+                # Use the search term directly if request is None
+                if not request:
+                    marine_query = MarineQueryModel(scientificname=search_term, common_name=None)
+                    print(f"DEBUG: Using direct search term: {marine_query.model_dump()}")
+                else:
+                    marine_query = await self.extract_query_info(request)
+                    print(f"DEBUG: Marine query after extraction: {marine_query.model_dump()}")
+                
                 if not marine_query.scientificname and not marine_query.common_name:
                     print(f"DEBUG: No scientific or common name identified")
                     await context.reply("No scientific or common name identified in the request")
                     return
+                    
                 search_name = marine_query.scientificname or marine_query.common_name
                 await process.log(f"Identified marine species: {search_name}", {
                     "scientific_name": marine_query.scientificname,
                     "common_name": marine_query.common_name
                 })
+                
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     records = await self.worms_client.get_species_by_name(client, search_name)
                     await process.log(f"Searching WoRMS by name: {search_name}", {
                         "search_url": f"https://www.marinespecies.org/rest/AphiaRecordsByName/{quote(search_name)}?like=false&marine_only=true"
                     })
+                    
                     if not records or len(records) == 0:
                         print(f"DEBUG: No records found for {search_name}")
                         await context.reply(f"No marine species found matching '{search_name}'")
                         return
+                        
                     primary_species = records[0]
                     aphia_id = primary_species.AphiaID
                     await process.log(f"Found species: {primary_species.scientificname} (AphiaID: {aphia_id})")
                     await process.log("Retrieving marine species data, vernacular names, synonyms, distributions, attributes, and sources")
+                    
                     vernaculars = await self.worms_client.get_vernaculars_by_aphia_id(client, aphia_id) if params.include_vernaculars else None
                     synonyms = await self.worms_client.get_synonyms_by_aphia_id(client, aphia_id) if params.include_synonyms else None
                     distributions = await self.worms_client.get_distributions_by_aphia_id(client, aphia_id) if params.include_distribution else None
                     attributes = await self.worms_client.get_attributes_by_aphia_id(client, aphia_id)
                     sources = await self.worms_client.get_sources_by_aphia_id(client, aphia_id) if params.include_sources else None
+                    
                     species_data = {
                         "species": primary_species,
                         "synonyms": synonyms,
@@ -269,6 +364,7 @@ class MarineAgent(IChatBioAgent):
                         "scientific_name": primary_species.scientificname,
                         "search_term": search_name
                     }
+                    
                     try:
                         complete_data = CompleteMarineSpeciesData(**species_data)
                         content = complete_data.model_dump_json()
@@ -276,11 +372,15 @@ class MarineAgent(IChatBioAgent):
                         print(f"DEBUG: Validation error for species data: {str(e)}")
                         await context.reply(f"Error processing marine species data: {str(e)}")
                         return
-                    artifact_response = ArtifactResponse(
+
+                    # Create the artifact using process.create_artifact()
+                    # Convert string content to bytes as expected by the API
+                    content_bytes = content.encode('utf-8')
+                    await process.create_artifact(
                         mimetype="application/json",
                         description=f"Marine species data for {primary_species.scientificname}",
+                        content=content_bytes,  # Now using bytes instead of string
                         uris=self._build_worms_uris(aphia_id),
-                        content=content,
                         metadata={
                             "aphia_id": aphia_id,
                             "scientific_name": primary_species.scientificname,
@@ -288,7 +388,7 @@ class MarineAgent(IChatBioAgent):
                             "data_sources": [
                                 "species",
                                 "vernaculars" if params.include_vernaculars else None,
-                                "synonyms" if params.include_synonyms else None,
+                                "synonyms" if params.include_synonyms else None,  
                                 "distributions" if params.include_distribution else None,
                                 "attributes",
                                 "sources" if params.include_sources else None
@@ -296,15 +396,9 @@ class MarineAgent(IChatBioAgent):
                             "retrieved_at": datetime.now(timezone.utc).isoformat()
                         }
                     )
-                    # Send artifact data as DirectResponse
-                    artifact_data = {
-                        "mimetype": artifact_response.mimetype,
-                        "description": artifact_response.description,
-                        "uris": artifact_response.uris,
-                        "metadata": artifact_response.metadata
-                    }
-                    await context.reply(f"Marine species data for {primary_species.scientificname}", data=artifact_data)
-                    print(f"DEBUG: Successfully sent artifact data for {primary_species.scientificname} (AphiaID: {aphia_id})")
+
+                    print(f"DEBUG: Successfully created artifact for {primary_species.scientificname} (AphiaID: {aphia_id})")
+                    
                     # Prepare and send text summary
                     vernacular_names = [v.vernacular for v in vernaculars] if vernaculars else []
                     synonym_names = [s.scientificname for s in synonyms] if synonyms else []
@@ -324,7 +418,12 @@ class MarineAgent(IChatBioAgent):
                         "The artifact contains detailed taxonomic information, common names, synonyms, distributions, attributes, and sources from WoRMS."
                     )
                     await context.reply(response_text)
-                    # Removed: await process.log(f"Successfully sent text summary for {primary_species.scientificname}")
+                    
             except Exception as e:
                 print(f"DEBUG: General error in run method: {str(e)}")
+                import traceback
+                print(f"DEBUG: Full traceback: {traceback.format_exc()}")
                 await context.reply(f"An error occurred while processing the request: {str(e)}")
+
+# Debug: Print when module is imported
+print("DEBUG: marine_agent.py module imported successfully")
