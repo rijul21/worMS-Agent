@@ -11,61 +11,7 @@ from datetime import datetime, timezone
 from urllib.parse import quote
 
 from ichatbio.agent import IChatBioAgent
-# Handle the ResponseContext import issue
-try:
-    from ichatbio.agent_response import ResponseContext
-except (ImportError, AttributeError):
-    # Create a wrapper class if ResponseContext doesn't exist
-    from a2a.server.agent_execution import RequestContext
-    
-    class ResponseContext:
-        """Wrapper for RequestContext to match expected interface"""
-        def __init__(self, request_context: RequestContext):
-            self._context = request_context
-            
-        def __getattr__(self, name):
-            # Delegate all attribute access to the underlying context
-            return getattr(self._context, name)
-            
-        async def reply(self, message: str):
-            """Send a reply message"""
-            # This might need to be adapted based on actual RequestContext API
-            print(f"REPLY: {message}")
-            
-        def begin_process(self, description: str):
-            """Begin a process - return a mock process context"""
-            return MockProcessContext(description, self)
-    
-    class MockProcessContext:
-        """Mock process context for testing"""
-        def __init__(self, description: str, response_context):
-            self.description = description
-            self.response_context = response_context
-            
-        async def __aenter__(self):
-            print(f"DEBUG: Starting process: {self.description}")
-            return self
-            
-        async def __aexit__(self, exc_type, exc_val, exc_tb):
-            print(f"DEBUG: Ending process: {self.description}")
-            
-        async def log(self, message: str, data: dict = None):
-            """Log a process step"""
-            print(f"PROCESS LOG: {message}")
-            if data:
-                print(f"  Data: {data}")
-                
-        async def create_artifact(self, mimetype: str, description: str, content: str, uris: list = None, metadata: dict = None):
-            """Create an artifact"""
-            print(f"DEBUG: Creating artifact: {description}")
-            print(f"  MIME type: {mimetype}")
-            print(f"  Content length: {len(content)} characters")
-            if uris:
-                print(f"  URIs: {uris}")
-            if metadata:
-                print(f"  Metadata: {metadata}")
-    
-    print("DEBUG: Using mock ResponseContext due to import issues")
+from ichatbio.agent_response import ResponseContext  
 from ichatbio.types import AgentCard, AgentEntrypoint
 
 from worms_models import (
