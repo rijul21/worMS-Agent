@@ -26,7 +26,7 @@ class MarineQueryModel(BaseModel):
     """Extracted marine species information from user message"""
     scientific_name: str = Field(..., description="Scientific name of the marine species, e.g. 'Orcinus orca'")
 
-class WoRMSAgent(IChatBioAgent):
+class MarineAgent(IChatBioAgent):
     def __init__(self):
         self.agent_card = AgentCard(
             name="WoRMS Marine Species Agent",
