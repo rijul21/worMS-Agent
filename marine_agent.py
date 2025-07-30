@@ -48,8 +48,13 @@ class MarineAgent(IChatBioAgent):
 
     @override
     async def run(self, context: ResponseContext, request: str, entrypoint: str, params: Optional[BaseModel]):
+        print(f"DEBUG: Agent run called with request: {request[:100]}...")
+        print(f"DEBUG: Entrypoint: {entrypoint}")
+        
         async with context.begin_process(summary="Analyzing marine species request") as process:
             try:
+                print("DEBUG: Starting instructor extraction...")
+                
                 # Extract marine species information using instructor
                 openai_client = AsyncOpenAI(
                     base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
@@ -57,6 +62,8 @@ class MarineAgent(IChatBioAgent):
                 )
                 instructor_client = instructor.patch(openai_client)
 
+                print("DEBUG: Calling instructor...")
+                
                 marine_query: MarineQueryModel = await instructor_client.chat.completions.create(
                     model="llama3-70b-8192",
                     response_model=MarineQueryModel,
@@ -81,34 +88,47 @@ class MarineAgent(IChatBioAgent):
                     max_retries=3
                 )
 
+                print(f"DEBUG: Instructor result: {marine_query.scientific_name}")
+
                 await process.log(f"Identified marine species: {marine_query.scientific_name}", {
                     "scientific_name": marine_query.scientific_name,
                 })
 
                 # Search WoRMS database
                 await process.log(f"Searching WoRMS database for: {marine_query.scientific_name}")
+                print(f"DEBUG: Starting WoRMS search for: {marine_query.scientific_name}")
 
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     # Get species record
+                    print("DEBUG: Calling _get_species_by_name...")
                     species_data = await self._get_species_by_name(client, marine_query.scientific_name)
                     
                     if not species_data:
+                        print("DEBUG: No species data found")
                         await context.reply(f"No marine species found matching '{marine_query.scientific_name}' in WoRMS database.")
                         return
 
                     species = species_data[0]  # Use first result
                     aphia_id = species.AphiaID
+                    print(f"DEBUG: Found species: {species.scientificname} (AphiaID: {aphia_id})")
 
                     await process.log(f"Found species: {species.scientificname} (AphiaID: {aphia_id})")
 
                     # Get additional data
                     await process.log("Retrieving synonyms, vernacular names, and distribution data")
+                    print("DEBUG: Getting additional data...")
                     
                     synonyms = await self._get_synonyms(client, aphia_id)
+                    print(f"DEBUG: Got {len(synonyms or [])} synonyms")
+                    
                     vernaculars = await self._get_vernaculars(client, aphia_id)
+                    print(f"DEBUG: Got {len(vernaculars or [])} vernaculars")
+                    
                     distributions = await self._get_distributions(client, aphia_id)
+                    print(f"DEBUG: Got {len(distributions or [])} distributions")
 
                     # Compile complete data
+                    print("DEBUG: Compiling data...")
                     complete_data = {
                         "species": species.model_dump(),
                         "aphia_id": aphia_id,
@@ -118,12 +138,21 @@ class MarineAgent(IChatBioAgent):
                         "vernacular_names": [v.model_dump() for v in vernaculars] if vernaculars else [],
                         "distributions": [d.model_dump() for d in distributions] if distributions else []
                     }
+                    print("DEBUG: Data compiled successfully")
 
                     await process.log(f"Data compilation complete. Found {len(synonyms or [])} synonyms, {len(vernaculars or [])} vernacular names, {len(distributions or [])} distribution records.")
 
                     # Create artifact
+                    await process.log("Starting artifact creation...")
+                    print("DEBUG: Starting artifact creation...")
+                    
                     content = json.dumps(complete_data, indent=2)
+                    await process.log(f"JSON content created, size: {len(content)} characters")
+                    print(f"DEBUG: JSON content created, size: {len(content)} characters")
+                    
                     content_bytes = content.encode('utf-8')
+                    await process.log(f"Content encoded to bytes, size: {len(content_bytes)} bytes")
+                    print(f"DEBUG: Content encoded to bytes, size: {len(content_bytes)} bytes")
 
                     await process.create_artifact(
                         mimetype="application/json",
@@ -140,6 +169,9 @@ class MarineAgent(IChatBioAgent):
                             "distribution_count": len(distributions or [])
                         }
                     )
+                    
+                    await process.log("Artifact creation completed successfully!")
+                    print("DEBUG: Artifact creation completed!")
 
                     # Create user response
                     response_parts = [
@@ -156,11 +188,18 @@ class MarineAgent(IChatBioAgent):
                     
                     response_parts.append("Complete marine species data has been compiled in the artifact.")
                     
+                    print("DEBUG: Sending reply...")
                     await context.reply(" ".join(response_parts))
+                    print("DEBUG: Reply sent successfully!")
 
             except InstructorRetryException as e:
+                print(f"DEBUG: InstructorRetryException: {e}")
                 await context.reply("Sorry, I couldn't extract marine species information from your request.", data={"error": str(e)})
             except Exception as e:
+                print(f"DEBUG: General Exception: {e}")
+                print(f"DEBUG: Exception type: {type(e)}")
+                import traceback
+                print(f"DEBUG: Traceback: {traceback.format_exc()}")
                 await context.reply("An error occurred while retrieving marine species information", data={"error": str(e)})
 
     async def _get_species_by_name(self, client: httpx.AsyncClient, scientific_name: str):
