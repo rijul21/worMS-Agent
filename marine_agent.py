@@ -88,28 +88,26 @@ class MarineAgent(IChatBioAgent):
                 
                 await process.log(f"Found species: {species['scientificname']} (AphiaID: {aphia_id})")
 
-                # Create artifact with the WoRMS data
+                # Store raw_response like ALA does
+                raw_response = worms_data
+                total = len(worms_data.get('synonyms', [])) + len(worms_data.get('vernaculars', [])) + len(worms_data.get('distributions', []))
+                returned = 1
+
+                await process.log("Query successful, found species data.")
+                
+                # Create artifact exactly like ALA - NO content parameter
                 await process.create_artifact(
                     mimetype="application/json",
-                    description=f"WoRMS data for {species['scientificname']}",
-                    content=json.dumps(worms_data, indent=2).encode('utf-8'),
+                    description=f"Raw JSON for marine species {species['scientificname']}.",
                     uris=[f"https://www.marinespecies.org/aphia.php?p=taxdetails&id={aphia_id}"],
-                    metadata={
-                        "data_source": "WoRMS", 
-                        "species_name": species['scientificname'],
-                        "aphia_id": aphia_id
-                    }
+                    metadata={"record_count": returned, "total_matches": total}
                 )
                 
-                # Reply to user
-                synonym_count = len(worms_data.get('synonyms', []))
-                vernacular_count = len(worms_data.get('vernaculars', []))
-                distribution_count = len(worms_data.get('distributions', []))
                 
                 await context.reply(
                     f"Found {species['scientificname']} (AphiaID: {aphia_id}) in WoRMS. "
-                    f"Retrieved {synonym_count} synonyms, {vernacular_count} common names, "
-                    f"and {distribution_count} distribution records."
+                    f"Retrieved {len(worms_data.get('synonyms', []))} synonyms, {len(worms_data.get('vernaculars', []))} common names, "
+                    f"and {len(worms_data.get('distributions', []))} distribution records. I've created an artifact with the results."
                 )
 
             except InstructorRetryException as e:
