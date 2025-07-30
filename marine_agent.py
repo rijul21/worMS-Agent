@@ -2,11 +2,12 @@ import os
 import json
 import dotenv
 import instructor
-from typing import Optional, List, Dict, Any, override
+import asyncio
+from typing import Optional, override
 from instructor.exceptions import InstructorRetryException
 from openai import AsyncOpenAI
-from pydantic import BaseModel, Field, ValidationError
-import httpx
+from pydantic import BaseModel, Field
+import requests
 from urllib.parse import quote
 
 from ichatbio.agent import IChatBioAgent
@@ -36,7 +37,7 @@ class MarineAgent(IChatBioAgent):
             entrypoints=[
                 AgentEntrypoint(
                     id="get_marine_info",
-                    description="Returns detailed marine species information",
+                    description="Returns detailed marine species information from WoRMS",
                     parameters=None
                 )
             ]
@@ -48,264 +49,159 @@ class MarineAgent(IChatBioAgent):
 
     @override
     async def run(self, context: ResponseContext, request: str, entrypoint: str, params: Optional[BaseModel]):
-        print(f"DEBUG: Agent run called with request: {request[:100]}...")
-        print(f"DEBUG: Entrypoint: {entrypoint}")
-        
-        async with context.begin_process(summary="Analyzing marine species request") as process:
+        async with context.begin_process(summary="Searching WoRMS for marine species") as process:
             try:
-                print("DEBUG: Starting instructor extraction...")
-                
-                # Extract marine species information using instructor
+                # Extract species name using instructor
                 openai_client = AsyncOpenAI(
                     base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
                     api_key=os.getenv("GROQ_API_KEY")
                 )
                 instructor_client = instructor.patch(openai_client)
 
-                print("DEBUG: Calling instructor...")
-                
                 marine_query: MarineQueryModel = await instructor_client.chat.completions.create(
                     model="llama3-70b-8192",
                     response_model=MarineQueryModel,
                     messages=[
                         {
                             "role": "system",
-                            "content": """
-                            You are a marine biology expert that extracts species names from user messages.
-                            Instructions:
-                            1. Identify the scientific name of the marine species from the user's message
-                            2. If common name is given, try to identify the scientific name
-                            3. Always respond in this strict JSON format:
-
-                            ```json
-                            {
-                            "scientific_name": "Genus species"
-                            }```
-                            """
+                            "content": "Extract the scientific name of a marine species from the user's message. Return JSON format: {\"scientific_name\": \"Genus species\"}"
                         },
                         {"role": "user", "content": request}
                     ],
                     max_retries=3
                 )
 
-                print(f"DEBUG: Instructor result: {marine_query.scientific_name}")
+                await process.log(f"Identified marine species: {marine_query.scientific_name}")
 
-                await process.log(f"Identified marine species: {marine_query.scientific_name}", {
-                    "scientific_name": marine_query.scientific_name,
-                })
-
-                # Search WoRMS database
+                # Search WoRMS database using run_in_executor pattern
                 await process.log(f"Searching WoRMS database for: {marine_query.scientific_name}")
-                print(f"DEBUG: Starting WoRMS search for: {marine_query.scientific_name}")
+                
+                loop = asyncio.get_event_loop()
+                worms_data = await loop.run_in_executor(None, lambda: self.get_worms_data(marine_query.scientific_name))
+                
+                if not worms_data:
+                    await context.reply(f"No marine species found for '{marine_query.scientific_name}' in WoRMS database.")
+                    return
 
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    # Get species record
-                    print("DEBUG: Calling _get_species_by_name...")
-                    species_data = await self._get_species_by_name(client, marine_query.scientific_name)
-                    
-                    if not species_data:
-                        print("DEBUG: No species data found")
-                        await context.reply(f"No marine species found matching '{marine_query.scientific_name}' in WoRMS database.")
-                        return
+                species = worms_data['species']
+                aphia_id = species['AphiaID']
+                
+                await process.log(f"Found species: {species['scientificname']} (AphiaID: {aphia_id})")
 
-                    species = species_data[0]  # Use first result
-                    aphia_id = species.AphiaID
-                    print(f"DEBUG: Found species: {species.scientificname} (AphiaID: {aphia_id})")
-
-                    await process.log(f"Found species: {species.scientificname} (AphiaID: {aphia_id})")
-
-                    # Get additional data
-                    await process.log("Retrieving synonyms, vernacular names, and distribution data")
-                    print("DEBUG: Getting additional data...")
-                    
-                    synonyms = await self._get_synonyms(client, aphia_id)
-                    print(f"DEBUG: Got {len(synonyms or [])} synonyms")
-                    
-                    vernaculars = await self._get_vernaculars(client, aphia_id)
-                    print(f"DEBUG: Got {len(vernaculars or [])} vernaculars")
-                    
-                    distributions = await self._get_distributions(client, aphia_id)
-                    print(f"DEBUG: Got {len(distributions or [])} distributions")
-
-                    # Compile complete data
-                    print("DEBUG: Compiling data...")
-                    complete_data = {
-                        "species": species.model_dump(),
-                        "aphia_id": aphia_id,
-                        "scientific_name": species.scientificname,
-                        "search_term": marine_query.scientific_name,
-                        "synonyms": [s.model_dump() for s in synonyms] if synonyms else [],
-                        "vernacular_names": [v.model_dump() for v in vernaculars] if vernaculars else [],
-                        "distributions": [d.model_dump() for d in distributions] if distributions else []
+                # Create artifact with the WoRMS data
+                await process.create_artifact(
+                    mimetype="application/json",
+                    description=f"WoRMS data for {species['scientificname']}",
+                    content=json.dumps(worms_data, indent=2).encode('utf-8'),
+                    uris=[f"https://www.marinespecies.org/aphia.php?p=taxdetails&id={aphia_id}"],
+                    metadata={
+                        "data_source": "WoRMS", 
+                        "species_name": species['scientificname'],
+                        "aphia_id": aphia_id
                     }
-                    print("DEBUG: Data compiled successfully")
-
-                    await process.log(f"Data compilation complete. Found {len(synonyms or [])} synonyms, {len(vernaculars or [])} vernacular names, {len(distributions or [])} distribution records.")
-
-                    # Create artifact - try with smaller data first
-                    await process.log("Starting artifact creation...")
-                    print("DEBUG: Starting artifact creation...")
-                    
-                    # Create a smaller test dataset first
-                    smaller_data = {
-                        "species": {
-                            "AphiaID": species.AphiaID,
-                            "scientificname": species.scientificname,
-                            "kingdom": species.kingdom,
-                            "phylum": species.phylum,
-                            "family": species.family
-                        },
-                        "aphia_id": aphia_id,
-                        "scientific_name": species.scientificname,
-                        "search_term": marine_query.scientific_name,
-                        "counts": {
-                            "synonyms": len(synonyms or []),
-                            "vernacular_names": len(vernaculars or []),
-                            "distributions": len(distributions or [])
-                        }
-                    }
-                    
-                    content = json.dumps(smaller_data, indent=2)
-                    await process.log(f"JSON content created, size: {len(content)} characters")
-                    print(f"DEBUG: JSON content created, size: {len(content)} characters")
-                    
-                    content_bytes = content.encode('utf-8')
-                    await process.log(f"Content encoded to bytes, size: {len(content_bytes)} bytes")
-                    print(f"DEBUG: Content encoded to bytes, size: {len(content_bytes)} bytes")
-
-                    print("DEBUG: About to call create_artifact...")
-                    # Try passing raw data like the other friend
-                    await process.create_artifact(
-                        mimetype="application/json",
-                        description=f"Marine species data for {species.scientificname}",
-                        content=content.encode('utf-8'),  # Direct encoding
-                        uris=[f"https://www.marinespecies.org/aphia.php?p=taxdetails&id={aphia_id}"],
-                        metadata={"record_count": len(synonyms or []), "total_matches": len(vernaculars or [])}
-                    )
-                    print("DEBUG: create_artifact call completed!")
-                    
-                    await process.log("Artifact creation completed successfully!")
-                    print("DEBUG: Artifact creation completed!")
-
-                    # Create user response
-                    response_parts = [
-                        f"Found {species.scientificname} (AphiaID: {aphia_id}) in WoRMS database.",
-                        f"Classification: {species.kingdom} > {species.phylum} > {getattr(species, 'class_', 'N/A')} > {species.family}."
-                    ]
-                    
-                    if synonyms:
-                        response_parts.append(f"Found {len(synonyms)} synonyms.")
-                    if vernaculars:
-                        response_parts.append(f"Found {len(vernaculars)} vernacular names.")
-                    if distributions:
-                        response_parts.append(f"Found {len(distributions)} distribution records.")
-                    
-                    response_parts.append("Complete marine species data has been compiled in the artifact.")
-                    
-                    print("DEBUG: Sending reply...")
-                    await context.reply(" ".join(response_parts))
-                    print("DEBUG: Reply sent successfully!")
+                )
+                
+                # Reply to user
+                synonym_count = len(worms_data.get('synonyms', []))
+                vernacular_count = len(worms_data.get('vernaculars', []))
+                distribution_count = len(worms_data.get('distributions', []))
+                
+                await context.reply(
+                    f"Found {species['scientificname']} (AphiaID: {aphia_id}) in WoRMS. "
+                    f"Retrieved {synonym_count} synonyms, {vernacular_count} common names, "
+                    f"and {distribution_count} distribution records."
+                )
 
             except InstructorRetryException as e:
-                print(f"DEBUG: InstructorRetryException: {e}")
-                await context.reply("Sorry, I couldn't extract marine species information from your request.", data={"error": str(e)})
+                await context.reply("Sorry, I couldn't extract marine species information from your request.")
             except Exception as e:
-                print(f"DEBUG: General Exception: {e}")
-                print(f"DEBUG: Exception type: {type(e)}")
-                import traceback
-                print(f"DEBUG: Traceback: {traceback.format_exc()}")
-                await context.reply("An error occurred while retrieving marine species information", data={"error": str(e)})
+                await context.reply(f"An error occurred while retrieving marine species information: {str(e)}")
 
-    async def _get_species_by_name(self, client: httpx.AsyncClient, scientific_name: str):
-        """Get species data from WoRMS"""
+    def get_worms_data(self, scientific_name: str) -> dict:
+        """Get complete WoRMS data for a species - synchronous for run_in_executor"""
+        try:
+            # Get main species record
+            species_data = self.get_species_record(scientific_name)
+            if not species_data:
+                return None
+            
+            aphia_id = species_data['AphiaID']
+            
+            # Get additional data
+            synonyms = self.get_synonyms(aphia_id)
+            vernaculars = self.get_vernaculars(aphia_id) 
+            distributions = self.get_distributions(aphia_id)
+            
+            return {
+                'species': species_data,
+                'synonyms': synonyms or [],
+                'vernaculars': vernaculars or [],
+                'distributions': distributions or [],
+                'search_term': scientific_name
+            }
+            
+        except Exception as e:
+            print(f"Error getting WoRMS data: {e}")
+            return None
+
+    def get_species_record(self, scientific_name: str) -> dict:
+        """Get main species record from WoRMS"""
         try:
             encoded_name = quote(scientific_name)
             url = f"https://www.marinespecies.org/rest/AphiaRecordsByName/{encoded_name}?like=false&marine_only=true"
             
-            response = await client.get(url)
+            response = requests.get(url, timeout=30)
             if response.status_code != 200:
                 return None
             
             data = response.json()
             if not data:
                 return None
-            
-            # Handle single record or list
+                
+            # Return first record (WoRMS API can return list or single record)
             if isinstance(data, list):
-                records = []
-                for record in data:
-                    # Fix boolean fields
-                    for bool_field in ['isMarine', 'isBrackish', 'isFreshwater', 'isTerrestrial', 'isExtinct']:
-                        if bool_field in record and record[bool_field] is not None:
-                            record[bool_field] = bool(record[bool_field])
-                    records.append(WoRMSRecord(**record))
-                return records
+                return data[0]
             else:
-                # Single record
-                for bool_field in ['isMarine', 'isBrackish', 'isFreshwater', 'isTerrestrial', 'isExtinct']:
-                    if bool_field in data and data[bool_field] is not None:
-                        data[bool_field] = bool(data[bool_field])
-                return [WoRMSRecord(**data)]
+                return data
                 
         except Exception as e:
-            print(f"Error getting species: {e}")
+            print(f"Error getting species record: {e}")
             return None
 
-    async def _get_synonyms(self, client: httpx.AsyncClient, aphia_id: int):
-        """Get synonyms from WoRMS"""
+    def get_synonyms(self, aphia_id: int) -> list:
+        """Get synonyms for a species"""
         try:
             url = f"https://www.marinespecies.org/rest/AphiaSynonymsByAphiaID/{aphia_id}"
-            response = await client.get(url)
-            if response.status_code != 200:
-                return None
-            
-            data = response.json()
-            if not data:
-                return None
-            
-            if isinstance(data, list):
-                return [WoRMSSynonym(**record) for record in data]
-            else:
-                return [WoRMSSynonym(**data)]
+            response = requests.get(url, timeout=30)
+            if response.status_code == 200:
+                data = response.json()
+                return data if isinstance(data, list) else [data] if data else []
+            return []
         except Exception:
-            return None
+            return []
 
-    async def _get_vernaculars(self, client: httpx.AsyncClient, aphia_id: int):
-        """Get vernacular names from WoRMS"""
+    def get_vernaculars(self, aphia_id: int) -> list:
+        """Get vernacular/common names for a species"""
         try:
             url = f"https://www.marinespecies.org/rest/AphiaVernacularsByAphiaID/{aphia_id}"
-            response = await client.get(url)
-            if response.status_code != 200:
-                return None
-            
-            data = response.json()
-            if not data:
-                return None
-            
-            if isinstance(data, list):
-                return [WoRMSVernacular(**record) for record in data]
-            else:
-                return [WoRMSVernacular(**data)]
+            response = requests.get(url, timeout=30)
+            if response.status_code == 200:
+                data = response.json()
+                return data if isinstance(data, list) else [data] if data else []
+            return []
         except Exception:
-            return None
+            return []
 
-    async def _get_distributions(self, client: httpx.AsyncClient, aphia_id: int):
-        """Get distribution data from WoRMS"""
+    def get_distributions(self, aphia_id: int) -> list:
+        """Get distribution data for a species"""
         try:
             url = f"https://www.marinespecies.org/rest/AphiaDistributionsByAphiaID/{aphia_id}"
-            response = await client.get(url)
-            if response.status_code != 200:
-                return None
-            
-            data = response.json()
-            if not data:
-                return None
-            
-            if isinstance(data, list):
-                return [WoRMSDistribution(**record) for record in data]
-            else:
-                return [WoRMSDistribution(**data)]
+            response = requests.get(url, timeout=30)
+            if response.status_code == 200:
+                data = response.json()
+                return data if isinstance(data, list) else [data] if data else []
+            return []
         except Exception:
-            return None
+            return []
 
 print("INIT: WoRMS Marine Species Agent loaded successfully")
