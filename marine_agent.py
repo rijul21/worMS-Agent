@@ -131,17 +131,17 @@ class MarineAgent(IChatBioAgent):
             icon=None,
             entrypoints=[
                 AgentEntrypoint(
-                    id="synonyms",
+                    id="get_synonyms",
                     description="Get synonyms for marine species",
                     parameters=MarineParameters
                 ),
                 AgentEntrypoint(
-                    id="vernacular",
+                    id="get_vernacular",
                     description="Get vernacular/common names for marine species",
                     parameters=MarineParameters
                 ),
                 AgentEntrypoint(
-                    id="distribution",
+                    id="get_distribution",
                     description="Get distribution data for marine species",
                     parameters=MarineParameters
                 )
@@ -150,8 +150,13 @@ class MarineAgent(IChatBioAgent):
 
     @override
     async def run(self, context: ResponseContext, request: str, entrypoint: str, params: BaseModel):
-        print(f"DEBUG: Entrypoint '{entrypoint}' called with request: {request}")
-        print(f"DEBUG: Params type: {type(params)}, value: {params}")
+        print(f"=== RECEIVED REQUEST ===")
+        print(f"entrypoint: '{entrypoint}'")
+        print(f"entrypoint repr: {repr(entrypoint)}")
+        print(f"entrypoint bytes: {entrypoint.encode()}")
+        print(f"request: '{request}'")
+        print(f"params: {params}")
+        print(f"========================")
         
         # Convert params to MarineParameters
         if isinstance(params, dict):
@@ -162,11 +167,11 @@ class MarineAgent(IChatBioAgent):
             marine_params = params
         
         # Route to methods
-        if entrypoint == "synonyms":
+        if entrypoint == "get_synonyms":
             await self.get_synonyms(context, marine_params, request)
-        elif entrypoint == "vernacular":
+        elif entrypoint == "get_vernacular":
             await self.get_vernacular(context, marine_params, request)
-        elif entrypoint == "distribution":
+        elif entrypoint == "get_distribution":
             await self.get_distribution(context, marine_params, request)
         else:
             print(f"ERROR: Unknown entrypoint: {entrypoint}")
