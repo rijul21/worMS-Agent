@@ -276,7 +276,7 @@ class MarineAgent(IChatBioAgent):
                 return None
             
             aphia_id = species_data['AphiaID']
-            synonyms = self.get_synonyms(aphia_id)
+            synonyms = self.get_species_synonyms(aphia_id)
             
             return {
                 'aphia_id': aphia_id,
@@ -294,7 +294,7 @@ class MarineAgent(IChatBioAgent):
                 return None
             
             aphia_id = species_data['AphiaID']
-            distributions = self.get_distributions(aphia_id)
+            distributions = self.get_species_distributions(aphia_id)
             
             return {
                 'aphia_id': aphia_id,
@@ -312,7 +312,7 @@ class MarineAgent(IChatBioAgent):
                 return None
             
             aphia_id = species_data['AphiaID']
-            vernaculars = self.get_vernaculars(aphia_id)
+            vernaculars = self.get_species_vernaculars(aphia_id)
             
             return {
                 'aphia_id': aphia_id,
@@ -321,6 +321,8 @@ class MarineAgent(IChatBioAgent):
             }
         except Exception:
             return None
+
+    def get_worms_data(self, scientific_name: str) -> dict:
         """Get complete WoRMS data for a species - synchronous for run_in_executor"""
         try:
             # Get main species record
@@ -331,9 +333,9 @@ class MarineAgent(IChatBioAgent):
             aphia_id = species_data['AphiaID']
             
             # Get additional data
-            synonyms = self.get_synonyms(aphia_id)
-            vernaculars = self.get_vernaculars(aphia_id) 
-            distributions = self.get_distributions(aphia_id)
+            synonyms = self.get_species_synonyms(aphia_id)
+            vernaculars = self.get_species_vernaculars(aphia_id) 
+            distributions = self.get_species_distributions(aphia_id)
             
             return {
                 'species': species_data,
@@ -371,7 +373,7 @@ class MarineAgent(IChatBioAgent):
             print(f"Error getting species record: {e}")
             return None
 
-    def get_synonyms(self, aphia_id: int) -> list:
+    def get_species_synonyms(self, aphia_id: int) -> list:
         """Get synonyms for a species"""
         try:
             url = f"https://www.marinespecies.org/rest/AphiaSynonymsByAphiaID/{aphia_id}"
@@ -383,7 +385,7 @@ class MarineAgent(IChatBioAgent):
         except Exception:
             return []
 
-    def get_vernaculars(self, aphia_id: int) -> list:
+    def get_species_vernaculars(self, aphia_id: int) -> list:
         """Get vernacular/common names for a species"""
         try:
             url = f"https://www.marinespecies.org/rest/AphiaVernacularsByAphiaID/{aphia_id}"
@@ -395,7 +397,7 @@ class MarineAgent(IChatBioAgent):
         except Exception:
             return []
 
-    def get_distributions(self, aphia_id: int) -> list:
+    def get_species_distributions(self, aphia_id: int) -> list:
         """Get distribution data for a species"""
         try:
             url = f"https://www.marinespecies.org/rest/AphiaDistributionsByAphiaID/{aphia_id}"
