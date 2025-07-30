@@ -126,254 +126,120 @@ class MarineAgent(IChatBioAgent):
     def get_agent_card(self) -> AgentCard:
         return AgentCard(
             name="Marine Species Data Agent",
-            description="Retrieves marine species synonyms, vernacular names, and distribution from WoRMS",
+            description="Retrieves marine species information from WoRMS database",
             url="http://18.222.189.40:9999",
             icon=None,
             entrypoints=[
                 AgentEntrypoint(
-                    id="get_synonyms",
-                    description="Get synonyms for marine species",
-                    parameters=MarineParameters
-                ),
-                AgentEntrypoint(
-                    id="get_vernacular",
-                    description="Get vernacular/common names for marine species",
-                    parameters=MarineParameters
-                ),
-                AgentEntrypoint(
-                    id="get_distribution",
-                    description="Get distribution data for marine species",
+                    id="get_marine_data",
+                    description="Get marine species data from WoRMS",
                     parameters=MarineParameters
                 )
             ]
         )
 
     @override
-    async def run(self, context: ResponseContext, request: str, entrypoint: str, params: BaseModel):
-        print(f"=== RECEIVED REQUEST ===")
-        print(f"entrypoint: '{entrypoint}'")
-        print(f"entrypoint repr: {repr(entrypoint)}")
-        print(f"entrypoint bytes: {entrypoint.encode()}")
-        print(f"request: '{request}'")
-        print(f"params: {params}")
-        print(f"========================")
+    async def run(self, context: ResponseContext, request: str, entrypoint: str, params: MarineParameters):
+        print(f"DEBUG: Entrypoint '{entrypoint}' called with request: {request}")
+        print(f"DEBUG: Params: {params}")
         
-        # Convert params to MarineParameters
-        if isinstance(params, dict):
-            marine_params = MarineParameters(**params)
-        elif hasattr(params, 'model_dump'):
-            marine_params = MarineParameters(**params.model_dump())
-        else:
-            marine_params = params
-        
-        # Route to methods
-        if entrypoint == "get_synonyms":
-            await self.get_synonyms(context, marine_params, request)
-        elif entrypoint == "get_vernacular":
-            await self.get_vernacular(context, marine_params, request)
-        elif entrypoint == "get_distribution":
-            await self.get_distribution(context, marine_params, request)
+        if entrypoint == "get_marine_data":
+            await self.get_marine_data(context, params, request)
         else:
             print(f"ERROR: Unknown entrypoint: {entrypoint}")
             await context.reply(f"Unknown entrypoint: {entrypoint}")
 
-    async def get_synonyms(self, context: ResponseContext, params: MarineParameters, request: str):
-        """Get synonyms for marine species"""
-        print(f"DEBUG: get_synonyms called")
+    async def get_marine_data(self, context: ResponseContext, params: MarineParameters, request: str):
+        """Main entrypoint - gets marine species data based on what user wants"""
+        print(f"DEBUG: get_marine_data called")
         
+        # Extract scientific name from request
         scientific_name = await self.extract_scientific_name(request, params)
         if not scientific_name:
-            await context.reply("Could not identify a marine species name.")
+            await context.reply("Could not identify a marine species name from your request.")
             return
         
-        async with context.begin_process(f"Getting synonyms for {scientific_name}") as process:
+        print(f"DEBUG: Searching for species: {scientific_name}")
+        
+        async with context.begin_process(f"Getting marine data for {scientific_name}") as process:
             try:
                 async with httpx.AsyncClient(timeout=30.0) as client:
-                    # First get species record
+                    # Get species data from WoRMS
                     records = await self.worms_client.get_species_by_name(client, scientific_name)
+                    
                     if not records:
-                        await context.reply(f"No marine species found for '{scientific_name}'")
+                        await context.reply(f"No marine species found for '{scientific_name}' in WoRMS database.")
                         return
                     
+                    # Use first record
                     species = records[0]
                     aphia_id = species.AphiaID
-                    print(f"DEBUG: Found species {species.scientificname}, getting synonyms")
+                    print(f"DEBUG: Found species {species.scientificname} with AphiaID {aphia_id}")
                     
-                    # Get synonyms
-                    synonyms = await self.worms_client.get_synonyms_by_aphia_id(client, aphia_id)
-                    if not synonyms:
-                        await context.reply(f"No synonyms found for {species.scientificname}")
-                        return
+                    # Determine what data to get based on request or params
+                    get_synonyms = "synonym" in request.lower() or params.include_synonyms
+                    get_vernacular = "vernacular" in request.lower() or "common" in request.lower() or params.include_vernaculars
+                    get_distribution = "distribution" in request.lower() or "location" in request.lower() or params.include_distribution
                     
-                    # Create artifact with synonyms data
-                    synonyms_data = {
-                        "species_name": species.scientificname,
+                    # Get additional data if requested
+                    synonyms = None
+                    vernaculars = None
+                    distributions = None
+                    
+                    if get_synonyms:
+                        synonyms = await self.worms_client.get_synonyms_by_aphia_id(client, aphia_id)
+                    if get_vernacular:
+                        vernaculars = await self.worms_client.get_vernaculars_by_aphia_id(client, aphia_id)
+                    if get_distribution:
+                        distributions = await self.worms_client.get_distributions_by_aphia_id(client, aphia_id)
+                    
+                    # Create data structure
+                    species_data = {
+                        "species": species.model_dump(),
                         "aphia_id": aphia_id,
-                        "synonyms": [synonym.model_dump() for synonym in synonyms],
-                        "count": len(synonyms)
+                        "scientific_name": species.scientificname,
+                        "search_term": scientific_name,
+                        "synonyms": [s.model_dump() for s in synonyms] if synonyms else None,
+                        "vernacular_names": [v.model_dump() for v in vernaculars] if vernaculars else None,
+                        "distributions": [d.model_dump() for d in distributions] if distributions else None
                     }
                     
-                    content = json.dumps(synonyms_data, indent=2)
+                    # Create artifact
+                    content = json.dumps(species_data, indent=2)
                     content_bytes = content.encode('utf-8')
                     
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Synonyms for {species.scientificname}",
+                        description=f"Marine species data for {species.scientificname}",
                         content=content_bytes,
-                        uris=[f"https://www.marinespecies.org/rest/AphiaSynonymsByAphiaID/{aphia_id}"],
+                        uris=[f"https://www.marinespecies.org/aphia.php?p=taxdetails&id={aphia_id}"],
                         metadata={
                             "data_source": "WoRMS",
-                            "data_type": "synonyms",
                             "aphia_id": aphia_id,
-                            "count": len(synonyms)
+                            "scientific_name": species.scientificname,
+                            "retrieved_at": datetime.now(timezone.utc).isoformat()
                         }
                     )
                     
                     # Send response
-                    synonym_names = [s.scientificname for s in synonyms[:5]]
-                    response = f"Found {len(synonyms)} synonyms for {species.scientificname}: {', '.join(synonym_names)}"
-                    if len(synonyms) > 5:
-                        response += f" and {len(synonyms) - 5} more. Complete data in artifact."
+                    response = f"Found {species.scientificname} (AphiaID: {aphia_id}) in WoRMS database. "
+                    response += f"Classification: {species.kingdom} > {species.phylum} > {getattr(species, 'class_', 'N/A')} > {species.family}. "
+                    
+                    if synonyms:
+                        response += f"Found {len(synonyms)} synonyms. "
+                    if vernaculars:
+                        response += f"Found {len(vernaculars)} common names. "
+                    if distributions:
+                        response += f"Found {len(distributions)} distribution records. "
+                    
+                    response += "Complete data has been saved to artifact."
                     
                     await context.reply(response)
-                    print(f"SUCCESS: Sent {len(synonyms)} synonyms")
+                    print(f"SUCCESS: Completed request for {species.scientificname}")
                     
             except Exception as e:
-                print(f"ERROR: Failed to get synonyms: {str(e)}")
-                await context.reply(f"Error getting synonyms: {str(e)}")
-
-    async def get_vernacular(self, context: ResponseContext, params: MarineParameters, request: str):
-        """Get vernacular names for marine species"""
-        print(f"DEBUG: get_vernacular called")
-        
-        scientific_name = await self.extract_scientific_name(request, params)
-        if not scientific_name:
-            await context.reply("Could not identify a marine species name.")
-            return
-        
-        async with context.begin_process(f"Getting vernacular names for {scientific_name}") as process:
-            try:
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    # First get species record
-                    records = await self.worms_client.get_species_by_name(client, scientific_name)
-                    if not records:
-                        await context.reply(f"No marine species found for '{scientific_name}'")
-                        return
-                    
-                    species = records[0]
-                    aphia_id = species.AphiaID
-                    print(f"DEBUG: Found species {species.scientificname}, getting vernacular names")
-                    
-                    # Get vernacular names
-                    vernaculars = await self.worms_client.get_vernaculars_by_aphia_id(client, aphia_id)
-                    if not vernaculars:
-                        await context.reply(f"No vernacular names found for {species.scientificname}")
-                        return
-                    
-                    # Create artifact with vernacular data
-                    vernacular_data = {
-                        "species_name": species.scientificname,
-                        "aphia_id": aphia_id,
-                        "vernacular_names": [vernacular.model_dump() for vernacular in vernaculars],
-                        "count": len(vernaculars)
-                    }
-                    
-                    content = json.dumps(vernacular_data, indent=2)
-                    content_bytes = content.encode('utf-8')
-                    
-                    await process.create_artifact(
-                        mimetype="application/json",
-                        description=f"Vernacular names for {species.scientificname}",
-                        content=content_bytes,
-                        uris=[f"https://www.marinespecies.org/rest/AphiaVernacularsByAphiaID/{aphia_id}"],
-                        metadata={
-                            "data_source": "WoRMS",
-                            "data_type": "vernacular_names",
-                            "aphia_id": aphia_id,
-                            "count": len(vernaculars)
-                        }
-                    )
-                    
-                    # Send response
-                    names = [v.vernacular for v in vernaculars[:5]]
-                    response = f"Found {len(vernaculars)} vernacular names for {species.scientificname}: {', '.join(names)}"
-                    if len(vernaculars) > 5:
-                        response += f" and {len(vernaculars) - 5} more. Complete data in artifact."
-                    
-                    await context.reply(response)
-                    print(f"SUCCESS: Sent {len(vernaculars)} vernacular names")
-                    
-            except Exception as e:
-                print(f"ERROR: Failed to get vernacular names: {str(e)}")
-                await context.reply(f"Error getting vernacular names: {str(e)}")
-
-    async def get_distribution(self, context: ResponseContext, params: MarineParameters, request: str):
-        """Get distribution data for marine species"""
-        print(f"DEBUG: get_distribution called")
-        
-        scientific_name = await self.extract_scientific_name(request, params)
-        if not scientific_name:
-            await context.reply("Could not identify a marine species name.")
-            return
-        
-        async with context.begin_process(f"Getting distribution for {scientific_name}") as process:
-            try:
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    # First get species record
-                    records = await self.worms_client.get_species_by_name(client, scientific_name)
-                    if not records:
-                        await context.reply(f"No marine species found for '{scientific_name}'")
-                        return
-                    
-                    species = records[0]
-                    aphia_id = species.AphiaID
-                    print(f"DEBUG: Found species {species.scientificname}, getting distribution")
-                    
-                    # Get distribution data
-                    distributions = await self.worms_client.get_distributions_by_aphia_id(client, aphia_id)
-                    if not distributions:
-                        await context.reply(f"No distribution data found for {species.scientificname}")
-                        return
-                    
-                    # Create artifact with distribution data
-                    distribution_data = {
-                        "species_name": species.scientificname,
-                        "aphia_id": aphia_id,
-                        "distributions": [dist.model_dump() for dist in distributions],
-                        "count": len(distributions)
-                    }
-                    
-                    content = json.dumps(distribution_data, indent=2)
-                    content_bytes = content.encode('utf-8')
-                    
-                    await process.create_artifact(
-                        mimetype="application/json",
-                        description=f"Distribution data for {species.scientificname}",
-                        content=content_bytes,
-                        uris=[f"https://www.marinespecies.org/rest/AphiaDistributionsByAphiaID/{aphia_id}"],
-                        metadata={
-                            "data_source": "WoRMS",
-                            "data_type": "distribution",
-                            "aphia_id": aphia_id,
-                            "count": len(distributions)
-                        }
-                    )
-                    
-                    # Send response
-                    locations = [d.locality for d in distributions if d.locality][:5]
-                    response = f"Found {len(distributions)} distribution records for {species.scientificname}"
-                    if locations:
-                        response += f": {', '.join(locations)}"
-                        if len(distributions) > 5:
-                            response += f" and {len(distributions) - 5} more locations"
-                    response += ". Complete data in artifact."
-                    
-                    await context.reply(response)
-                    print(f"SUCCESS: Sent {len(distributions)} distribution records")
-                    
-            except Exception as e:
-                print(f"ERROR: Failed to get distribution: {str(e)}")
-                await context.reply(f"Error getting distribution: {str(e)}")
+                print(f"ERROR: Failed to get marine data: {str(e)}")
+                await context.reply(f"Error retrieving marine data: {str(e)}")
 
     async def extract_scientific_name(self, request: str, params: MarineParameters) -> Optional[str]:
         """Extract scientific name using instructor"""
@@ -430,4 +296,4 @@ class MarineAgent(IChatBioAgent):
             print(f"WARN: Instructor failed, using request directly: {str(e)}")
             return request.strip() if request else None
 
-print("INIT: Marine agent with synonyms, vernacular, and distribution entrypoints loaded")
+print("INIT: Marine agent with single get_marine_data entrypoint loaded")
