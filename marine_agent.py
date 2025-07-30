@@ -142,11 +142,30 @@ class MarineAgent(IChatBioAgent):
 
                     await process.log(f"Data compilation complete. Found {len(synonyms or [])} synonyms, {len(vernaculars or [])} vernacular names, {len(distributions or [])} distribution records.")
 
-                    # Create artifact
+                    # Create artifact - try with smaller data first
                     await process.log("Starting artifact creation...")
                     print("DEBUG: Starting artifact creation...")
                     
-                    content = json.dumps(complete_data, indent=2)
+                    # Create a smaller test dataset first
+                    smaller_data = {
+                        "species": {
+                            "AphiaID": species.AphiaID,
+                            "scientificname": species.scientificname,
+                            "kingdom": species.kingdom,
+                            "phylum": species.phylum,
+                            "family": species.family
+                        },
+                        "aphia_id": aphia_id,
+                        "scientific_name": species.scientificname,
+                        "search_term": marine_query.scientific_name,
+                        "counts": {
+                            "synonyms": len(synonyms or []),
+                            "vernacular_names": len(vernaculars or []),
+                            "distributions": len(distributions or [])
+                        }
+                    }
+                    
+                    content = json.dumps(smaller_data, indent=2)
                     await process.log(f"JSON content created, size: {len(content)} characters")
                     print(f"DEBUG: JSON content created, size: {len(content)} characters")
                     
@@ -154,21 +173,19 @@ class MarineAgent(IChatBioAgent):
                     await process.log(f"Content encoded to bytes, size: {len(content_bytes)} bytes")
                     print(f"DEBUG: Content encoded to bytes, size: {len(content_bytes)} bytes")
 
+                    print("DEBUG: About to call create_artifact...")
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Complete marine species data for {species.scientificname}",
+                        description=f"Marine species summary for {species.scientificname}",
                         content=content_bytes,
                         uris=[f"https://www.marinespecies.org/aphia.php?p=taxdetails&id={aphia_id}"],
                         metadata={
                             "data_source": "WoRMS",
                             "aphia_id": aphia_id,
-                            "scientific_name": species.scientificname,
-                            "search_term": marine_query.scientific_name,
-                            "synonym_count": len(synonyms or []),
-                            "vernacular_count": len(vernaculars or []),
-                            "distribution_count": len(distributions or [])
+                            "scientific_name": species.scientificname
                         }
                     )
+                    print("DEBUG: create_artifact call completed!")
                     
                     await process.log("Artifact creation completed successfully!")
                     print("DEBUG: Artifact creation completed!")
