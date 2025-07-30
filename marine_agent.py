@@ -174,16 +174,13 @@ class MarineAgent(IChatBioAgent):
                     print(f"DEBUG: Content encoded to bytes, size: {len(content_bytes)} bytes")
 
                     print("DEBUG: About to call create_artifact...")
+                    # Try passing raw data like the other friend
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Marine species summary for {species.scientificname}",
-                        content=content_bytes,
+                        description=f"Marine species data for {species.scientificname}",
+                        content=content.encode('utf-8'),  # Direct encoding
                         uris=[f"https://www.marinespecies.org/aphia.php?p=taxdetails&id={aphia_id}"],
-                        metadata={
-                            "data_source": "WoRMS",
-                            "aphia_id": aphia_id,
-                            "scientific_name": species.scientificname
-                        }
+                        metadata={"record_count": len(synonyms or []), "total_matches": len(vernaculars or [])}
                     )
                     print("DEBUG: create_artifact call completed!")
                     
