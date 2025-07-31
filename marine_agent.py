@@ -18,7 +18,11 @@ from worms_models import (
     WoRMSRecord,
     WoRMSSynonym,
     WoRMSDistribution,
-    WoRMSVernacular
+    WoRMSVernacular,
+    SynonymSearchParams,
+    DistributionSearchParams,
+    VernacularSearchParams,
+    MarineInfoParams
 )
 
 dotenv.load_dotenv()
@@ -37,23 +41,23 @@ class MarineAgent(IChatBioAgent):
             entrypoints=[
                 AgentEntrypoint(
                     id="get_marine_info",
-                    description="Returns detailed marine species information from WoRMS",
-                    parameters=None
+                    description="Get complete marine species information from WoRMS including taxonomy, synonyms, distribution and vernacular names",
+                    parameters=MarineInfoParams
                 ),
                 AgentEntrypoint(
                     id="get_synonyms",
-                    description="Get synonyms for marine species",
-                    parameters=None
+                    description="Get synonyms and alternative scientific names for a marine species from WoRMS",
+                    parameters=SynonymSearchParams
                 ),
                 AgentEntrypoint(
                     id="get_distribution",
-                    description="Get distribution data for marine species",
-                    parameters=None
+                    description="Get geographic distribution and occurrence data for a marine species from WoRMS",
+                    parameters=DistributionSearchParams
                 ),
                 AgentEntrypoint(
-                    id="get_vernacular",
-                    description="Get vernacular/common names for marine species",
-                    parameters=None
+                    id="get_vernacular_names",
+                    description="Get vernacular names and common names in different languages for a marine species from WoRMS",
+                    parameters=VernacularSearchParams
                 )
             ]
         )
@@ -70,19 +74,24 @@ class MarineAgent(IChatBioAgent):
             await self.get_synonyms(context, request)
         elif entrypoint == "get_distribution":
             await self.get_distribution(context, request)
-        elif entrypoint == "get_vernacular":
+        elif entrypoint == "get_vernacular_names":
             await self.get_vernacular(context, request)
         else:
             await context.reply(f"Unknown entrypoint: {entrypoint}")
 
-    async def get_synonyms(self, context: ResponseContext, request: str):
+    async def get_synonyms(self, context: ResponseContext, request: str, params: Optional[SynonymSearchParams]):
         """Get synonyms for a marine species"""
         async with context.begin_process("Getting synonyms from WoRMS") as process:
             try:
-                scientific_name = await self.extract_species_name(request, process)
-                if not scientific_name:
-                    await context.reply("Could not identify a marine species name from your request.")
-                    return
+                # Get species name from params or extract from request
+                if params and params.species_name:
+                    scientific_name = params.species_name
+                    await process.log(f"Using species name from params: {scientific_name}")
+                else:
+                    scientific_name = await self.extract_species_name(request, process)
+                    if not scientific_name:
+                        await context.reply("Could not identify a marine species name from your request.")
+                        return
 
                 await process.log(f"Getting synonyms for: {scientific_name}")
                 
@@ -117,14 +126,19 @@ class MarineAgent(IChatBioAgent):
             except Exception as e:
                 await context.reply(f"Error getting synonyms: {str(e)}")
 
-    async def get_distribution(self, context: ResponseContext, request: str):
+    async def get_distribution(self, context: ResponseContext, request: str, params: Optional[DistributionSearchParams]):
         """Get distribution for a marine species"""
         async with context.begin_process("Getting distribution from WoRMS") as process:
             try:
-                scientific_name = await self.extract_species_name(request, process)
-                if not scientific_name:
-                    await context.reply("Could not identify a marine species name from your request.")
-                    return
+                # Get species name from params or extract from request
+                if params and params.species_name:
+                    scientific_name = params.species_name
+                    await process.log(f"Using species name from params: {scientific_name}")
+                else:
+                    scientific_name = await self.extract_species_name(request, process)
+                    if not scientific_name:
+                        await context.reply("Could not identify a marine species name from your request.")
+                        return
 
                 await process.log(f"Getting distribution for: {scientific_name}")
                 
@@ -166,14 +180,19 @@ class MarineAgent(IChatBioAgent):
             except Exception as e:
                 await context.reply(f"Error getting distribution: {str(e)}")
 
-    async def get_vernacular(self, context: ResponseContext, request: str):
+    async def get_vernacular(self, context: ResponseContext, request: str, params: Optional[VernacularSearchParams]):
         """Get vernacular names for a marine species"""
         async with context.begin_process("Getting vernacular names from WoRMS") as process:
             try:
-                scientific_name = await self.extract_species_name(request, process)
-                if not scientific_name:
-                    await context.reply("Could not identify a marine species name from your request.")
-                    return
+                # Get species name from params or extract from request
+                if params and params.species_name:
+                    scientific_name = params.species_name
+                    await process.log(f"Using species name from params: {scientific_name}")
+                else:
+                    scientific_name = await self.extract_species_name(request, process)
+                    if not scientific_name:
+                        await context.reply("Could not identify a marine species name from your request.")
+                        return
 
                 await process.log(f"Getting vernacular names for: {scientific_name}")
                 
@@ -274,11 +293,15 @@ class MarineAgent(IChatBioAgent):
     async def get_marine_info(self, context: ResponseContext, request: str):
         async with context.begin_process(summary="Searching WoRMS for marine species") as process:
             try:
-                # Extract species name with fallback
-                scientific_name = await self.extract_species_name(request, process)
-                if not scientific_name:
-                    await context.reply("Could not identify a marine species name from your request.")
-                    return
+                # Get species name from params or extract from request
+                if params and params.species_name:
+                    scientific_name = params.species_name
+                    await process.log(f"Using species name from params: {scientific_name}")
+                else:
+                    scientific_name = await self.extract_species_name(request, process)
+                    if not scientific_name:
+                        await context.reply("Could not identify a marine species name from your request.")
+                        return
 
                 await process.log(f"Searching WoRMS database for: {scientific_name}")
                 

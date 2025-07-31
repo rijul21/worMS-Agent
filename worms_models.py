@@ -102,6 +102,34 @@ class MarineParameters(BaseModel):
     include_distribution: bool = False
     include_sources: bool = False
 
+class SynonymSearchParams(BaseModel):
+    """Parameters for searching marine species synonyms"""
+    species_name: str = Field(..., 
+        description="Scientific name of the marine species to find synonyms for",
+        examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
+    )
+
+class DistributionSearchParams(BaseModel):
+    """Parameters for searching marine species distribution data"""
+    species_name: str = Field(...,
+        description="Scientific name of the marine species to find distribution for", 
+        examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
+    )
+
+class VernacularSearchParams(BaseModel):
+    """Parameters for searching marine species vernacular/common names"""
+    species_name: str = Field(...,
+        description="Scientific name of the marine species to find common names for",
+        examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
+    )
+
+class MarineInfoParams(BaseModel):
+    """Parameters for getting complete marine species information"""
+    species_name: str = Field(...,
+        description="Scientific name of the marine species to get complete information for",
+        examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
+    )
+
 class CompleteMarineSpeciesData(BaseModel):
     """Complete marine species data structure for artifacts"""
     species: WoRMSRecord
