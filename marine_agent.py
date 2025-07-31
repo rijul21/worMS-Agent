@@ -44,6 +44,16 @@ class MarineAgent(IChatBioAgent):
                     id="get_synonyms",
                     description="Get synonyms for marine species",
                     parameters=None
+                ),
+                AgentEntrypoint(
+                    id="get_distribution",
+                    description="Get distribution data for marine species",
+                    parameters=None
+                ),
+                AgentEntrypoint(
+                    id="get_vernacular",
+                    description="Get vernacular/common names for marine species",
+                    parameters=None
                 )
             ]
         )
@@ -58,6 +68,10 @@ class MarineAgent(IChatBioAgent):
             await self.get_marine_info(context, request)
         elif entrypoint == "get_synonyms":
             await self.get_synonyms(context, request)
+        elif entrypoint == "get_distribution":
+            await self.get_distribution(context, request)
+        elif entrypoint == "get_vernacular":
+            await self.get_vernacular(context, request)
         else:
             await context.reply(f"Unknown entrypoint: {entrypoint}")
 
@@ -82,7 +96,6 @@ class MarineAgent(IChatBioAgent):
                 await process.create_artifact(
                     mimetype="application/json",
                     description=f"Synonyms for {scientific_name}",
-                    content=json.dumps(synonyms_data, indent=2).encode('utf-8'),
                     uris=[f"https://www.marinespecies.org/rest/AphiaSynonymsByAphiaID/{synonyms_data['aphia_id']}"],
                     metadata={"synonym_count": len(synonyms_data['synonyms'])}
                 )
@@ -104,7 +117,143 @@ class MarineAgent(IChatBioAgent):
             except Exception as e:
                 await context.reply(f"Error getting synonyms: {str(e)}")
 
-    def get_synonyms_data(self, scientific_name: str) -> dict:
+    async def get_distribution(self, context: ResponseContext, request: str):
+        """Get distribution for a marine species"""
+        async with context.begin_process("Getting distribution from WoRMS") as process:
+            try:
+                scientific_name = await self.extract_species_name(request, process)
+                if not scientific_name:
+                    await context.reply("Could not identify a marine species name from your request.")
+                    return
+
+                await process.log(f"Getting distribution for: {scientific_name}")
+                
+                loop = asyncio.get_event_loop()
+                distribution_data = await loop.run_in_executor(None, lambda: self.get_distribution_data(scientific_name))
+                
+                if not distribution_data:
+                    await context.reply(f"No distribution data found for '{scientific_name}' in WoRMS.")
+                    return
+
+                await process.create_artifact(
+                    mimetype="application/json",
+                    description=f"Distribution for {scientific_name}",
+                    uris=[f"https://www.marinespecies.org/rest/AphiaDistributionsByAphiaID/{distribution_data['aphia_id']}"],
+                    metadata={"distribution_count": len(distribution_data['distributions'])}
+                )
+                
+                # Simple response
+                distributions = distribution_data['distributions']
+                response = f"**Distribution for {scientific_name}**\n\n"
+                
+                regions = []
+                for dist in distributions[:10]:
+                    if dist.get('locality'):
+                        regions.append(dist['locality'])
+                    elif dist.get('country'):
+                        regions.append(dist['country'])
+                
+                if regions:
+                    response += f"**Found in**: {', '.join(regions)}"
+                    if len(distributions) > 10:
+                        response += f" and {len(distributions) - 10} more locations"
+                    response += "\n\n"
+                
+                response += f"**Total**: {len(distributions)} distribution records found."
+                
+                await context.reply(response)
+
+            except Exception as e:
+                await context.reply(f"Error getting distribution: {str(e)}")
+
+    async def get_vernacular(self, context: ResponseContext, request: str):
+        """Get vernacular names for a marine species"""
+        async with context.begin_process("Getting vernacular names from WoRMS") as process:
+            try:
+                scientific_name = await self.extract_species_name(request, process)
+                if not scientific_name:
+                    await context.reply("Could not identify a marine species name from your request.")
+                    return
+
+                await process.log(f"Getting vernacular names for: {scientific_name}")
+                
+                loop = asyncio.get_event_loop()
+                vernacular_data = await loop.run_in_executor(None, lambda: self.get_vernacular_data(scientific_name))
+                
+                if not vernacular_data:
+                    await context.reply(f"No vernacular names found for '{scientific_name}' in WoRMS.")
+                    return
+
+                await process.create_artifact(
+                    mimetype="application/json",
+                    description=f"Vernacular names for {scientific_name}",
+                    uris=[f"https://www.marinespecies.org/rest/AphiaVernacularsByAphiaID/{vernacular_data['aphia_id']}"],
+                    metadata={"vernacular_count": len(vernacular_data['vernaculars'])}
+                )
+                
+                # Simple response
+                vernaculars = vernacular_data['vernaculars']
+                response = f"**Common Names for {scientific_name}**\n\n"
+                
+                # Group by language
+                by_language = {}
+                for vern in vernaculars:
+                    name = vern.get('vernacular', 'Unknown')
+                    language = vern.get('language', 'Unknown language')
+                    
+                    if language not in by_language:
+                        by_language[language] = []
+                    by_language[language].append(name)
+                
+                # Show top languages
+                for i, (language, names) in enumerate(list(by_language.items())[:5], 1):
+                    response += f"**{language}**: {', '.join(names[:3])}"
+                    if len(names) > 3:
+                        response += f" (and {len(names) - 3} more)"
+                    response += "\n"
+                
+                response += f"\n**Total**: {len(vernaculars)} names in {len(by_language)} languages."
+                
+                await context.reply(response)
+
+            except Exception as e:
+                await context.reply(f"Error getting vernacular names: {str(e)}")
+
+    def get_distribution_data(self, scientific_name: str) -> dict:
+        """Get distribution data for a species"""
+        try:
+            species_data = self.get_species_record(scientific_name)
+            if not species_data:
+                return None
+            
+            aphia_id = species_data['AphiaID']
+            distributions = self.get_species_distributions(aphia_id)
+            
+            return {
+                'aphia_id': aphia_id,
+                'distributions': distributions or [],
+                'species_name': species_data['scientificname']
+            }
+        except Exception:
+            return None
+
+    def get_vernacular_data(self, scientific_name: str) -> dict:
+        """Get vernacular data for a species"""
+        try:
+            species_data = self.get_species_record(scientific_name)
+            if not species_data:
+                return None
+            
+            aphia_id = species_data['AphiaID']
+            vernaculars = self.get_species_vernaculars(aphia_id)
+            
+            return {
+                'aphia_id': aphia_id,
+                'vernaculars': vernaculars or [],
+                'species_name': species_data['scientificname']
+            }
+        except Exception:
+            return None
         """Get synonyms data for a species"""
         try:
             species_data = self.get_species_record(scientific_name)
@@ -151,7 +300,6 @@ class MarineAgent(IChatBioAgent):
                 await process.create_artifact(
                     mimetype="application/json",
                     description=f"Raw JSON for marine species {species['scientificname']}.",
-                    content=json.dumps(worms_data, indent=2).encode('utf-8'),
                     uris=[f"https://www.marinespecies.org/aphia.php?p=taxdetails&id={aphia_id}"],
                     metadata={"record_count": 1, "total_matches": total}
                 )
