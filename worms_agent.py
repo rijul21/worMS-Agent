@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from worms_client import (
     WoRMS,
-    
+
     AttributesParams,
     SynonymsParams, 
     DistributionParams,
@@ -89,7 +89,7 @@ class WoRMSiChatBioAgent:
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Marine species attributes for {params.species_name} (AphiaID: {aphia_id}) - {attribute_count} attributes",
-                        content=json.dumps(attributes, indent=2),
+                        content=json.dumps(attributes, indent=2, ensure_ascii=False, default=str),
                         uris=[api_url],
                         metadata={
                             "data_source": "WoRMS Attributes",
@@ -166,7 +166,7 @@ class WoRMSiChatBioAgent:
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Marine species synonyms for {params.species_name} (AphiaID: {aphia_id}) - {synonym_count} synonyms",
-                        content=json.dumps(synonyms, indent=2),
+                        content=json.dumps(synonyms, indent=2, ensure_ascii=False, default=str),
                         uris=[api_url],
                         metadata={
                             "data_source": "WoRMS Synonyms",
@@ -243,6 +243,7 @@ class WoRMSiChatBioAgent:
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Marine species distribution for {params.species_name} (AphiaID: {aphia_id}) - {distribution_count} locations",
+                        content=json.dumps(distributions, indent=2, ensure_ascii=False, default=str),
                         uris=[api_url],
                         metadata={
                             "data_source": "WoRMS Distribution",
