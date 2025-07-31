@@ -39,6 +39,11 @@ class MarineAgent(IChatBioAgent):
                     id="get_marine_info",
                     description="Returns detailed marine species information from WoRMS",
                     parameters=None
+                ),
+                AgentEntrypoint(
+                    id="get_synonyms",
+                    description="Get synonyms for marine species",
+                    parameters=None
                 )
             ]
         )
@@ -51,8 +56,71 @@ class MarineAgent(IChatBioAgent):
     async def run(self, context: ResponseContext, request: str, entrypoint: str, params: Optional[BaseModel]):
         if entrypoint == "get_marine_info":
             await self.get_marine_info(context, request)
+        elif entrypoint == "get_synonyms":
+            await self.get_synonyms(context, request)
         else:
             await context.reply(f"Unknown entrypoint: {entrypoint}")
+
+    async def get_synonyms(self, context: ResponseContext, request: str):
+        """Get synonyms for a marine species"""
+        async with context.begin_process("Getting synonyms from WoRMS") as process:
+            try:
+                scientific_name = await self.extract_species_name(request, process)
+                if not scientific_name:
+                    await context.reply("Could not identify a marine species name from your request.")
+                    return
+
+                await process.log(f"Getting synonyms for: {scientific_name}")
+                
+                loop = asyncio.get_event_loop()
+                synonyms_data = await loop.run_in_executor(None, lambda: self.get_synonyms_data(scientific_name))
+                
+                if not synonyms_data:
+                    await context.reply(f"No synonyms found for '{scientific_name}' in WoRMS.")
+                    return
+
+                await process.create_artifact(
+                    mimetype="application/json",
+                    description=f"Synonyms for {scientific_name}",
+                    content=json.dumps(synonyms_data, indent=2).encode('utf-8'),
+                    uris=[f"https://www.marinespecies.org/rest/AphiaSynonymsByAphiaID/{synonyms_data['aphia_id']}"],
+                    metadata={"synonym_count": len(synonyms_data['synonyms'])}
+                )
+                
+                # Simple response
+                synonyms = synonyms_data['synonyms']
+                response = f"**Synonyms for {scientific_name}**\n\n"
+                for i, syn in enumerate(synonyms[:10], 1):
+                    name = syn.get('scientificname', 'Unknown')
+                    response += f"{i}. {name}\n"
+                
+                if len(synonyms) > 10:
+                    response += f"\n... and {len(synonyms) - 10} more synonyms in the artifact."
+                
+                response += f"\n**Total**: {len(synonyms)} synonyms found."
+                
+                await context.reply(response)
+
+            except Exception as e:
+                await context.reply(f"Error getting synonyms: {str(e)}")
+
+    def get_synonyms_data(self, scientific_name: str) -> dict:
+        """Get synonyms data for a species"""
+        try:
+            species_data = self.get_species_record(scientific_name)
+            if not species_data:
+                return None
+            
+            aphia_id = species_data['AphiaID']
+            synonyms = self.get_species_synonyms(aphia_id)
+            
+            return {
+                'aphia_id': aphia_id,
+                'synonyms': synonyms or [],
+                'species_name': species_data['scientificname']
+            }
+        except Exception:
+            return None
 
     async def get_marine_info(self, context: ResponseContext, request: str):
         async with context.begin_process(summary="Searching WoRMS for marine species") as process:
@@ -83,6 +151,7 @@ class MarineAgent(IChatBioAgent):
                 await process.create_artifact(
                     mimetype="application/json",
                     description=f"Raw JSON for marine species {species['scientificname']}.",
+                    content=json.dumps(worms_data, indent=2).encode('utf-8'),
                     uris=[f"https://www.marinespecies.org/aphia.php?p=taxdetails&id={aphia_id}"],
                     metadata={"record_count": 1, "total_matches": total}
                 )
