@@ -130,12 +130,10 @@ class MarineAgent(IChatBioAgent):
                     metadata={"record_count": returned, "total_matches": total}
                 )
                 
+                # Create rich, informative response
+                response = self.format_species_summary(worms_data)
                 
-                await context.reply(
-                    f"Found {species['scientificname']} (AphiaID: {aphia_id}) in WoRMS. "
-                    f"Retrieved {len(worms_data.get('synonyms', []))} synonyms, {len(worms_data.get('vernaculars', []))} common names, "
-                    f"and {len(worms_data.get('distributions', []))} distribution records. I've created an artifact with the results."
-                )
+                await context.reply(response)
 
             except InstructorRetryException as e:
                 await context.reply("Sorry, I couldn't extract marine species information from your request.")
@@ -179,7 +177,7 @@ class MarineAgent(IChatBioAgent):
                     metadata={"synonym_count": len(synonyms_data['synonyms'])}
                 )
                 
-                await context.reply(f"Found {len(synonyms_data['synonyms'])} synonyms for {marine_query.scientific_name}.")
+                await context.reply(self.format_synonyms_response(synonyms_data))
 
             except Exception as e:
                 await context.reply(f"Error getting synonyms: {str(e)}")
@@ -221,7 +219,7 @@ class MarineAgent(IChatBioAgent):
                     metadata={"distribution_count": len(distribution_data['distributions'])}
                 )
                 
-                await context.reply(f"Found {len(distribution_data['distributions'])} distribution records for {marine_query.scientific_name}.")
+                await context.reply(self.format_distribution_response(distribution_data))
 
             except Exception as e:
                 await context.reply(f"Error getting distribution: {str(e)}")
@@ -263,7 +261,7 @@ class MarineAgent(IChatBioAgent):
                     metadata={"vernacular_count": len(vernacular_data['vernaculars'])}
                 )
                 
-                await context.reply(f"Found {len(vernacular_data['vernaculars'])} vernacular names for {marine_query.scientific_name}.")
+                await context.reply(self.format_vernacular_response(vernacular_data))
 
             except Exception as e:
                 await context.reply(f"Error getting vernacular names: {str(e)}")
@@ -408,5 +406,199 @@ class MarineAgent(IChatBioAgent):
             return []
         except Exception:
             return []
+
+    def format_species_summary(self, worms_data: dict) -> str:
+        """Format a comprehensive species summary"""
+        species = worms_data['species']
+        synonyms = worms_data.get('synonyms', [])
+        vernaculars = worms_data.get('vernaculars', [])
+        distributions = worms_data.get('distributions', [])
+        
+        # Build taxonomy chain
+        taxonomy_parts = [
+            f"Kingdom {species.get('kingdom', 'N/A')}",
+            f"Phylum {species.get('phylum', 'N/A')}",
+            f"Class {species.get('class', 'N/A')}",
+            f"Family {species.get('family', 'N/A')}"
+        ]
+        taxonomy = " > ".join([part for part in taxonomy_parts if "N/A" not in part])
+        
+        # Extract key distribution regions (first 5)
+        key_regions = []
+        for dist in distributions[:5]:
+            if dist.get('locality'):
+                key_regions.append(dist['locality'])
+            elif dist.get('country'):
+                key_regions.append(dist['country'])
+        
+        # Extract primary common names (first 4)
+        primary_names = []
+        for vern in vernaculars[:4]:
+            if vern.get('vernacular'):
+                primary_names.append(vern['vernacular'])
+        
+        # Extract recent synonyms (first 3)
+        recent_synonyms = []
+        for syn in synonyms[:3]:
+            if syn.get('scientificname'):
+                recent_synonyms.append(syn['scientificname'])
+        
+        # Build formatted response
+        response = f"**{species['scientificname']}** (AphiaID: {species['AphiaID']})\n\n"
+        
+        if taxonomy:
+            response += f"**Taxonomy**: {taxonomy}\n\n"
+        
+        if species.get('authority'):
+            response += f"**Authority**: {species['authority']}\n\n"
+        
+        if key_regions:
+            response += f"**Distribution**: Found in {', '.join(key_regions)}"
+            if len(distributions) > 5:
+                response += f" and {len(distributions) - 5} additional regions"
+            response += "\n\n"
+        
+        if primary_names:
+            response += f"**Common Names**: {', '.join(primary_names)}"
+            if len(vernaculars) > 4:
+                response += f" ({len(vernaculars)} total names)"
+            response += "\n\n"
+        
+        if recent_synonyms:
+            response += f"**Key Synonyms**: {', '.join(recent_synonyms)}"
+            if len(synonyms) > 3:
+                response += f" ({len(synonyms)} total synonyms)"
+            response += "\n\n"
+        
+        response += f"**Additional Data**: Complete taxonomic details, {len(distributions)} distribution records, and {len(vernaculars)} vernacular names available in the attached artifact."
+        
+        return response
+    
+    def format_synonyms_response(self, synonyms_data: dict) -> str:
+        """Format synonyms response with key highlights"""
+        synonyms = synonyms_data['synonyms']
+        species_name = synonyms_data['species_name']
+        
+        if not synonyms:
+            return f"No synonyms found for **{species_name}** in WoRMS."
+        
+        # Group by status if available
+        accepted_synonyms = []
+        other_synonyms = []
+        
+        for syn in synonyms:
+            name = syn.get('scientificname', 'Unknown')
+            status = syn.get('status', '').lower()
+            
+            if 'accepted' in status or 'valid' in status:
+                accepted_synonyms.append(name)
+            else:
+                other_synonyms.append(name)
+        
+        response = f"**Synonyms for {species_name}**\n\n"
+        
+        # Show first 6 synonyms with their details
+        key_synonyms = synonyms[:6]
+        for i, syn in enumerate(key_synonyms, 1):
+            name = syn.get('scientificname', 'Unknown')
+            authority = syn.get('authority', '')
+            status = syn.get('status', '')
+            
+            response += f"{i}. **{name}**"
+            if authority:
+                response += f" {authority}"
+            if status:
+                response += f" [{status}]"
+            response += "\n"
+        
+        if len(synonyms) > 6:
+            response += f"\n**Additional**: {len(synonyms) - 6} more synonyms available in the attached artifact."
+        
+        response += f"\n\n**Total**: {len(synonyms)} synonyms found in WoRMS database."
+        
+        return response
+    
+    def format_distribution_response(self, distribution_data: dict) -> str:
+        """Format distribution response with geographic details"""
+        distributions = distribution_data['distributions']
+        species_name = distribution_data['species_name']
+        
+        if not distributions:
+            return f"No distribution data found for **{species_name}** in WoRMS."
+        
+        # Group by establishment means if available
+        native_regions = []
+        introduced_regions = []
+        other_regions = []
+        
+        for dist in distributions:
+            locality = dist.get('locality') or dist.get('country', 'Unknown location')
+            establishment = dist.get('establishmentMeans', '').lower()
+            
+            if 'native' in establishment:
+                native_regions.append(locality)
+            elif 'introduced' in establishment:
+                introduced_regions.append(locality)
+            else:
+                other_regions.append(locality)
+        
+        response = f"**Distribution of {species_name}**\n\n"
+        
+        # Show regions by type
+        if native_regions:
+            response += f"**Native Range**: {', '.join(native_regions[:5])}"
+            if len(native_regions) > 5:
+                response += f" and {len(native_regions) - 5} more regions"
+            response += "\n\n"
+        
+        if introduced_regions:
+            response += f"**Introduced Range**: {', '.join(introduced_regions[:5])}"
+            if len(introduced_regions) > 5:
+                response += f" and {len(introduced_regions) - 5} more regions"
+            response += "\n\n"
+        
+        if other_regions:
+            response += f"**Other Locations**: {', '.join(other_regions[:5])}"
+            if len(other_regions) > 5:
+                response += f" and {len(other_regions) - 5} more regions"
+            response += "\n\n"
+        
+        response += f"**Total**: {len(distributions)} distribution records found in WoRMS database."
+        
+        return response
+    
+    def format_vernacular_response(self, vernacular_data: dict) -> str:
+        """Format vernacular names response by language"""
+        vernaculars = vernacular_data['vernaculars']
+        species_name = vernacular_data['species_name']
+        
+        if not vernaculars:
+            return f"No vernacular names found for **{species_name}** in WoRMS."
+        
+        # Group by language
+        by_language = {}
+        for vern in vernaculars:
+            name = vern.get('vernacular', 'Unknown')
+            language = vern.get('language', 'Unknown language')
+            
+            if language not in by_language:
+                by_language[language] = []
+            by_language[language].append(name)
+        
+        response = f"**Common Names for {species_name}**\n\n"
+        
+        # Show top languages with their names
+        for i, (language, names) in enumerate(list(by_language.items())[:5], 1):
+            response += f"**{language}**: {', '.join(names[:3])}"
+            if len(names) > 3:
+                response += f" and {len(names) - 3} more"
+            response += "\n"
+        
+        if len(by_language) > 5:
+            response += f"\n**Additional**: Names in {len(by_language) - 5} more languages available in the attached artifact."
+        
+        response += f"\n\n**Total**: {len(vernaculars)} vernacular names in {len(by_language)} languages found in WoRMS database."
+        
+        return response
 
 print("INIT: WoRMS Marine Species Agent loaded successfully")
