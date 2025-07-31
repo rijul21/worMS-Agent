@@ -18,8 +18,7 @@ from worms_models import (
     WoRMSRecord,
     WoRMSSynonym,
     WoRMSDistribution,
-    WoRMSVernacular,
-    MarineInfoParams
+    WoRMSVernacular
 )
 
 dotenv.load_dotenv()
@@ -38,8 +37,23 @@ class MarineAgent(IChatBioAgent):
             entrypoints=[
                 AgentEntrypoint(
                     id="get_marine_info",
-                    description="Get complete marine species information from WoRMS including taxonomy, synonyms, distribution and vernacular names",
-                    parameters=MarineInfoParams
+                    description="Returns detailed marine species information from WoRMS",
+                    parameters=None
+                ),
+                AgentEntrypoint(
+                    id="get_synonyms",
+                    description="Get synonyms for marine species",
+                    parameters=None
+                ),
+                AgentEntrypoint(
+                    id="get_distribution",
+                    description="Get distribution data for marine species", 
+                    parameters=None
+                ),
+                AgentEntrypoint(
+                    id="get_vernacular",
+                    description="Get vernacular/common names for marine species",
+                    parameters=None
                 )
             ]
         )
@@ -50,25 +64,50 @@ class MarineAgent(IChatBioAgent):
 
     @override
     async def run(self, context: ResponseContext, request: str, entrypoint: str, params: Optional[BaseModel]):
+        if entrypoint == "get_marine_info":
+            await self.get_marine_info(context, request)
+        elif entrypoint == "get_synonyms":
+            await self.get_synonyms(context, request)
+        elif entrypoint == "get_distribution":
+            await self.get_distribution(context, request)
+        elif entrypoint == "get_vernacular":
+            await self.get_vernacular(context, request)
+        else:
+            await context.reply(f"Unknown entrypoint: {entrypoint}")
+
+    async def get_marine_info(self, context: ResponseContext, request: str):
         async with context.begin_process(summary="Searching WoRMS for marine species") as process:
             try:
-                # Get species name from params or extract from request
-                if params and hasattr(params, 'species_name') and params.species_name:
-                    scientific_name = params.species_name
-                    await process.log(f"Using species name from params: {scientific_name}")
-                else:
-                    scientific_name = await self.extract_species_name(request, process)
-                    if not scientific_name:
-                        await context.reply("Could not identify a marine species name from your request.")
-                        return
+                # Extract species name using instructor
+                openai_client = AsyncOpenAI(
+                    base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
+                    api_key=os.getenv("GROQ_API_KEY")
+                )
+                instructor_client = instructor.patch(openai_client)
 
-                await process.log(f"Searching WoRMS database for: {scientific_name}")
+                marine_query: MarineQueryModel = await instructor_client.chat.completions.create(
+                    model="llama3-70b-8192",
+                    response_model=MarineQueryModel,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Extract the scientific name of a marine species from the user's message. Return JSON format: {\"scientific_name\": \"Genus species\"}"
+                        },
+                        {"role": "user", "content": request}
+                    ],
+                    max_retries=3
+                )
+
+                await process.log(f"Identified marine species: {marine_query.scientific_name}")
+
+                # Search WoRMS database using run_in_executor pattern
+                await process.log(f"Searching WoRMS database for: {marine_query.scientific_name}")
                 
                 loop = asyncio.get_event_loop()
-                worms_data = await loop.run_in_executor(None, lambda: self.get_worms_data(scientific_name))
+                worms_data = await loop.run_in_executor(None, lambda: self.get_worms_data(marine_query.scientific_name))
                 
                 if not worms_data:
-                    await context.reply(f"No marine species found for '{scientific_name}' in WoRMS database.")
+                    await context.reply(f"No marine species found for '{marine_query.scientific_name}' in WoRMS database.")
                     return
 
                 species = worms_data['species']
@@ -76,69 +115,215 @@ class MarineAgent(IChatBioAgent):
                 
                 await process.log(f"Found species: {species['scientificname']} (AphiaID: {aphia_id})")
 
-                # Create artifact - WORKING PATTERN
+                # Store raw_response like ALA does
+                raw_response = worms_data
                 total = len(worms_data.get('synonyms', [])) + len(worms_data.get('vernaculars', [])) + len(worms_data.get('distributions', []))
+                returned = 1
+
+                await process.log("Query successful, found species data.")
                 
+                # Create artifact exactly like ALA - NO content parameter
                 await process.create_artifact(
                     mimetype="application/json",
                     description=f"Raw JSON for marine species {species['scientificname']}.",
                     uris=[f"https://www.marinespecies.org/aphia.php?p=taxdetails&id={aphia_id}"],
-                    metadata={"record_count": 1, "total_matches": total}
+                    metadata={"record_count": returned, "total_matches": total}
                 )
                 
-                # Simple response
-                response = f"**{species['scientificname']}** (AphiaID: {aphia_id})\n\n"
-                response += f"**Classification**: {species.get('kingdom', 'N/A')} > {species.get('phylum', 'N/A')} > {species.get('family', 'N/A')}\n\n"
-                response += f"**Data found**: {len(worms_data.get('synonyms', []))} synonyms, {len(worms_data.get('vernaculars', []))} common names, {len(worms_data.get('distributions', []))} distribution records\n\n"
-                response += "Complete data available in the attached artifact."
                 
-                await context.reply(response)
+                await context.reply(
+                    f"Found {species['scientificname']} (AphiaID: {aphia_id}) in WoRMS. "
+                    f"Retrieved {len(worms_data.get('synonyms', []))} synonyms, {len(worms_data.get('vernaculars', []))} common names, "
+                    f"and {len(worms_data.get('distributions', []))} distribution records. I've created an artifact with the results."
+                )
+
+            except InstructorRetryException as e:
+                await context.reply("Sorry, I couldn't extract marine species information from your request.")
+            except Exception as e:
+                await context.reply(f"An error occurred while retrieving marine species information: {str(e)}")
+
+    async def get_synonyms(self, context: ResponseContext, request: str):
+        """Get synonyms for a marine species"""
+        async with context.begin_process("Getting synonyms from WoRMS") as process:
+            try:
+                # Extract species name
+                openai_client = AsyncOpenAI(
+                    base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
+                    api_key=os.getenv("GROQ_API_KEY")
+                )
+                instructor_client = instructor.patch(openai_client)
+
+                marine_query: MarineQueryModel = await instructor_client.chat.completions.create(
+                    model="llama3-70b-8192",
+                    response_model=MarineQueryModel,
+                    messages=[
+                        {"role": "system", "content": "Extract the scientific name of a marine species from the user's message."},
+                        {"role": "user", "content": request}
+                    ],
+                    max_retries=3
+                )
+
+                await process.log(f"Getting synonyms for: {marine_query.scientific_name}")
+                
+                loop = asyncio.get_event_loop()
+                synonyms_data = await loop.run_in_executor(None, lambda: self.get_synonyms_data(marine_query.scientific_name))
+                
+                if not synonyms_data:
+                    await context.reply(f"No synonyms found for '{marine_query.scientific_name}' in WoRMS.")
+                    return
+
+                await process.create_artifact(
+                    mimetype="application/json",
+                    description=f"Synonyms for {marine_query.scientific_name}",
+                    uris=[f"https://www.marinespecies.org/rest/AphiaSynonymsByAphiaID/{synonyms_data['aphia_id']}"],
+                    metadata={"synonym_count": len(synonyms_data['synonyms'])}
+                )
+                
+                await context.reply(f"Found {len(synonyms_data['synonyms'])} synonyms for {marine_query.scientific_name}.")
 
             except Exception as e:
-                await context.reply(f"An error occurred: {str(e)}")
+                await context.reply(f"Error getting synonyms: {str(e)}")
 
-    async def extract_species_name(self, request: str, process) -> Optional[str]:
-        """Extract species name with fallback logic"""
+    async def get_distribution(self, context: ResponseContext, request: str):
+        """Get distribution for a marine species"""
+        async with context.begin_process("Getting distribution from WoRMS") as process:
+            try:
+                # Extract species name
+                openai_client = AsyncOpenAI(
+                    base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
+                    api_key=os.getenv("GROQ_API_KEY")
+                )
+                instructor_client = instructor.patch(openai_client)
+
+                marine_query: MarineQueryModel = await instructor_client.chat.completions.create(
+                    model="llama3-70b-8192",
+                    response_model=MarineQueryModel,
+                    messages=[
+                        {"role": "system", "content": "Extract the scientific name of a marine species from the user's message."},
+                        {"role": "user", "content": request}
+                    ],
+                    max_retries=3
+                )
+
+                await process.log(f"Getting distribution for: {marine_query.scientific_name}")
+                
+                loop = asyncio.get_event_loop()
+                distribution_data = await loop.run_in_executor(None, lambda: self.get_distribution_data(marine_query.scientific_name))
+                
+                if not distribution_data:
+                    await context.reply(f"No distribution data found for '{marine_query.scientific_name}' in WoRMS.")
+                    return
+
+                await process.create_artifact(
+                    mimetype="application/json",
+                    description=f"Distribution for {marine_query.scientific_name}",
+                    uris=[f"https://www.marinespecies.org/rest/AphiaDistributionsByAphiaID/{distribution_data['aphia_id']}"],
+                    metadata={"distribution_count": len(distribution_data['distributions'])}
+                )
+                
+                await context.reply(f"Found {len(distribution_data['distributions'])} distribution records for {marine_query.scientific_name}.")
+
+            except Exception as e:
+                await context.reply(f"Error getting distribution: {str(e)}")
+
+    async def get_vernacular(self, context: ResponseContext, request: str):
+        """Get vernacular names for a marine species"""
+        async with context.begin_process("Getting vernacular names from WoRMS") as process:
+            try:
+                # Extract species name
+                openai_client = AsyncOpenAI(
+                    base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
+                    api_key=os.getenv("GROQ_API_KEY")
+                )
+                instructor_client = instructor.patch(openai_client)
+
+                marine_query: MarineQueryModel = await instructor_client.chat.completions.create(
+                    model="llama3-70b-8192",
+                    response_model=MarineQueryModel,
+                    messages=[
+                        {"role": "system", "content": "Extract the scientific name of a marine species from the user's message."},
+                        {"role": "user", "content": request}
+                    ],
+                    max_retries=3
+                )
+
+                await process.log(f"Getting vernacular names for: {marine_query.scientific_name}")
+                
+                loop = asyncio.get_event_loop()
+                vernacular_data = await loop.run_in_executor(None, lambda: self.get_vernacular_data(marine_query.scientific_name))
+                
+                if not vernacular_data:
+                    await context.reply(f"No vernacular names found for '{marine_query.scientific_name}' in WoRMS.")
+                    return
+
+                await process.create_artifact(
+                    mimetype="application/json",
+                    description=f"Vernacular names for {marine_query.scientific_name}",
+                    uris=[f"https://www.marinespecies.org/rest/AphiaVernacularsByAphiaID/{vernacular_data['aphia_id']}"],
+                    metadata={"vernacular_count": len(vernacular_data['vernaculars'])}
+                )
+                
+                await context.reply(f"Found {len(vernacular_data['vernaculars'])} vernacular names for {marine_query.scientific_name}.")
+
+            except Exception as e:
+                await context.reply(f"Error getting vernacular names: {str(e)}")
+
+    def get_synonyms_data(self, scientific_name: str) -> dict:
+        """Get synonyms data for a species"""
         try:
-            # Try instructor first
-            openai_client = AsyncOpenAI(
-                base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
-                api_key=os.getenv("GROQ_API_KEY")
-            )
-            instructor_client = instructor.patch(openai_client)
-
-            marine_query: MarineQueryModel = await instructor_client.chat.completions.create(
-                model="llama3-70b-8192",
-                response_model=MarineQueryModel,
-                messages=[
-                    {"role": "system", "content": "Extract the scientific name of a marine species from the user's message."},
-                    {"role": "user", "content": request}
-                ],
-                max_retries=2
-            )
-            await process.log(f"Identified marine species: {marine_query.scientific_name}")
-            return marine_query.scientific_name
-
-        except Exception as e:
-            # Fallback: simple pattern matching
-            await process.log(f"API extraction failed, using fallback")
-            words = request.split()
-            for i in range(len(words) - 1):
-                if words[i][0].isupper() and words[i+1][0].islower():
-                    scientific_name = f"{words[i]} {words[i+1]}"
-                    await process.log(f"Using fallback extraction: {scientific_name}")
-                    return scientific_name
+            species_data = self.get_species_record(scientific_name)
+            if not species_data:
+                return None
             
-            # Common patterns
-            if "orcinus orca" in request.lower():
-                return "Orcinus orca"
-            elif "delphinus delphis" in request.lower():
-                return "Delphinus delphis"
+            aphia_id = species_data['AphiaID']
+            synonyms = self.get_species_synonyms(aphia_id)
             
+            return {
+                'aphia_id': aphia_id,
+                'synonyms': synonyms or [],
+                'species_name': species_data['scientificname']
+            }
+        except Exception:
+            return None
+
+    def get_distribution_data(self, scientific_name: str) -> dict:
+        """Get distribution data for a species"""
+        try:
+            species_data = self.get_species_record(scientific_name)
+            if not species_data:
+                return None
+            
+            aphia_id = species_data['AphiaID']
+            distributions = self.get_species_distributions(aphia_id)
+            
+            return {
+                'aphia_id': aphia_id,
+                'distributions': distributions or [],
+                'species_name': species_data['scientificname']
+            }
+        except Exception:
+            return None
+
+    def get_vernacular_data(self, scientific_name: str) -> dict:
+        """Get vernacular data for a species"""
+        try:
+            species_data = self.get_species_record(scientific_name)
+            if not species_data:
+                return None
+            
+            aphia_id = species_data['AphiaID']
+            vernaculars = self.get_species_vernaculars(aphia_id)
+            
+            return {
+                'aphia_id': aphia_id,
+                'vernaculars': vernaculars or [],
+                'species_name': species_data['scientificname']
+            }
+        except Exception:
             return None
 
     def get_worms_data(self, scientific_name: str) -> dict:
-        """Get complete WoRMS data for a species"""
+        """Get complete WoRMS data for a species - synchronous for run_in_executor"""
         try:
             # Get main species record
             species_data = self.get_species_record(scientific_name)
@@ -178,7 +363,7 @@ class MarineAgent(IChatBioAgent):
             if not data:
                 return None
                 
-            # Return first record
+            # Return first record (WoRMS API can return list or single record)
             if isinstance(data, list):
                 return data[0]
             else:
