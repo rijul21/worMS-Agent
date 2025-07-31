@@ -1,6 +1,6 @@
 import pytest
 from marine_agent import MarineAgent
-from worms_models import MarineParameters
+from MarineAgent.worms_agent_server import MarineParameters
 
 @pytest.mark.asyncio
 async def test_get_marine_info_orcinus_orca(context, messages):
