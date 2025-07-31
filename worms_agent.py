@@ -1,15 +1,16 @@
-from pydantic import BaseModel, Fieldimport ,asyncio
+from pydantic import BaseModel, Field
+import asyncio
 import json
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 
 from worms_client import (
     WoRMS,
-    SpeciesSearchParams,
+    
     AttributesParams,
     SynonymsParams, 
     DistributionParams,
-    NoParams
+
 )
 
 # Simple Agent Parameter Models
@@ -77,9 +78,18 @@ class WoRMSiChatBioAgent:
                 if attribute_count > 0:
                     await process.log(f"Found {attribute_count} attributes")
                     
+                    # Extract sample attributes for display
+                    sample_attributes = []
+                    for attr in attributes[:5]:  # Show first 5
+                        if isinstance(attr, dict):
+                            attr_name = attr.get('measurementType', attr.get('attribute', 'Unknown'))
+                            attr_value = attr.get('measurementValue', attr.get('value', 'N/A'))
+                            sample_attributes.append(f"{attr_name}: {attr_value}")
+                    
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Marine species attributes for {params.species_name} (AphiaID: {aphia_id}) - {attribute_count} attributes",
+                        content=json.dumps(attributes, indent=2),
                         uris=[api_url],
                         metadata={
                             "data_source": "WoRMS Attributes",
@@ -89,11 +99,19 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    await context.reply(f"Found {attribute_count} attributes for {params.species_name} (AphiaID: {aphia_id}). I've created an artifact with the results.")
+                    # Create detailed reply
+                    reply = f"Found {attribute_count} attributes for {params.species_name} (AphiaID: {aphia_id})"
+                    if sample_attributes:
+                        reply += f". Examples: {'; '.join(sample_attributes[:3])}"
+                        if attribute_count > 3:
+                            reply += f" and {attribute_count - 3} more"
+                    reply += ". I've created an artifact with the complete data."
+                    
+                    await context.reply(reply)
                 else:
                     await context.reply(f"No attributes found for {params.species_name} in WoRMS.")
 
-            except ConnectionError as e:
+            except Exception as e:
                 await process.log("Error during API request", data={"error": str(e)})
                 await context.reply(f"I encountered an error while retrieving attributes: {e}")
 
@@ -134,9 +152,21 @@ class WoRMSiChatBioAgent:
                 if synonym_count > 0:
                     await process.log(f"Found {synonym_count} synonyms")
                     
+                    # Extract sample synonyms for display
+                    sample_synonyms = []
+                    for syn in synonyms[:8]:  # Show first 8
+                        if isinstance(syn, dict):
+                            syn_name = syn.get('scientificname', 'Unknown')
+                            syn_status = syn.get('status', '')
+                            if syn_status and syn_status != 'accepted':
+                                sample_synonyms.append(f"{syn_name} ({syn_status})")
+                            else:
+                                sample_synonyms.append(syn_name)
+                    
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Marine species synonyms for {params.species_name} (AphiaID: {aphia_id}) - {synonym_count} synonyms",
+                        content=json.dumps(synonyms, indent=2),
                         uris=[api_url],
                         metadata={
                             "data_source": "WoRMS Synonyms",
@@ -146,11 +176,19 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    await context.reply(f"Found {synonym_count} synonyms for {params.species_name} (AphiaID: {aphia_id}). I've created an artifact with the results.")
+                    # Create detailed reply
+                    reply = f"Found {synonym_count} synonyms for {params.species_name} (AphiaID: {aphia_id})"
+                    if sample_synonyms:
+                        reply += f". Examples: {', '.join(sample_synonyms[:5])}"
+                        if synonym_count > 5:
+                            reply += f" and {synonym_count - 5} more"
+                    reply += ". I've created an artifact with all the synonyms."
+                    
+                    await context.reply(reply)
                 else:
                     await context.reply(f"No synonyms found for {params.species_name} in WoRMS.")
 
-            except ConnectionError as e:
+            except Exception as e:
                 await process.log("Error during API request", data={"error": str(e)})
                 await context.reply(f"I encountered an error while retrieving synonyms: {e}")
 
@@ -191,6 +229,17 @@ class WoRMSiChatBioAgent:
                 if distribution_count > 0:
                     await process.log(f"Found {distribution_count} distribution records")
                     
+                    # Extract location details for user-friendly response
+                    countries = set()
+                    localities = []
+                    
+                    for dist in distributions:
+                        if isinstance(dist, dict):
+                            if dist.get('country'):
+                                countries.add(dist['country'])
+                            if dist.get('locality'):
+                                localities.append(dist['locality'])
+                    
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Marine species distribution for {params.species_name} (AphiaID: {aphia_id}) - {distribution_count} locations",
@@ -203,7 +252,25 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    await context.reply(f"Found distribution data for {params.species_name} (AphiaID: {aphia_id}) across {distribution_count} locations. I've created an artifact with the results.")
+                    # Create detailed user-friendly response
+                    reply_parts = [f"Found distribution data for {params.species_name} (AphiaID: {aphia_id}) across {distribution_count} locations"]
+                    
+                    if countries:
+                        country_list = sorted(list(countries))
+                        if len(country_list) <= 10:
+                            reply_parts.append(f"Countries/regions: {', '.join(country_list)}")
+                        else:
+                            reply_parts.append(f"Countries/regions: {', '.join(country_list[:10])} and {len(country_list)-10} more")
+                    
+                    if localities:
+                        if len(localities) <= 5:
+                            reply_parts.append(f"Specific locations include: {', '.join(localities)}")
+                        else:
+                            reply_parts.append(f"Specific locations include: {', '.join(localities[:5])} and {len(localities)-5} more")
+                    
+                    reply_parts.append("I've created an artifact with the complete distribution data.")
+                    
+                    await context.reply(". ".join(reply_parts))
                 else:
                     await context.reply(f"No distribution data found for {params.species_name} in WoRMS.")
 
