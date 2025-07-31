@@ -1,9 +1,9 @@
 import os
 from ichatbio.server import run_agent_server
-from marine_agent import MarineAgent
+from worms_agent_server import WoRMSAgent
 
 if __name__ == "__main__":
-    agent = MarineAgent()
+    agent = WoRMSAgent()
     port = int(os.getenv("PORT", 9999))
     print(f"Starting agent on port {port}")
     run_agent_server(agent, host="0.0.0.0", port=port)
