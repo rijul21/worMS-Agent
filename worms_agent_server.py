@@ -52,12 +52,12 @@ card = AgentCard(
             parameters=MarineRecordParams
         ),
         AgentEntrypoint(
-            id="get_classification",
+            id="get_taxonomy",
             description="Get complete taxonomic classification hierarchy for a marine species from WoRMS.",
             parameters=MarineClassificationParams
         ),
         AgentEntrypoint(
-            id="get_children",
+            id="get_marine_info",
             description="Get child taxa (subspecies, varieties, forms) for a marine species from WoRMS.",
             parameters=MarineChildrenParams
         )
@@ -96,9 +96,9 @@ class WoRMSAgent(IChatBioAgent):
             await self.workflow_agent.run_get_sources(context, params)
         elif entrypoint == "get_record":
             await self.workflow_agent.run_get_record(context, params)
-        elif entrypoint == "get_classification":
+        elif entrypoint == "get_taxonomy":
             await self.workflow_agent.run_get_classification(context, params)
-        elif entrypoint == "get_children":
+        elif entrypoint == "get_marine_info":
             await self.workflow_agent.run_get_children(context, params)
         else:
             # Handle unexpected entrypoints 
