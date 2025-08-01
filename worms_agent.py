@@ -128,14 +128,14 @@ class WoRMSiChatBioAgent:
                     accepted_names = [syn for syn in synonyms if isinstance(syn, dict) and syn.get('status') == 'accepted']
                     unaccepted_names = [syn for syn in synonyms if isinstance(syn, dict) and syn.get('status') != 'accepted']
                     
-                    reply_parts = [f"🔍 **Taxonomic History of {params.species_name}**"]
-                    reply_parts.append(f"I found **{synonym_count} historical names** for this species in the WoRMS database!")
+                    reply_parts = [f"**Taxonomic History of {params.species_name}**"]
+                    reply_parts.append(f"I found **{synonym_count} historical names** for this species in the WoRMS database, revealing a complex taxonomic journey.")
                     
                     if accepted_names:
-                        reply_parts.append(f"✅ **Currently accepted**: {len(accepted_names)} names")
+                        reply_parts.append(f"**Currently accepted names**: {len(accepted_names)}")
                     
                     if unaccepted_names:
-                        reply_parts.append(f"📚 **Historical/invalid names**: {len(unaccepted_names)} entries")
+                        reply_parts.append(f"**Historical and invalid names**: {len(unaccepted_names)} entries")
                         
                         # Group by common patterns
                         genus_changes = []
@@ -150,12 +150,13 @@ class WoRMSiChatBioAgent:
                                         spelling_variants.append(name)
                         
                         if genus_changes:
-                            reply_parts.append(f"🔄 **Genus transfers**: This species was previously classified in genera like *{', '.join(set([n.split()[0] for n in genus_changes[:3]]))}*")
+                            unique_genera = set([n.split()[0] for n in genus_changes[:3]])
+                            reply_parts.append(f"**Taxonomic transfers**: This species has been moved between genera, previously classified under *{', '.join(unique_genera)}*")
                         
                         if spelling_variants:
-                            reply_parts.append(f"✏️ **Spelling variants**: {', '.join(spelling_variants[:3])}")
+                            reply_parts.append(f"**Nomenclatural variants**: Multiple spelling variations exist, including *{', '.join(spelling_variants[:3])}*")
                     
-                    reply_parts.append(f"📊 **Complete dataset** with all {synonym_count} names, authorities, and publication years is available in the artifact above.")
+                    reply_parts.append(f"The complete dataset includes all {synonym_count} names with their authorities, publication years, and taxonomic status. This nomenclatural history reflects the ongoing refinement of marine taxonomic classification.")
                     
                     await context.reply("\n\n".join(reply_parts))
                 else:
@@ -225,53 +226,34 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Extract rich location details for engaging response
-                    countries = set()
-                    localities = []
-                    regions = set()
-                    marine_areas = []
-                    
-                    for dist in distributions:
-                        if isinstance(dist, dict):
-                            if dist.get('country'):
-                                countries.add(dist['country'])
-                            if dist.get('locality'):
-                                locality = dist['locality']
-                                localities.append(locality)
-                                # Categorize locations
-                                if any(term in locality.lower() for term in ['sea', 'ocean', 'atlantic', 'pacific', 'mediterranean']):
-                                    marine_areas.append(locality)
-                            if dist.get('locationID'):
-                                regions.add(dist.get('locationID', ''))
-                    
                     # Create engaging, detailed reply
-                    reply_parts = [f"🌍 **Global Distribution of {params.species_name}**"]
-                    reply_parts.append(f"This species has been documented across **{distribution_count} distinct locations** worldwide!")
+                    reply_parts = [f"**Global Distribution of {params.species_name}**"]
+                    reply_parts.append(f"This species has been documented across **{distribution_count} distinct geographic locations** worldwide, based on verified occurrence records in the WoRMS database.")
                     
                     if countries:
                         country_list = sorted(list(countries))
                         if len(country_list) <= 8:
-                            reply_parts.append(f"🏴 **Countries/Regions**: {', '.join(country_list)}")
+                            reply_parts.append(f"**Regional presence**: Confirmed in {', '.join(country_list)}")
                         else:
-                            reply_parts.append(f"🏴 **Countries/Regions**: {', '.join(country_list[:8])} and {len(country_list)-8} others")
+                            reply_parts.append(f"**Regional presence**: Documented across {len(country_list)} countries and territories including {', '.join(country_list[:8])} and {len(country_list)-8} others")
                     
                     if marine_areas:
-                        reply_parts.append(f"🌊 **Major Marine Areas**: {', '.join(marine_areas[:4])}")
+                        reply_parts.append(f"**Major marine ecosystems**: Recorded from {', '.join(marine_areas[:4])}")
                     
                     if localities:
                         coastal_areas = [loc for loc in localities if any(term in loc.lower() for term in ['coast', 'coastal', 'shore', 'estuary', 'bay'])]
                         if coastal_areas:
-                            reply_parts.append(f"🏖️ **Coastal Presence**: Found in {len(coastal_areas)} coastal/estuarine areas")
+                            reply_parts.append(f"**Habitat diversity**: Found in {len(coastal_areas)} coastal and estuarine environments")
                     
                     # Add ecological insight
                     if len(countries) > 15:
-                        reply_parts.append(f"🌐 **Ecological Note**: With presence in {len(countries)}+ regions, this appears to be a **cosmopolitan species** with global distribution!")
+                        reply_parts.append(f"**Biogeographic assessment**: With presence across {len(countries)}+ regions, this appears to be a **cosmopolitan species** with global distribution, indicating broad ecological tolerance and dispersal capability.")
                     elif len(countries) > 8:
-                        reply_parts.append(f"📍 **Distribution Pattern**: **Wide-ranging species** found across multiple biogeographic regions")
+                        reply_parts.append(f"**Distribution pattern**: This **wide-ranging species** spans multiple biogeographic regions, suggesting adaptability to diverse marine environments.")
                     else:
-                        reply_parts.append(f"📍 **Distribution Pattern**: **Regional distribution** with documented presence in {len(countries)} areas")
+                        reply_parts.append(f"**Distribution pattern**: Shows **regional distribution** with documented presence in {len(countries)} areas, indicating more specialized habitat requirements or limited dispersal.")
                     
-                    reply_parts.append(f"📊 **Detailed location data** with coordinates and specific locality information is available in the artifact above.")
+                    reply_parts.append(f"The complete distribution dataset includes precise coordinates and detailed locality information for all {distribution_count} occurrence records.")
                     
                     await context.reply("\n\n".join(reply_parts))
                 else:
@@ -368,12 +350,12 @@ class WoRMSiChatBioAgent:
                                 sample_names.append(f"**{name}** ({lang})")
                     
                     # Create engaging, detailed reply
-                    reply_parts = [f"🗣️ **Common Names for {params.species_name}**"]
-                    reply_parts.append(f"This species is known by **{vernacular_count} different names** across **{len(languages)} languages**!")
+                    reply_parts = [f"**Vernacular Names for {params.species_name}**"]
+                    reply_parts.append(f"This species is recognized by **{vernacular_count} different names** across **{len(languages)} languages**, demonstrating its widespread cultural and economic significance.")
                     
                     # Highlight language diversity
                     if len(languages) > 10:
-                        reply_parts.append(f"🌍 **Global Recognition**: This species has names in {len(languages)} languages, showing its **worldwide cultural significance**!")
+                        reply_parts.append(f"**Global linguistic recognition**: Names documented in {len(languages)} languages reflect this species' **worldwide cultural importance** and interaction with diverse human communities.")
                     
                     # Show interesting examples by language
                     lang_examples = []
@@ -383,19 +365,19 @@ class WoRMSiChatBioAgent:
                             lang_examples.append(f"**{lang}**: {', '.join(examples)}")
                     
                     if lang_examples:
-                        reply_parts.append("🏷️ **Examples by Language**:")
+                        reply_parts.append("**Representative examples by language**:")
                         reply_parts.extend([f"  • {ex}" for ex in lang_examples])
                     
                     # Highlight unique/interesting names
                     if interesting_names:
-                        reply_parts.append(f"✨ **Notable Names**: {', '.join(interesting_names[:3])}")
+                        reply_parts.append(f"**Linguistically notable names**: {', '.join(interesting_names[:3])}")
                     
                     # Cultural insight
                     indigenous_langs = [lang for lang in languages if lang.lower() in ['inuktitut', 'aleut', 'kalaallisut', 'yupik', 'inupiaq']]
                     if indigenous_langs:
-                        reply_parts.append(f"🏔️ **Indigenous Knowledge**: Names documented in {len(indigenous_langs)} indigenous languages, reflecting traditional ecological knowledge")
+                        reply_parts.append(f"**Indigenous knowledge systems**: Names preserved in {len(indigenous_langs)} indigenous languages, representing traditional ecological knowledge and cultural relationships with marine ecosystems.")
                     
-                    reply_parts.append(f"📚 **Complete multilingual dataset** with all {vernacular_count} names and language codes is available in the artifact above.")
+                    reply_parts.append(f"The complete multilingual dataset provides valuable insight into human-marine species interactions across different cultures and regions, with all {vernacular_count} names and their linguistic contexts preserved in the artifact.")
                     
                     await context.reply("\n\n".join(reply_parts))
                 else:
@@ -512,8 +494,8 @@ class WoRMSiChatBioAgent:
                                 sample_sources.append(f"*{title}*")
                     
                     # Create engaging, detailed reply
-                    reply_parts = [f"📚 **Scientific Literature for {params.species_name}**"]
-                    reply_parts.append(f"Found **{source_count} academic sources** documenting this species!")
+                    reply_parts = [f"**Scientific Literature for {params.species_name}**"]
+                    reply_parts.append(f"Located **{source_count} academic sources** documenting this species in the scientific literature.")
                     
                     # Publication timeline
                     if years:
@@ -522,38 +504,38 @@ class WoRMSiChatBioAgent:
                             earliest = min(year_list)
                             latest = max(year_list)
                             if latest - earliest > 50:
-                                reply_parts.append(f"📅 **Research Timeline**: Scientific documentation spans **{latest - earliest} years** ({earliest}-{latest})")
+                                reply_parts.append(f"**Research timeline**: Scientific documentation spans **{latest - earliest} years** from {earliest} to {latest}, indicating sustained research interest.")
                             else:
-                                reply_parts.append(f"📅 **Publication Period**: {earliest}-{latest}")
+                                reply_parts.append(f"**Publication period**: Active research from {earliest} to {latest}")
                     
                     # Author diversity
                     if authors:
                         clean_authors = [a for a in authors if a != 'Unknown' and len(a) > 2]
                         if len(clean_authors) > 5:
-                            reply_parts.append(f"👥 **Research Community**: {len(clean_authors)} different research groups/authors have published on this species")
-                            reply_parts.append(f"🔬 **Key Contributors**: {', '.join(list(clean_authors)[:4])}")
+                            reply_parts.append(f"**Research community**: {len(clean_authors)} different research groups and authors have contributed to the scientific understanding of this species.")
+                            reply_parts.append(f"**Key contributors**: {', '.join(list(clean_authors)[:4])}")
                     
                     # Publication insights
                     if publications:
                         marine_terms = sum(1 for pub in publications if any(term in pub.lower() for term in ['marine', 'ocean', 'sea', 'fish', 'taxonomy', 'systematics']))
                         if marine_terms > len(publications) * 0.5:
-                            reply_parts.append(f"🌊 **Research Focus**: Strong emphasis on **marine biology and taxonomy**")
+                            reply_parts.append(f"**Research focus**: Literature emphasizes marine biology, taxonomy, and systematic studies.")
                     
                     # Source examples
                     if sample_sources:
-                        reply_parts.append(f"📖 **Sample References**: {', '.join(sample_sources[:4])}")
+                        reply_parts.append(f"**Representative citations**: {', '.join(sample_sources[:4])}")
                         if source_count > 4:
-                            reply_parts.append(f"   *...and {source_count - 4} additional sources*")
+                            reply_parts.append(f"   *...plus {source_count - 4} additional references*")
                     
                     # Research status insight
                     if source_count > 15:
-                        reply_parts.append(f"⭐ **Research Status**: **Well-studied species** with extensive scientific literature")
+                        reply_parts.append(f"**Research assessment**: **Well-studied species** with extensive scientific literature indicating significant ecological or economic importance.")
                     elif source_count > 5:
-                        reply_parts.append(f"📊 **Research Status**: **Moderately documented** species in scientific literature")
+                        reply_parts.append(f"**Research assessment**: **Moderately documented** species with steady scientific attention.")
                     else:
-                        reply_parts.append(f"🔍 **Research Status**: **Limited documentation** - potential area for further research")
+                        reply_parts.append(f"**Research assessment**: **Limited documentation** suggests potential opportunities for expanded research.")
                     
-                    reply_parts.append(f"📋 **Complete bibliography** with full citations and publication details is available in the artifact above.")
+                    reply_parts.append(f"The complete bibliography includes full citations, publication details, and DOI links where available, providing comprehensive access to the scientific knowledge base for this species.")
                     
                     await context.reply("\n\n".join(reply_parts))
                 else:
