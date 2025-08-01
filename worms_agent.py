@@ -124,15 +124,40 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Create detailed reply
-                    reply = f"Found {synonym_count} synonyms for {params.species_name} (AphiaID: {aphia_id})"
-                    if sample_synonyms:
-                        reply += f". Examples: {', '.join(sample_synonyms[:5])}"
-                        if synonym_count > 5:
-                            reply += f" and {synonym_count - 5} more"
-                    reply += ". I've created an artifact with all the synonyms."
+                    # Create engaging, detailed reply
+                    accepted_names = [syn for syn in synonyms if isinstance(syn, dict) and syn.get('status') == 'accepted']
+                    unaccepted_names = [syn for syn in synonyms if isinstance(syn, dict) and syn.get('status') != 'accepted']
                     
-                    await context.reply(reply)
+                    reply_parts = [f"🔍 **Taxonomic History of {params.species_name}**"]
+                    reply_parts.append(f"I found **{synonym_count} historical names** for this species in the WoRMS database!")
+                    
+                    if accepted_names:
+                        reply_parts.append(f"✅ **Currently accepted**: {len(accepted_names)} names")
+                    
+                    if unaccepted_names:
+                        reply_parts.append(f"📚 **Historical/invalid names**: {len(unaccepted_names)} entries")
+                        
+                        # Group by common patterns
+                        genus_changes = []
+                        spelling_variants = []
+                        for syn in unaccepted_names[:8]:
+                            if isinstance(syn, dict):
+                                name = syn.get('scientificname', '')
+                                if name:
+                                    if name.split()[0] != params.species_name.split()[0]:  # Different genus
+                                        genus_changes.append(name)
+                                    else:
+                                        spelling_variants.append(name)
+                        
+                        if genus_changes:
+                            reply_parts.append(f"🔄 **Genus transfers**: This species was previously classified in genera like *{', '.join(set([n.split()[0] for n in genus_changes[:3]]))}*")
+                        
+                        if spelling_variants:
+                            reply_parts.append(f"✏️ **Spelling variants**: {', '.join(spelling_variants[:3])}")
+                    
+                    reply_parts.append(f"📊 **Complete dataset** with all {synonym_count} names, authorities, and publication years is available in the artifact above.")
+                    
+                    await context.reply("\n\n".join(reply_parts))
                 else:
                     await context.reply(f"No synonyms found for {params.species_name} in WoRMS.")
 
@@ -200,25 +225,55 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Create detailed user-friendly response
-                    reply_parts = [f"Found distribution data for {params.species_name} (AphiaID: {aphia_id}) across {distribution_count} locations"]
+                    # Extract rich location details for engaging response
+                    countries = set()
+                    localities = []
+                    regions = set()
+                    marine_areas = []
+                    
+                    for dist in distributions:
+                        if isinstance(dist, dict):
+                            if dist.get('country'):
+                                countries.add(dist['country'])
+                            if dist.get('locality'):
+                                locality = dist['locality']
+                                localities.append(locality)
+                                # Categorize locations
+                                if any(term in locality.lower() for term in ['sea', 'ocean', 'atlantic', 'pacific', 'mediterranean']):
+                                    marine_areas.append(locality)
+                            if dist.get('locationID'):
+                                regions.add(dist.get('locationID', ''))
+                    
+                    # Create engaging, detailed reply
+                    reply_parts = [f"🌍 **Global Distribution of {params.species_name}**"]
+                    reply_parts.append(f"This species has been documented across **{distribution_count} distinct locations** worldwide!")
                     
                     if countries:
                         country_list = sorted(list(countries))
-                        if len(country_list) <= 10:
-                            reply_parts.append(f"Countries/regions: {', '.join(country_list)}")
+                        if len(country_list) <= 8:
+                            reply_parts.append(f"🏴 **Countries/Regions**: {', '.join(country_list)}")
                         else:
-                            reply_parts.append(f"Countries/regions: {', '.join(country_list[:10])} and {len(country_list)-10} more")
+                            reply_parts.append(f"🏴 **Countries/Regions**: {', '.join(country_list[:8])} and {len(country_list)-8} others")
+                    
+                    if marine_areas:
+                        reply_parts.append(f"🌊 **Major Marine Areas**: {', '.join(marine_areas[:4])}")
                     
                     if localities:
-                        if len(localities) <= 5:
-                            reply_parts.append(f"Specific locations include: {', '.join(localities)}")
-                        else:
-                            reply_parts.append(f"Specific locations include: {', '.join(localities[:5])} and {len(localities)-5} more")
+                        coastal_areas = [loc for loc in localities if any(term in loc.lower() for term in ['coast', 'coastal', 'shore', 'estuary', 'bay'])]
+                        if coastal_areas:
+                            reply_parts.append(f"🏖️ **Coastal Presence**: Found in {len(coastal_areas)} coastal/estuarine areas")
                     
-                    reply_parts.append("I've created an artifact with the complete distribution data.")
+                    # Add ecological insight
+                    if len(countries) > 15:
+                        reply_parts.append(f"🌐 **Ecological Note**: With presence in {len(countries)}+ regions, this appears to be a **cosmopolitan species** with global distribution!")
+                    elif len(countries) > 8:
+                        reply_parts.append(f"📍 **Distribution Pattern**: **Wide-ranging species** found across multiple biogeographic regions")
+                    else:
+                        reply_parts.append(f"📍 **Distribution Pattern**: **Regional distribution** with documented presence in {len(countries)} areas")
                     
-                    await context.reply(". ".join(reply_parts))
+                    reply_parts.append(f"📊 **Detailed location data** with coordinates and specific locality information is available in the artifact above.")
+                    
+                    await context.reply("\n\n".join(reply_parts))
                 else:
                     await context.reply(f"No distribution data found for {params.species_name} in WoRMS.")
 
@@ -290,17 +345,59 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Create detailed reply
-                    reply = f"Found {vernacular_count} vernacular names for {params.species_name} (AphiaID: {aphia_id})"
-                    if languages:
-                        reply += f" in {len(languages)} languages ({', '.join(sorted(list(languages))[:5])}{'...' if len(languages) > 5 else ''})"
-                    if sample_names:
-                        reply += f". Examples: {', '.join(sample_names[:4])}"
-                        if vernacular_count > 4:
-                            reply += f" and {vernacular_count - 4} more"
-                    reply += ". I've created an artifact with all the vernacular names."
+                    # Extract rich vernacular data for engaging response
+                    sample_names = []
+                    languages = set()
+                    language_groups = {}
+                    interesting_names = []
                     
-                    await context.reply(reply)
+                    for vern in vernaculars:
+                        if isinstance(vern, dict):
+                            name = vern.get('vernacular', 'Unknown')
+                            lang = vern.get('language', 'Unknown')
+                            if lang != 'Unknown':
+                                languages.add(lang)
+                                if lang not in language_groups:
+                                    language_groups[lang] = []
+                                language_groups[lang].append(name)
+                                
+                                # Collect interesting/unique names
+                                if len(name) > 15 or any(char in name for char in ['ä', 'ö', 'ü', 'ñ', 'ç', 'é', 'è']):
+                                    interesting_names.append(f"{name} ({lang})")
+                                
+                                sample_names.append(f"**{name}** ({lang})")
+                    
+                    # Create engaging, detailed reply
+                    reply_parts = [f"🗣️ **Common Names for {params.species_name}**"]
+                    reply_parts.append(f"This species is known by **{vernacular_count} different names** across **{len(languages)} languages**!")
+                    
+                    # Highlight language diversity
+                    if len(languages) > 10:
+                        reply_parts.append(f"🌍 **Global Recognition**: This species has names in {len(languages)} languages, showing its **worldwide cultural significance**!")
+                    
+                    # Show interesting examples by language
+                    lang_examples = []
+                    for lang in sorted(list(languages))[:6]:
+                        if lang in language_groups and language_groups[lang]:
+                            examples = language_groups[lang][:2]
+                            lang_examples.append(f"**{lang}**: {', '.join(examples)}")
+                    
+                    if lang_examples:
+                        reply_parts.append("🏷️ **Examples by Language**:")
+                        reply_parts.extend([f"  • {ex}" for ex in lang_examples])
+                    
+                    # Highlight unique/interesting names
+                    if interesting_names:
+                        reply_parts.append(f"✨ **Notable Names**: {', '.join(interesting_names[:3])}")
+                    
+                    # Cultural insight
+                    indigenous_langs = [lang for lang in languages if lang.lower() in ['inuktitut', 'aleut', 'kalaallisut', 'yupik', 'inupiaq']]
+                    if indigenous_langs:
+                        reply_parts.append(f"🏔️ **Indigenous Knowledge**: Names documented in {len(indigenous_langs)} indigenous languages, reflecting traditional ecological knowledge")
+                    
+                    reply_parts.append(f"📚 **Complete multilingual dataset** with all {vernacular_count} names and language codes is available in the artifact above.")
+                    
+                    await context.reply("\n\n".join(reply_parts))
                 else:
                     await context.reply(f"No vernacular names found for {params.species_name} in WoRMS.")
 
@@ -380,18 +477,85 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Create detailed reply
-                    reply = f"Found {source_count} literature sources for {params.species_name} (AphiaID: {aphia_id})"
-                    if years:
-                        year_range = f"{min(years)}-{max(years)}" if len(years) > 1 else list(years)[0]
-                        reply += f" spanning {year_range}"
-                    if sample_sources:
-                        reply += f". Examples: {'; '.join(sample_sources[:3])}"
-                        if source_count > 3:
-                            reply += f" and {source_count - 3} more"
-                    reply += ". I've created an artifact with all the literature sources."
+                    # Extract rich source data for engaging response
+                    sample_sources = []
+                    authors = set()
+                    years = set()
+                    publications = []
+                    source_types = set()
                     
-                    await context.reply(reply)
+                    for source in sources:
+                        if isinstance(source, dict):
+                            title = source.get('title', 'Unknown')
+                            author = source.get('authors', source.get('author', ''))
+                            year = source.get('year', '')
+                            source_type = source.get('type', '')
+                            
+                            if author and author != 'Unknown':
+                                # Extract first author surname
+                                first_author = author.split(',')[0].strip()
+                                authors.add(first_author)
+                            
+                            if year and str(year) != 'Unknown':
+                                years.add(str(year))
+                            
+                            if title and title != 'Unknown' and len(title) > 5:
+                                publications.append(title)
+                            
+                            if source_type:
+                                source_types.add(source_type)
+                            
+                            # Create formatted citation
+                            if author and year:
+                                sample_sources.append(f"**{first_author}** ({year})")
+                            elif title and len(title) < 80:
+                                sample_sources.append(f"*{title}*")
+                    
+                    # Create engaging, detailed reply
+                    reply_parts = [f"📚 **Scientific Literature for {params.species_name}**"]
+                    reply_parts.append(f"Found **{source_count} academic sources** documenting this species!")
+                    
+                    # Publication timeline
+                    if years:
+                        year_list = sorted([int(y) for y in years if y.isdigit()])
+                        if year_list:
+                            earliest = min(year_list)
+                            latest = max(year_list)
+                            if latest - earliest > 50:
+                                reply_parts.append(f"📅 **Research Timeline**: Scientific documentation spans **{latest - earliest} years** ({earliest}-{latest})")
+                            else:
+                                reply_parts.append(f"📅 **Publication Period**: {earliest}-{latest}")
+                    
+                    # Author diversity
+                    if authors:
+                        clean_authors = [a for a in authors if a != 'Unknown' and len(a) > 2]
+                        if len(clean_authors) > 5:
+                            reply_parts.append(f"👥 **Research Community**: {len(clean_authors)} different research groups/authors have published on this species")
+                            reply_parts.append(f"🔬 **Key Contributors**: {', '.join(list(clean_authors)[:4])}")
+                    
+                    # Publication insights
+                    if publications:
+                        marine_terms = sum(1 for pub in publications if any(term in pub.lower() for term in ['marine', 'ocean', 'sea', 'fish', 'taxonomy', 'systematics']))
+                        if marine_terms > len(publications) * 0.5:
+                            reply_parts.append(f"🌊 **Research Focus**: Strong emphasis on **marine biology and taxonomy**")
+                    
+                    # Source examples
+                    if sample_sources:
+                        reply_parts.append(f"📖 **Sample References**: {', '.join(sample_sources[:4])}")
+                        if source_count > 4:
+                            reply_parts.append(f"   *...and {source_count - 4} additional sources*")
+                    
+                    # Research status insight
+                    if source_count > 15:
+                        reply_parts.append(f"⭐ **Research Status**: **Well-studied species** with extensive scientific literature")
+                    elif source_count > 5:
+                        reply_parts.append(f"📊 **Research Status**: **Moderately documented** species in scientific literature")
+                    else:
+                        reply_parts.append(f"🔍 **Research Status**: **Limited documentation** - potential area for further research")
+                    
+                    reply_parts.append(f"📋 **Complete bibliography** with full citations and publication details is available in the artifact above.")
+                    
+                    await context.reply("\n\n".join(reply_parts))
                 else:
                     await context.reply(f"No literature sources found for {params.species_name} in WoRMS.")
 
