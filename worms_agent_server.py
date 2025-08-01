@@ -13,14 +13,16 @@ from worms_agent import (
     MarineDistributionParams,
     MarineVernacularParams,
     MarineSourcesParams,
-    MarineRecordParams
+    MarineRecordParams,
+    MarineClassificationParams,
+    MarineChildrenParams
 )
 from worms_client import NoParams
 
-# --- AgentCard definition with 5 endpoints ---
+# --- AgentCard definition with 7 endpoints ---
 card = AgentCard(
     name="WoRMS Marine Species Agent",
-    description="Retrieves detailed marine species information from WoRMS (World Register of Marine Species) database including synonyms, distribution, common names, literature sources, and taxonomic records.",
+    description="Retrieves detailed marine species information from WoRMS (World Register of Marine Species) database including synonyms, distribution, common names, literature sources, taxonomic records, classification, and child taxa.",
     icon="https://www.marinespecies.org/images/WoRMS_logo.png",
     url="http://localhost:9999",  
     entrypoints=[
@@ -48,6 +50,16 @@ card = AgentCard(
             id="get_record",
             description="Get basic taxonomic record and classification for a marine species from WoRMS.",
             parameters=MarineRecordParams
+        ),
+        AgentEntrypoint(
+            id="get_classification",
+            description="Get complete taxonomic classification hierarchy for a marine species from WoRMS.",
+            parameters=MarineClassificationParams
+        ),
+        AgentEntrypoint(
+            id="get_children",
+            description="Get child taxa (subspecies, varieties, forms) for a marine species from WoRMS.",
+            parameters=MarineChildrenParams
         )
     ]
 )
@@ -84,6 +96,10 @@ class WoRMSAgent(IChatBioAgent):
             await self.workflow_agent.run_get_sources(context, params)
         elif entrypoint == "get_record":
             await self.workflow_agent.run_get_record(context, params)
+        elif entrypoint == "get_classification":
+            await self.workflow_agent.run_get_classification(context, params)
+        elif entrypoint == "get_children":
+            await self.workflow_agent.run_get_children(context, params)
         else:
             # Handle unexpected entrypoints 
             await context.reply(f"Unknown entrypoint '{entrypoint}' received. Request was: '{request}'")

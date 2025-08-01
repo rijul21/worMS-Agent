@@ -11,6 +11,8 @@ from worms_client import (
     VernacularParams,
     SourcesParams,
     RecordParams,
+    ClassificationParams,
+    ChildrenParams,
 )
 
 # Simple Agent Parameter Models - 5 endpoints (removed attributes, added 3 new)
@@ -56,6 +58,26 @@ class MarineRecordParams(BaseModel):
     )
     include_record: Optional[bool] = Field(True,
         description="Include taxonomic record in results"
+    )
+
+class MarineClassificationParams(BaseModel):
+    """Parameters for getting marine species taxonomic classification"""
+    species_name: str = Field(...,
+        description="Scientific name of the marine species",
+        examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
+    )
+    include_classification: Optional[bool] = Field(True,
+        description="Include taxonomic classification in results"
+    )
+
+class MarineChildrenParams(BaseModel):
+    """Parameters for getting marine species child taxa"""
+    species_name: str = Field(...,
+        description="Scientific name of the marine species",
+        examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
+    )
+    include_children: Optional[bool] = Field(True,
+        description="Include child taxa in results"
     )
 
 class WoRMSiChatBioAgent:
@@ -123,10 +145,6 @@ class WoRMSiChatBioAgent:
                             "synonym_count": synonym_count
                         }
                     )
-                    
-                    # Create engaging, detailed reply
-                    accepted_names = [syn for syn in synonyms if isinstance(syn, dict) and syn.get('status') == 'accepted']
-                    unaccepted_names = [syn for syn in synonyms if isinstance(syn, dict) and syn.get('status') != 'accepted']
                     
                     # Create detailed reply - WORKING VERSION
                     reply = f"Found {synonym_count} synonyms for {params.species_name} (AphiaID: {aphia_id})"
@@ -204,55 +222,25 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Extract rich location details for engaging response
-                    countries = set()
-                    localities = []
-                    regions = set()
-                    marine_areas = []
-                    
-                    for dist in distributions:
-                        if isinstance(dist, dict):
-                            if dist.get('country'):
-                                countries.add(dist['country'])
-                            if dist.get('locality'):
-                                locality = dist['locality']
-                                localities.append(locality)
-                                # Categorize locations
-                                if any(term in locality.lower() for term in ['sea', 'ocean', 'atlantic', 'pacific', 'mediterranean']):
-                                    marine_areas.append(locality)
-                            if dist.get('locationID'):
-                                regions.add(dist.get('locationID', ''))
-                    
-                    # Create engaging, detailed reply
-                    reply_parts = [f"**Global Distribution of {params.species_name}**"]
-                    reply_parts.append(f"This species has been documented across **{distribution_count} distinct geographic locations** worldwide, based on verified occurrence records in the WoRMS database.")
+                    # Create detailed user-friendly response
+                    reply_parts = [f"Found distribution data for {params.species_name} (AphiaID: {aphia_id}) across {distribution_count} locations"]
                     
                     if countries:
                         country_list = sorted(list(countries))
-                        if len(country_list) <= 8:
-                            reply_parts.append(f"**Regional presence**: Confirmed in {', '.join(country_list)}")
+                        if len(country_list) <= 10:
+                            reply_parts.append(f"Countries/regions: {', '.join(country_list)}")
                         else:
-                            reply_parts.append(f"**Regional presence**: Documented across {len(country_list)} countries and territories including {', '.join(country_list[:8])} and {len(country_list)-8} others")
-                    
-                    if marine_areas:
-                        reply_parts.append(f"**Major marine ecosystems**: Recorded from {', '.join(marine_areas[:4])}")
+                            reply_parts.append(f"Countries/regions: {', '.join(country_list[:10])} and {len(country_list)-10} more")
                     
                     if localities:
-                        coastal_areas = [loc for loc in localities if any(term in loc.lower() for term in ['coast', 'coastal', 'shore', 'estuary', 'bay'])]
-                        if coastal_areas:
-                            reply_parts.append(f"**Habitat diversity**: Found in {len(coastal_areas)} coastal and estuarine environments")
+                        if len(localities) <= 5:
+                            reply_parts.append(f"Specific locations include: {', '.join(localities)}")
+                        else:
+                            reply_parts.append(f"Specific locations include: {', '.join(localities[:5])} and {len(localities)-5} more")
                     
-                    # Add ecological insight
-                    if len(countries) > 15:
-                        reply_parts.append(f"**Biogeographic assessment**: With presence across {len(countries)}+ regions, this appears to be a **cosmopolitan species** with global distribution, indicating broad ecological tolerance and dispersal capability.")
-                    elif len(countries) > 8:
-                        reply_parts.append(f"**Distribution pattern**: This **wide-ranging species** spans multiple biogeographic regions, suggesting adaptability to diverse marine environments.")
-                    else:
-                        reply_parts.append(f"**Distribution pattern**: Shows **regional distribution** with documented presence in {len(countries)} areas, indicating more specialized habitat requirements or limited dispersal.")
+                    reply_parts.append("I've created an artifact with the complete distribution data.")
                     
-                    reply_parts.append(f"The complete distribution dataset includes precise coordinates and detailed locality information for all {distribution_count} occurrence records.")
-                    
-                    await context.reply("\n\n".join(reply_parts))
+                    await context.reply(". ".join(reply_parts))
                 else:
                     await context.reply(f"No distribution data found for {params.species_name} in WoRMS.")
 
@@ -324,59 +312,17 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Extract rich vernacular data for engaging response
-                    sample_names = []
-                    languages = set()
-                    language_groups = {}
-                    interesting_names = []
+                    # Create detailed reply
+                    reply = f"Found {vernacular_count} vernacular names for {params.species_name} (AphiaID: {aphia_id})"
+                    if languages:
+                        reply += f" in {len(languages)} languages ({', '.join(sorted(list(languages))[:5])}{'...' if len(languages) > 5 else ''})"
+                    if sample_names:
+                        reply += f". Examples: {', '.join(sample_names[:4])}"
+                        if vernacular_count > 4:
+                            reply += f" and {vernacular_count - 4} more"
+                    reply += ". I've created an artifact with all the vernacular names."
                     
-                    for vern in vernaculars:
-                        if isinstance(vern, dict):
-                            name = vern.get('vernacular', 'Unknown')
-                            lang = vern.get('language', 'Unknown')
-                            if lang != 'Unknown':
-                                languages.add(lang)
-                                if lang not in language_groups:
-                                    language_groups[lang] = []
-                                language_groups[lang].append(name)
-                                
-                                # Collect interesting/unique names
-                                if len(name) > 15 or any(char in name for char in ['ä', 'ö', 'ü', 'ñ', 'ç', 'é', 'è']):
-                                    interesting_names.append(f"{name} ({lang})")
-                                
-                                sample_names.append(f"**{name}** ({lang})")
-                    
-                    # Create engaging, detailed reply
-                    reply_parts = [f"**Vernacular Names for {params.species_name}**"]
-                    reply_parts.append(f"This species is recognized by **{vernacular_count} different names** across **{len(languages)} languages**, demonstrating its widespread cultural and economic significance.")
-                    
-                    # Highlight language diversity
-                    if len(languages) > 10:
-                        reply_parts.append(f"**Global linguistic recognition**: Names documented in {len(languages)} languages reflect this species' **worldwide cultural importance** and interaction with diverse human communities.")
-                    
-                    # Show interesting examples by language
-                    lang_examples = []
-                    for lang in sorted(list(languages))[:6]:
-                        if lang in language_groups and language_groups[lang]:
-                            examples = language_groups[lang][:2]
-                            lang_examples.append(f"**{lang}**: {', '.join(examples)}")
-                    
-                    if lang_examples:
-                        reply_parts.append("**Representative examples by language**:")
-                        reply_parts.extend([f"  • {ex}" for ex in lang_examples])
-                    
-                    # Highlight unique/interesting names
-                    if interesting_names:
-                        reply_parts.append(f"**Linguistically notable names**: {', '.join(interesting_names[:3])}")
-                    
-                    # Cultural insight
-                    indigenous_langs = [lang for lang in languages if lang.lower() in ['inuktitut', 'aleut', 'kalaallisut', 'yupik', 'inupiaq']]
-                    if indigenous_langs:
-                        reply_parts.append(f"**Indigenous knowledge systems**: Names preserved in {len(indigenous_langs)} indigenous languages, representing traditional ecological knowledge and cultural relationships with marine ecosystems.")
-                    
-                    reply_parts.append(f"The complete multilingual dataset provides valuable insight into human-marine species interactions across different cultures and regions, with all {vernacular_count} names and their linguistic contexts preserved in the artifact.")
-                    
-                    await context.reply("\n\n".join(reply_parts))
+                    await context.reply(reply)
                 else:
                     await context.reply(f"No vernacular names found for {params.species_name} in WoRMS.")
 
@@ -456,85 +402,18 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Extract rich source data for engaging response
-                    sample_sources = []
-                    authors = set()
-                    years = set()
-                    publications = []
-                    source_types = set()
-                    
-                    for source in sources:
-                        if isinstance(source, dict):
-                            title = source.get('title', 'Unknown')
-                            author = source.get('authors', source.get('author', ''))
-                            year = source.get('year', '')
-                            source_type = source.get('type', '')
-                            
-                            if author and author != 'Unknown':
-                                # Extract first author surname
-                                first_author = author.split(',')[0].strip()
-                                authors.add(first_author)
-                            
-                            if year and str(year) != 'Unknown':
-                                years.add(str(year))
-                            
-                            if title and title != 'Unknown' and len(title) > 5:
-                                publications.append(title)
-                            
-                            if source_type:
-                                source_types.add(source_type)
-                            
-                            # Create formatted citation
-                            if author and year:
-                                sample_sources.append(f"**{first_author}** ({year})")
-                            elif title and len(title) < 80:
-                                sample_sources.append(f"*{title}*")
-                    
-                    # Create engaging, detailed reply
-                    reply_parts = [f"**Scientific Literature for {params.species_name}**"]
-                    reply_parts.append(f"Located **{source_count} academic sources** documenting this species in the scientific literature.")
-                    
-                    # Publication timeline
+                    # Create detailed reply
+                    reply = f"Found {source_count} literature sources for {params.species_name} (AphiaID: {aphia_id})"
                     if years:
-                        year_list = sorted([int(y) for y in years if y.isdigit()])
-                        if year_list:
-                            earliest = min(year_list)
-                            latest = max(year_list)
-                            if latest - earliest > 50:
-                                reply_parts.append(f"**Research timeline**: Scientific documentation spans **{latest - earliest} years** from {earliest} to {latest}, indicating sustained research interest.")
-                            else:
-                                reply_parts.append(f"**Publication period**: Active research from {earliest} to {latest}")
-                    
-                    # Author diversity
-                    if authors:
-                        clean_authors = [a for a in authors if a != 'Unknown' and len(a) > 2]
-                        if len(clean_authors) > 5:
-                            reply_parts.append(f"**Research community**: {len(clean_authors)} different research groups and authors have contributed to the scientific understanding of this species.")
-                            reply_parts.append(f"**Key contributors**: {', '.join(list(clean_authors)[:4])}")
-                    
-                    # Publication insights
-                    if publications:
-                        marine_terms = sum(1 for pub in publications if any(term in pub.lower() for term in ['marine', 'ocean', 'sea', 'fish', 'taxonomy', 'systematics']))
-                        if marine_terms > len(publications) * 0.5:
-                            reply_parts.append(f"**Research focus**: Literature emphasizes marine biology, taxonomy, and systematic studies.")
-                    
-                    # Source examples
+                        year_range = f"{min(years)}-{max(years)}" if len(years) > 1 else list(years)[0]
+                        reply += f" spanning {year_range}"
                     if sample_sources:
-                        reply_parts.append(f"**Representative citations**: {', '.join(sample_sources[:4])}")
-                        if source_count > 4:
-                            reply_parts.append(f"   *...plus {source_count - 4} additional references*")
+                        reply += f". Examples: {'; '.join(sample_sources[:3])}"
+                        if source_count > 3:
+                            reply += f" and {source_count - 3} more"
+                    reply += ". I've created an artifact with all the literature sources."
                     
-                    # Research status insight
-                    if source_count > 15:
-                        reply_parts.append(f"**Research assessment**: **Well-studied species** with extensive scientific literature indicating significant ecological or economic importance.")
-                    elif source_count > 5:
-                        reply_parts.append(f"**Research assessment**: **Moderately documented** species with steady scientific attention.")
-                    else:
-                        reply_parts.append(f"**Research assessment**: **Limited documentation** suggests potential opportunities for expanded research.")
-                    
-                    reply_parts.append(f"The complete bibliography includes full citations, publication details, and DOI links where available, providing comprehensive access to the scientific knowledge base for this species.")
-                    
-                    await context.reply("\n\n".join(reply_parts))
+                    await context.reply(reply)
                 else:
                     await context.reply(f"No literature sources found for {params.species_name} in WoRMS.")
 
@@ -633,3 +512,163 @@ class WoRMSiChatBioAgent:
             except Exception as e:
                 await process.log("Error during API request", data={"error": str(e)})
                 await context.reply(f"I encountered an error while retrieving the taxonomic record: {e}")
+
+    async def run_get_classification(self, context, params: MarineClassificationParams):
+        """Workflow for getting marine species taxonomic classification"""
+        async with context.begin_process(f"Getting classification for '{params.species_name}'") as process:
+            await process.log("Classification search parameters", data=params.model_dump(exclude_defaults=True))
+
+            try:
+                # Step 1: Get AphiaID
+                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                loop = asyncio.get_event_loop()
+                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
+                
+                if not aphia_id:
+                    await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
+                    return
+
+                await process.log(f"Found AphiaID: {aphia_id}")
+
+                # Step 2: Get classification
+                class_params = ClassificationParams(aphia_id=aphia_id)
+                api_url = self.worms_logic.build_classification_url(class_params)
+                await process.log(f"Constructed API URL: {api_url}")
+
+                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
+                
+                # Handle response format
+                if isinstance(raw_response, list):
+                    classification = raw_response
+                elif isinstance(raw_response, dict):
+                    classification = [raw_response]
+                else:
+                    classification = []
+
+                classification_count = len(classification)
+                
+                if classification_count > 0:
+                    await process.log(f"Found {classification_count} taxonomic levels")
+                    
+                    # Extract taxonomic hierarchy for display
+                    taxonomic_levels = []
+                    for level in classification:
+                        if isinstance(level, dict):
+                            rank = level.get('rank', 'Unknown')
+                            name = level.get('scientificname', 'Unknown')
+                            if rank != 'Unknown' and name != 'Unknown':
+                                taxonomic_levels.append(f"{rank}: {name}")
+                    
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Marine species taxonomic classification for {params.species_name} (AphiaID: {aphia_id}) - {classification_count} levels",
+                        uris=[api_url],
+                        metadata={
+                            "data_source": "WoRMS Classification",
+                            "aphia_id": aphia_id,
+                            "scientific_name": params.species_name,
+                            "classification_levels": classification_count
+                        }
+                    )
+                    
+                    # Create detailed reply
+                    reply = f"Found complete taxonomic classification for {params.species_name} (AphiaID: {aphia_id}) with {classification_count} hierarchical levels"
+                    if taxonomic_levels:
+                        reply += f". Taxonomic hierarchy: {' → '.join(taxonomic_levels[:6])}"
+                        if classification_count > 6:
+                            reply += f" and {classification_count - 6} more levels"
+                    reply += ". I've created an artifact with the complete classification."
+                    
+                    await context.reply(reply)
+                else:
+                    await context.reply(f"No taxonomic classification found for {params.species_name} in WoRMS.")
+
+            except Exception as e:
+                await process.log("Error during API request", data={"error": str(e)})
+                await context.reply(f"I encountered an error while retrieving classification: {e}")
+
+    async def run_get_children(self, context, params: MarineChildrenParams):
+        """Workflow for getting marine species child taxa"""
+        async with context.begin_process(f"Getting child taxa for '{params.species_name}'") as process:
+            await process.log("Children search parameters", data=params.model_dump(exclude_defaults=True))
+
+            try:
+                # Step 1: Get AphiaID
+                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                loop = asyncio.get_event_loop()
+                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
+                
+                if not aphia_id:
+                    await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
+                    return
+
+                await process.log(f"Found AphiaID: {aphia_id}")
+
+                # Step 2: Get children
+                children_params = ChildrenParams(aphia_id=aphia_id)
+                api_url = self.worms_logic.build_children_url(children_params)
+                await process.log(f"Constructed API URL: {api_url}")
+
+                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
+                
+                # Handle response format
+                if isinstance(raw_response, list):
+                    children = raw_response
+                elif isinstance(raw_response, dict):
+                    children = [raw_response]
+                else:
+                    children = []
+
+                children_count = len(children)
+                
+                if children_count > 0:
+                    await process.log(f"Found {children_count} child taxa")
+                    
+                    # Extract sample children for display
+                    sample_children = []
+                    ranks = set()
+                    
+                    for child in children[:8]:  # Show first 8
+                        if isinstance(child, dict):
+                            child_name = child.get('scientificname', 'Unknown')
+                            child_rank = child.get('rank', 'Unknown')
+                            child_status = child.get('status', '')
+                            
+                            if child_rank != 'Unknown':
+                                ranks.add(child_rank)
+                            
+                            if child_status and child_status == 'accepted':
+                                sample_children.append(f"{child_name} ({child_rank})")
+                            else:
+                                sample_children.append(child_name)
+                    
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Marine species child taxa for {params.species_name} (AphiaID: {aphia_id}) - {children_count} children",
+                        uris=[api_url],
+                        metadata={
+                            "data_source": "WoRMS Child Taxa",
+                            "aphia_id": aphia_id,
+                            "scientific_name": params.species_name,
+                            "children_count": children_count,
+                            "ranks_found": list(ranks)
+                        }
+                    )
+                    
+                    # Create detailed reply
+                    reply = f"Found {children_count} child taxa for {params.species_name} (AphiaID: {aphia_id})"
+                    if ranks:
+                        reply += f" at taxonomic levels: {', '.join(sorted(list(ranks)))}"
+                    if sample_children:
+                        reply += f". Examples: {', '.join(sample_children[:5])}"
+                        if children_count > 5:
+                            reply += f" and {children_count - 5} more"
+                    reply += ". I've created an artifact with all the child taxa."
+                    
+                    await context.reply(reply)
+                else:
+                    await context.reply(f"No child taxa found for {params.species_name} in WoRMS. This may indicate it's a terminal taxonomic unit (species level) with no subspecies or varieties.")
+
+            except Exception as e:
+                await process.log("Error during API request", data={"error": str(e)})
+                await context.reply(f"I encountered an error while retrieving child taxa: {e}")

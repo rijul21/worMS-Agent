@@ -6,7 +6,7 @@ from typing import Optional, Dict
 from urllib.parse import urlencode, quote
 import cloudscraper
 
-# Parameter Models - 5 endpoints (removed attributes, added 3 new ones)
+# Parameter Models - 7 endpoints total
 class SpeciesSearchParams(BaseModel):
     """Parameters for searching marine species in WoRMS"""
     scientific_name: str = Field(..., 
@@ -54,6 +54,20 @@ class RecordParams(BaseModel):
     """Parameters for getting basic taxonomic record of a species"""
     aphia_id: int = Field(...,
         description="The AphiaID of the species to get record for",
+        examples=[137205, 104625, 137094]
+    )
+
+class ClassificationParams(BaseModel):
+    """Parameters for getting taxonomic classification of a species"""
+    aphia_id: int = Field(...,
+        description="The AphiaID of the species to get classification for",
+        examples=[137205, 104625, 137094]
+    )
+
+class ChildrenParams(BaseModel):
+    """Parameters for getting child taxa of a species"""
+    aphia_id: int = Field(...,
+        description="The AphiaID of the species to get child taxa for",
         examples=[137205, 104625, 137094]
     )
 
@@ -115,6 +129,14 @@ class WoRMS:
     def build_record_url(self, params: RecordParams) -> str:
         """Build URL for getting basic species taxonomic record"""
         return f"{self.worms_api_base_url}/AphiaRecordByAphiaID/{params.aphia_id}"
+
+    def build_classification_url(self, params: ClassificationParams) -> str:
+        """Build URL for getting species taxonomic classification"""
+        return f"{self.worms_api_base_url}/AphiaClassificationByAphiaID/{params.aphia_id}"
+
+    def build_children_url(self, params: ChildrenParams) -> str:
+        """Build URL for getting species child taxa"""
+        return f"{self.worms_api_base_url}/AphiaChildrenByAphiaID/{params.aphia_id}"
 
     # Request execution methods (following ALA pattern)
     def execute_request(self, url: str) -> Dict:
