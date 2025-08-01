@@ -7,26 +7,23 @@ from ichatbio.server import run_agent_server
 from ichatbio.types import AgentCard, AgentEntrypoint
 
 # Import your existing agent workflow and Pydantic models
-from worms_agent import WoRMSiChatBioAgent
-from worms_client import (
-    MarineAttributesParams,
+from worms_agent import (
+    WoRMSiChatBioAgent,
     MarineSynonymsParams,
     MarineDistributionParams,
-    NoParams
+    MarineVernacularParams,
+    MarineSourcesParams,
+    MarineRecordParams
 )
+from worms_client import NoParams
 
-# --- AgentCard definition with url added ---
+# --- AgentCard definition with 5 endpoints ---
 card = AgentCard(
     name="WoRMS Marine Species Agent",
-    description="Retrieves detailed marine species information from WoRMS (World Register of Marine Species) database.",
+    description="Retrieves detailed marine species information from WoRMS (World Register of Marine Species) database including synonyms, distribution, common names, literature sources, and taxonomic records.",
     icon="https://www.marinespecies.org/images/WoRMS_logo.png",
     url="http://localhost:9999",  
     entrypoints=[
-        AgentEntrypoint(
-            id="get_attributes",
-            description="Get attributes and characteristics for a marine species from WoRMS.",
-            parameters=MarineAttributesParams
-        ),
         AgentEntrypoint(
             id="get_synonyms",
             description="Get synonyms and alternative names for a marine species from WoRMS.",
@@ -36,6 +33,21 @@ card = AgentCard(
             id="get_distribution",
             description="Get distribution data and geographic locations for a marine species from WoRMS.",
             parameters=MarineDistributionParams
+        ),
+        AgentEntrypoint(
+            id="get_vernacular_names",
+            description="Get vernacular/common names for a marine species in different languages from WoRMS.",
+            parameters=MarineVernacularParams
+        ),
+        AgentEntrypoint(
+            id="get_sources",
+            description="Get literature sources and references for a marine species from WoRMS.",
+            parameters=MarineSourcesParams
+        ),
+        AgentEntrypoint(
+            id="get_record",
+            description="Get basic taxonomic record and classification for a marine species from WoRMS.",
+            parameters=MarineRecordParams
         )
     ]
 )
@@ -62,12 +74,16 @@ class WoRMSAgent(IChatBioAgent):
         print(f"params: {params}")
         print(f"========================")
         
-        if entrypoint == "get_attributes":
-            await self.workflow_agent.run_get_attributes(context, params)
-        elif entrypoint == "get_synonyms":
+        if entrypoint == "get_synonyms":
             await self.workflow_agent.run_get_synonyms(context, params)
         elif entrypoint == "get_distribution":
             await self.workflow_agent.run_get_distribution(context, params)
+        elif entrypoint == "get_vernacular_names":
+            await self.workflow_agent.run_get_vernacular_names(context, params)
+        elif entrypoint == "get_sources":
+            await self.workflow_agent.run_get_sources(context, params)
+        elif entrypoint == "get_record":
+            await self.workflow_agent.run_get_record(context, params)
         else:
             # Handle unexpected entrypoints 
             await context.reply(f"Unknown entrypoint '{entrypoint}' received. Request was: '{request}'")

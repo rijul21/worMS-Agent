@@ -6,7 +6,7 @@ from typing import Optional, Dict
 from urllib.parse import urlencode, quote
 import cloudscraper
 
-# Simple Parameter Models - Only 3 endpoints
+# Parameter Models - 5 endpoints (removed attributes, added 3 new ones)
 class SpeciesSearchParams(BaseModel):
     """Parameters for searching marine species in WoRMS"""
     scientific_name: str = Field(..., 
@@ -22,13 +22,6 @@ class SpeciesSearchParams(BaseModel):
         description="Return only marine species"
     )
 
-class AttributesParams(BaseModel):
-    """Parameters for getting attributes of a species"""
-    aphia_id: int = Field(...,
-        description="The AphiaID of the species to get attributes for",
-        examples=[137205, 104625, 137094]
-    )
-
 class SynonymsParams(BaseModel):
     """Parameters for getting synonyms of a species"""
     aphia_id: int = Field(...,
@@ -40,6 +33,27 @@ class DistributionParams(BaseModel):
     """Parameters for getting distribution data of a species"""
     aphia_id: int = Field(...,
         description="The AphiaID of the species to get distribution for",
+        examples=[137205, 104625, 137094]
+    )
+
+class VernacularParams(BaseModel):
+    """Parameters for getting vernacular/common names of a species"""
+    aphia_id: int = Field(...,
+        description="The AphiaID of the species to get vernacular names for",
+        examples=[137205, 104625, 137094]
+    )
+
+class SourcesParams(BaseModel):
+    """Parameters for getting literature sources/references of a species"""
+    aphia_id: int = Field(...,
+        description="The AphiaID of the species to get sources for",
+        examples=[137205, 104625, 137094]
+    )
+
+class RecordParams(BaseModel):
+    """Parameters for getting basic taxonomic record of a species"""
+    aphia_id: int = Field(...,
+        description="The AphiaID of the species to get record for",
         examples=[137205, 104625, 137094]
     )
 
@@ -67,7 +81,7 @@ class WoRMS:
                 value = config.get(key, default)
         return value if value is not None else default
 
-    # URL Building Methods - 3 core endpoints + search
+    # URL Building Methods - 5 core endpoints + search
     def build_species_search_url(self, params: SpeciesSearchParams) -> str:
         """Build URL for searching species by name"""
         encoded_name = quote(params.scientific_name)
@@ -82,10 +96,6 @@ class WoRMS:
         base_url = f"{self.worms_api_base_url}/AphiaRecordsByName/{encoded_name}"
         return f"{base_url}?{query_string}" if query_string else base_url
 
-    def build_attributes_url(self, params: AttributesParams) -> str:
-        """Build URL for getting species attributes"""
-        return f"{self.worms_api_base_url}/AphiaAttributesByAphiaID/{params.aphia_id}"
-
     def build_synonyms_url(self, params: SynonymsParams) -> str:
         """Build URL for getting species synonyms"""
         return f"{self.worms_api_base_url}/AphiaSynonymsByAphiaID/{params.aphia_id}"
@@ -93,6 +103,18 @@ class WoRMS:
     def build_distribution_url(self, params: DistributionParams) -> str:
         """Build URL for getting species distribution"""
         return f"{self.worms_api_base_url}/AphiaDistributionsByAphiaID/{params.aphia_id}"
+
+    def build_vernacular_url(self, params: VernacularParams) -> str:
+        """Build URL for getting species vernacular/common names"""
+        return f"{self.worms_api_base_url}/AphiaVernacularsByAphiaID/{params.aphia_id}"
+
+    def build_sources_url(self, params: SourcesParams) -> str:
+        """Build URL for getting species literature sources/references"""
+        return f"{self.worms_api_base_url}/AphiaSourcesByAphiaID/{params.aphia_id}"
+
+    def build_record_url(self, params: RecordParams) -> str:
+        """Build URL for getting basic species taxonomic record"""
+        return f"{self.worms_api_base_url}/AphiaRecordByAphiaID/{params.aphia_id}"
 
     # Request execution methods (following ALA pattern)
     def execute_request(self, url: str) -> Dict:

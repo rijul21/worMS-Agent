@@ -6,21 +6,14 @@ from pydantic import BaseModel, Field
 
 from worms_client import (
     WoRMS,
-
-    AttributesParams,
     SynonymsParams, 
     DistributionParams,
-
+    VernacularParams,
+    SourcesParams,
+    RecordParams,
 )
 
-# Simple Agent Parameter Models
-class MarineAttributesParams(BaseModel):
-    """Parameters for getting marine species attributes"""
-    species_name: str = Field(...,
-        description="Scientific name of the marine species",
-        examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
-    )
-
+# Simple Agent Parameter Models - 5 endpoints (removed attributes, added 3 new)
 class MarineSynonymsParams(BaseModel):
     """Parameters for getting marine species synonyms"""
     species_name: str = Field(...,
@@ -35,84 +28,32 @@ class MarineDistributionParams(BaseModel):
         examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
     )
 
+class MarineVernacularParams(BaseModel):
+    """Parameters for getting marine species vernacular/common names"""
+    species_name: str = Field(...,
+        description="Scientific name of the marine species",
+        examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
+    )
+
+class MarineSourcesParams(BaseModel):
+    """Parameters for getting marine species literature sources/references"""
+    species_name: str = Field(...,
+        description="Scientific name of the marine species",
+        examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
+    )
+
+class MarineRecordParams(BaseModel):
+    """Parameters for getting marine species basic taxonomic record"""
+    species_name: str = Field(...,
+        description="Scientific name of the marine species",
+        examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
+    )
+
 class WoRMSiChatBioAgent:
-    """The iChatBio agent implementation for WoRMS - Simple 3 endpoint version"""
+    """The iChatBio agent implementation for WoRMS - 5 endpoint version"""
 
     def __init__(self):
         self.worms_logic = WoRMS()
-
-    async def run_get_attributes(self, context, params: MarineAttributesParams):
-        """Workflow for getting marine species attributes"""
-        async with context.begin_process(f"Getting attributes for '{params.species_name}'") as process:
-            await process.log("Attributes search parameters", data=params.model_dump(exclude_defaults=True))
-
-            try:
-                # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
-                loop = asyncio.get_event_loop()
-                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
-                
-                if not aphia_id:
-                    await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
-                    return
-
-                await process.log(f"Found AphiaID: {aphia_id}")
-
-                # Step 2: Get attributes
-                attr_params = AttributesParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_attributes_url(attr_params)
-                await process.log(f"Constructed API URL: {api_url}")
-
-                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
-                
-                # Handle response format
-                if isinstance(raw_response, list):
-                    attributes = raw_response
-                elif isinstance(raw_response, dict):
-                    attributes = [raw_response]
-                else:
-                    attributes = []
-
-                attribute_count = len(attributes)
-                
-                if attribute_count > 0:
-                    await process.log(f"Found {attribute_count} attributes")
-                    
-                    # Extract sample attributes for display
-                    sample_attributes = []
-                    for attr in attributes[:5]:  # Show first 5
-                        if isinstance(attr, dict):
-                            attr_name = attr.get('measurementType', attr.get('attribute', 'Unknown'))
-                            attr_value = attr.get('measurementValue', attr.get('value', 'N/A'))
-                            sample_attributes.append(f"{attr_name}: {attr_value}")
-                    
-                    await process.create_artifact(
-                        mimetype="application/json",
-                        description=f"Marine species attributes for {params.species_name} (AphiaID: {aphia_id}) - {attribute_count} attributes",
-                        uris=[api_url],
-                        metadata={
-                            "data_source": "WoRMS Attributes",
-                            "aphia_id": aphia_id,
-                            "scientific_name": params.species_name,
-                            "attribute_count": attribute_count
-                        }
-                    )
-                    
-                    # Create detailed reply
-                    reply = f"Found {attribute_count} attributes for {params.species_name} (AphiaID: {aphia_id})"
-                    if sample_attributes:
-                        reply += f". Examples: {'; '.join(sample_attributes[:3])}"
-                        if attribute_count > 3:
-                            reply += f" and {attribute_count - 3} more"
-                    reply += ". I've created an artifact with the complete data."
-                    
-                    await context.reply(reply)
-                else:
-                    await context.reply(f"No attributes found for {params.species_name} in WoRMS.")
-
-            except Exception as e:
-                await process.log("Error during API request", data={"error": str(e)})
-                await context.reply(f"I encountered an error while retrieving attributes: {e}")
 
     async def run_get_synonyms(self, context, params: MarineSynonymsParams):
         """Workflow for getting marine species synonyms"""
@@ -272,6 +213,271 @@ class WoRMSiChatBioAgent:
                 else:
                     await context.reply(f"No distribution data found for {params.species_name} in WoRMS.")
 
-            except ConnectionError as e:
+            except Exception as e:
                 await process.log("Error during API request", data={"error": str(e)})
                 await context.reply(f"I encountered an error while retrieving distribution data: {e}")
+
+    async def run_get_vernacular_names(self, context, params: MarineVernacularParams):
+        """Workflow for getting marine species vernacular/common names"""
+        async with context.begin_process(f"Getting vernacular names for '{params.species_name}'") as process:
+            await process.log("Vernacular names search parameters", data=params.model_dump(exclude_defaults=True))
+
+            try:
+                # Step 1: Get AphiaID
+                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                loop = asyncio.get_event_loop()
+                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
+                
+                if not aphia_id:
+                    await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
+                    return
+
+                await process.log(f"Found AphiaID: {aphia_id}")
+
+                # Step 2: Get vernacular names
+                vern_params = VernacularParams(aphia_id=aphia_id)
+                api_url = self.worms_logic.build_vernacular_url(vern_params)
+                await process.log(f"Constructed API URL: {api_url}")
+
+                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
+                
+                # Handle response format
+                if isinstance(raw_response, list):
+                    vernaculars = raw_response
+                elif isinstance(raw_response, dict):
+                    vernaculars = [raw_response]
+                else:
+                    vernaculars = []
+
+                vernacular_count = len(vernaculars)
+                
+                if vernacular_count > 0:
+                    await process.log(f"Found {vernacular_count} vernacular names")
+                    
+                    # Extract sample vernacular names by language for display
+                    sample_names = []
+                    languages = set()
+                    
+                    for vern in vernaculars[:10]:  # Show first 10
+                        if isinstance(vern, dict):
+                            name = vern.get('vernacular', 'Unknown')
+                            lang = vern.get('language', 'Unknown')
+                            if lang != 'Unknown':
+                                languages.add(lang)
+                                sample_names.append(f"{name} ({lang})")
+                            else:
+                                sample_names.append(name)
+                    
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Marine species vernacular names for {params.species_name} (AphiaID: {aphia_id}) - {vernacular_count} names",
+                        uris=[api_url],
+                        metadata={
+                            "data_source": "WoRMS Vernacular Names",
+                            "aphia_id": aphia_id,
+                            "scientific_name": params.species_name,
+                            "vernacular_count": vernacular_count,
+                            "languages": list(languages)
+                        }
+                    )
+                    
+                    # Create detailed reply
+                    reply = f"Found {vernacular_count} vernacular names for {params.species_name} (AphiaID: {aphia_id})"
+                    if languages:
+                        reply += f" in {len(languages)} languages ({', '.join(sorted(list(languages))[:5])}{'...' if len(languages) > 5 else ''})"
+                    if sample_names:
+                        reply += f". Examples: {', '.join(sample_names[:4])}"
+                        if vernacular_count > 4:
+                            reply += f" and {vernacular_count - 4} more"
+                    reply += ". I've created an artifact with all the vernacular names."
+                    
+                    await context.reply(reply)
+                else:
+                    await context.reply(f"No vernacular names found for {params.species_name} in WoRMS.")
+
+            except Exception as e:
+                await process.log("Error during API request", data={"error": str(e)})
+                await context.reply(f"I encountered an error while retrieving vernacular names: {e}")
+
+    async def run_get_sources(self, context, params: MarineSourcesParams):
+        """Workflow for getting marine species literature sources/references"""
+        async with context.begin_process(f"Getting sources for '{params.species_name}'") as process:
+            await process.log("Sources search parameters", data=params.model_dump(exclude_defaults=True))
+
+            try:
+                # Step 1: Get AphiaID
+                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                loop = asyncio.get_event_loop()
+                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
+                
+                if not aphia_id:
+                    await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
+                    return
+
+                await process.log(f"Found AphiaID: {aphia_id}")
+
+                # Step 2: Get sources
+                sources_params = SourcesParams(aphia_id=aphia_id)
+                api_url = self.worms_logic.build_sources_url(sources_params)
+                await process.log(f"Constructed API URL: {api_url}")
+
+                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
+                
+                # Handle response format
+                if isinstance(raw_response, list):
+                    sources = raw_response
+                elif isinstance(raw_response, dict):
+                    sources = [raw_response]
+                else:
+                    sources = []
+
+                source_count = len(sources)
+                
+                if source_count > 0:
+                    await process.log(f"Found {source_count} sources")
+                    
+                    # Extract sample sources for display
+                    sample_sources = []
+                    authors = set()
+                    years = set()
+                    
+                    for source in sources[:8]:  # Show first 8
+                        if isinstance(source, dict):
+                            title = source.get('title', 'Unknown')
+                            author = source.get('authors', source.get('author', ''))
+                            year = source.get('year', '')
+                            
+                            if author:
+                                authors.add(author.split(',')[0])  # First author
+                            if year:
+                                years.add(str(year))
+                            
+                            if author and year:
+                                sample_sources.append(f"{author} ({year})")
+                            elif title:
+                                sample_sources.append(title[:50] + "..." if len(title) > 50 else title)
+                    
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Marine species literature sources for {params.species_name} (AphiaID: {aphia_id}) - {source_count} sources",
+                        uris=[api_url],
+                        metadata={
+                            "data_source": "WoRMS Sources",
+                            "aphia_id": aphia_id,
+                            "scientific_name": params.species_name,
+                            "source_count": source_count,
+                            "authors": list(authors),
+                            "years": sorted(list(years))
+                        }
+                    )
+                    
+                    # Create detailed reply
+                    reply = f"Found {source_count} literature sources for {params.species_name} (AphiaID: {aphia_id})"
+                    if years:
+                        year_range = f"{min(years)}-{max(years)}" if len(years) > 1 else list(years)[0]
+                        reply += f" spanning {year_range}"
+                    if sample_sources:
+                        reply += f". Examples: {'; '.join(sample_sources[:3])}"
+                        if source_count > 3:
+                            reply += f" and {source_count - 3} more"
+                    reply += ". I've created an artifact with all the literature sources."
+                    
+                    await context.reply(reply)
+                else:
+                    await context.reply(f"No literature sources found for {params.species_name} in WoRMS.")
+
+            except Exception as e:
+                await process.log("Error during API request", data={"error": str(e)})
+                await context.reply(f"I encountered an error while retrieving sources: {e}")
+
+    async def run_get_record(self, context, params: MarineRecordParams):
+        """Workflow for getting marine species basic taxonomic record"""
+        async with context.begin_process(f"Getting basic record for '{params.species_name}'") as process:
+            await process.log("Record search parameters", data=params.model_dump(exclude_defaults=True))
+
+            try:
+                # Step 1: Get AphiaID
+                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                loop = asyncio.get_event_loop()
+                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
+                
+                if not aphia_id:
+                    await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
+                    return
+
+                await process.log(f"Found AphiaID: {aphia_id}")
+
+                # Step 2: Get record
+                record_params = RecordParams(aphia_id=aphia_id)
+                api_url = self.worms_logic.build_record_url(record_params)
+                await process.log(f"Constructed API URL: {api_url}")
+
+                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
+                
+                # Handle response format - this endpoint returns a single object
+                if isinstance(raw_response, dict):
+                    record = raw_response
+                else:
+                    await context.reply(f"Unexpected response format for {params.species_name} record.")
+                    return
+
+                await process.log("Found taxonomic record")
+                
+                # Extract key information for display
+                scientific_name = record.get('scientificname', 'Unknown')
+                authority = record.get('authority', '')
+                status = record.get('status', 'Unknown')
+                rank = record.get('rank', 'Unknown')
+                kingdom = record.get('kingdom', '')
+                phylum = record.get('phylum', '')
+                class_name = record.get('class', '')
+                order = record.get('order', '')
+                family = record.get('family', '')
+                genus = record.get('genus', '')
+                
+                await process.create_artifact(
+                    mimetype="application/json",
+                    description=f"Marine species taxonomic record for {params.species_name} (AphiaID: {aphia_id})",
+                    uris=[api_url],
+                    metadata={
+                        "data_source": "WoRMS Taxonomic Record",
+                        "aphia_id": aphia_id,
+                        "scientific_name": scientific_name,
+                        "status": status,
+                        "rank": rank,
+                        "taxonomy": {
+                            "kingdom": kingdom,
+                            "phylum": phylum,
+                            "class": class_name,
+                            "order": order,
+                            "family": family,
+                            "genus": genus
+                        }
+                    }
+                )
+                
+                # Create detailed user-friendly response
+                reply_parts = [f"Retrieved taxonomic record for {scientific_name}"]
+                
+                if authority:
+                    reply_parts.append(f"Authority: {authority}")
+                
+                reply_parts.append(f"Status: {status}, Rank: {rank}")
+                
+                # Build taxonomy string
+                taxonomy_parts = []
+                for tax_rank, tax_name in [("Kingdom", kingdom), ("Phylum", phylum), ("Class", class_name), 
+                                         ("Order", order), ("Family", family), ("Genus", genus)]:
+                    if tax_name:
+                        taxonomy_parts.append(f"{tax_rank}: {tax_name}")
+                
+                if taxonomy_parts:
+                    reply_parts.append(f"Taxonomy - {'; '.join(taxonomy_parts)}")
+                
+                reply_parts.append("I've created an artifact with the complete taxonomic record.")
+                
+                await context.reply(". ".join(reply_parts))
+
+            except Exception as e:
+                await process.log("Error during API request", data={"error": str(e)})
+                await context.reply(f"I encountered an error while retrieving the taxonomic record: {e}")
