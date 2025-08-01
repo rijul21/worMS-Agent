@@ -34,6 +34,9 @@ class MarineVernacularParams(BaseModel):
         description="Scientific name of the marine species",
         examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
     )
+    include_vernaculars: Optional[bool] = Field(True,
+        description="Include vernacular names in results"
+    )
 
 class MarineSourcesParams(BaseModel):
     """Parameters for getting marine species literature sources/references"""
@@ -41,12 +44,18 @@ class MarineSourcesParams(BaseModel):
         description="Scientific name of the marine species",
         examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
     )
+    include_sources: Optional[bool] = Field(True,
+        description="Include literature sources in results"
+    )
 
 class MarineRecordParams(BaseModel):
     """Parameters for getting marine species basic taxonomic record"""
     species_name: str = Field(...,
         description="Scientific name of the marine species",
         examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
+    )
+    include_record: Optional[bool] = Field(True,
+        description="Include taxonomic record in results"
     )
 
 class WoRMSiChatBioAgent:
