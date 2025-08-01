@@ -128,8 +128,33 @@ class WoRMSiChatBioAgent:
                     accepted_names = [syn for syn in synonyms if isinstance(syn, dict) and syn.get('status') == 'accepted']
                     unaccepted_names = [syn for syn in synonyms if isinstance(syn, dict) and syn.get('status') != 'accepted']
                     
-                    # SIMPLE TEST VERSION
-                    await context.reply(f"TESTING ENHANCED FORMAT: Found {synonym_count} synonyms for {params.species_name}. This species has undergone multiple taxonomic revisions throughout its nomenclatural history, indicating the evolving nature of marine taxonomic classification. The complete dataset reveals patterns of genus transfers and spelling variants that reflect scientific progress in systematic biology.")
+                    # Single comprehensive paragraph approach
+                    accepted_names = [syn for syn in synonyms if isinstance(syn, dict) and syn.get('status') == 'accepted']
+                    unaccepted_names = [syn for syn in synonyms if isinstance(syn, dict) and syn.get('status') != 'accepted']
+                    
+                    # Build analysis in one flowing paragraph
+                    analysis_parts = []
+                    analysis_parts.append(f"Analysis of {synonym_count} historical names for {params.species_name} reveals a complex taxonomic journey.")
+                    
+                    if unaccepted_names:
+                        # Check for genus transfers
+                        genus_changes = []
+                        for syn in unaccepted_names[:5]:
+                            if isinstance(syn, dict):
+                                name = syn.get('scientificname', '')
+                                if name and name.split()[0] != params.species_name.split()[0]:
+                                    genus_changes.append(name.split()[0])
+                        
+                        if genus_changes:
+                            unique_genera = list(set(genus_changes))[:3]
+                            analysis_parts.append(f"The species has undergone taxonomic transfers between genera including {', '.join(unique_genera)}, reflecting evolving systematic understanding.")
+                        
+                        analysis_parts.append(f"Of the {synonym_count} names, {len(unaccepted_names)} represent historical nomenclatural variants or taxonomic revisions.")
+                    
+                    analysis_parts.append("This nomenclatural complexity demonstrates the ongoing refinement of marine taxonomic classification as new morphological and molecular evidence becomes available.")
+                    
+                    comprehensive_response = " ".join(analysis_parts)
+                    await context.reply(comprehensive_response)
                 else:
                     await context.reply(f"No synonyms found for {params.species_name} in WoRMS.")
 
