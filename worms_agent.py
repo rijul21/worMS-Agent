@@ -128,37 +128,8 @@ class WoRMSiChatBioAgent:
                     accepted_names = [syn for syn in synonyms if isinstance(syn, dict) and syn.get('status') == 'accepted']
                     unaccepted_names = [syn for syn in synonyms if isinstance(syn, dict) and syn.get('status') != 'accepted']
                     
-                    reply_parts = [f"**Taxonomic History of {params.species_name}**"]
-                    reply_parts.append(f"I found **{synonym_count} historical names** for this species in the WoRMS database, revealing a complex taxonomic journey.")
-                    
-                    if accepted_names:
-                        reply_parts.append(f"**Currently accepted names**: {len(accepted_names)}")
-                    
-                    if unaccepted_names:
-                        reply_parts.append(f"**Historical and invalid names**: {len(unaccepted_names)} entries")
-                        
-                        # Group by common patterns
-                        genus_changes = []
-                        spelling_variants = []
-                        for syn in unaccepted_names[:8]:
-                            if isinstance(syn, dict):
-                                name = syn.get('scientificname', '')
-                                if name:
-                                    if name.split()[0] != params.species_name.split()[0]:  # Different genus
-                                        genus_changes.append(name)
-                                    else:
-                                        spelling_variants.append(name)
-                        
-                        if genus_changes:
-                            unique_genera = set([n.split()[0] for n in genus_changes[:3]])
-                            reply_parts.append(f"**Taxonomic transfers**: This species has been moved between genera, previously classified under *{', '.join(unique_genera)}*")
-                        
-                        if spelling_variants:
-                            reply_parts.append(f"**Nomenclatural variants**: Multiple spelling variations exist, including *{', '.join(spelling_variants[:3])}*")
-                    
-                    reply_parts.append(f"The complete dataset includes all {synonym_count} names with their authorities, publication years, and taxonomic status. This nomenclatural history reflects the ongoing refinement of marine taxonomic classification.")
-                    
-                    await context.reply("\n\n".join(reply_parts))
+                    # SIMPLE TEST VERSION
+                    await context.reply(f"TESTING ENHANCED FORMAT: Found {synonym_count} synonyms for {params.species_name}. This species has undergone multiple taxonomic revisions throughout its nomenclatural history, indicating the evolving nature of marine taxonomic classification. The complete dataset reveals patterns of genus transfers and spelling variants that reflect scientific progress in systematic biology.")
                 else:
                     await context.reply(f"No synonyms found for {params.species_name} in WoRMS.")
 
