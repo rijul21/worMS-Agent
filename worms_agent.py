@@ -226,6 +226,25 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
+                    # Extract rich location details for engaging response
+                    countries = set()
+                    localities = []
+                    regions = set()
+                    marine_areas = []
+                    
+                    for dist in distributions:
+                        if isinstance(dist, dict):
+                            if dist.get('country'):
+                                countries.add(dist['country'])
+                            if dist.get('locality'):
+                                locality = dist['locality']
+                                localities.append(locality)
+                                # Categorize locations
+                                if any(term in locality.lower() for term in ['sea', 'ocean', 'atlantic', 'pacific', 'mediterranean']):
+                                    marine_areas.append(locality)
+                            if dist.get('locationID'):
+                                regions.add(dist.get('locationID', ''))
+                    
                     # Create engaging, detailed reply
                     reply_parts = [f"**Global Distribution of {params.species_name}**"]
                     reply_parts.append(f"This species has been documented across **{distribution_count} distinct geographic locations** worldwide, based on verified occurrence records in the WoRMS database.")
