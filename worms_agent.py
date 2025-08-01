@@ -128,8 +128,12 @@ class WoRMSiChatBioAgent:
                     accepted_names = [syn for syn in synonyms if isinstance(syn, dict) and syn.get('status') == 'accepted']
                     unaccepted_names = [syn for syn in synonyms if isinstance(syn, dict) and syn.get('status') != 'accepted']
                     
-                    # DEBUG: Simple test to confirm code is running
-                    await context.reply(f"DEBUG_MARKER_12345: This proves the updated code is running. Found {synonym_count} synonyms for {params.species_name}.")
+                    # Ultra-simple debug test
+                    try:
+                        await context.reply("SIMPLE_TEST_WORKING")
+                    except Exception as e:
+                        await process.log(f"Reply error: {e}")
+                        await context.reply("ERROR_IN_REPLY")
                 else:
                     await context.reply(f"No synonyms found for {params.species_name} in WoRMS.")
 
