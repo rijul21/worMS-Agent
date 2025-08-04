@@ -20,23 +20,24 @@ from worms_api import (
     ChildrenParams,
     NoParams
 )
-# Simple Agent Parameter Models - 5 endpoints (removed attributes, added 3 new)
+
+# Parameter models for the marine species endpoints
 class MarineSynonymsParams(BaseModel):
-    """Parameters for getting marine species synonyms"""
+    """Get synonyms for marine species"""
     species_name: str = Field(...,
         description="Scientific name of the marine species",
         examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
     )
 
 class MarineDistributionParams(BaseModel):
-    """Parameters for getting marine species distribution"""
+    """Distribution data for marine species"""
     species_name: str = Field(...,
         description="Scientific name of the marine species",
         examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
     )
 
 class MarineVernacularParams(BaseModel):
-    """Parameters for getting marine species vernacular/common names"""
+    """Common names for marine species"""
     species_name: str = Field(...,
         description="Scientific name of the marine species",
         examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
@@ -46,7 +47,7 @@ class MarineVernacularParams(BaseModel):
     )
 
 class MarineSourcesParams(BaseModel):
-    """Parameters for getting marine species literature sources/references"""
+    """Literature sources for marine species"""
     species_name: str = Field(...,
         description="Scientific name of the marine species",
         examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
@@ -56,7 +57,7 @@ class MarineSourcesParams(BaseModel):
     )
 
 class MarineRecordParams(BaseModel):
-    """Parameters for getting marine species basic taxonomic record"""
+    """Basic taxonomic record for marine species"""
     species_name: str = Field(...,
         description="Scientific name of the marine species",
         examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
@@ -66,7 +67,7 @@ class MarineRecordParams(BaseModel):
     )
 
 class MarineClassificationParams(BaseModel):
-    """Parameters for getting marine species taxonomic classification"""
+    """Taxonomic classification for marine species"""
     species_name: str = Field(...,
         description="Scientific name of the marine species",
         examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
@@ -76,7 +77,7 @@ class MarineClassificationParams(BaseModel):
     )
 
 class MarineChildrenParams(BaseModel):
-    """Parameters for getting marine species child taxa"""
+    """Child taxa for marine species"""
     species_name: str = Field(...,
         description="Scientific name of the marine species",
         examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
@@ -86,21 +87,21 @@ class MarineChildrenParams(BaseModel):
     )
 
 class WoRMSiChatBioAgent:
-    """The iChatBio agent implementation for WoRMS - 5 endpoint version"""
+    """iChatBio agent for WoRMS marine species data"""
 
     def __init__(self):
         self.worms_logic = WoRMS()
 
     async def run_get_synonyms(self, context, params: MarineSynonymsParams):
-        """Workflow for getting marine species synonyms"""
+        """Get marine species synonyms workflow"""
         async with context.begin_process(f"Getting synonyms for '{params.species_name}'") as process:
             await process.log("Synonyms search parameters", data=params.model_dump(exclude_defaults=True))
 
             try:
-                # Step 1: Get AphiaID
+                # Get AphiaID first
                 await process.log(f"Looking up AphiaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
-                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
+                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.find_species_aphia_id(params.species_name))
                 
                 if not aphia_id:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
@@ -108,12 +109,12 @@ class WoRMSiChatBioAgent:
 
                 await process.log(f"Found AphiaID: {aphia_id}")
 
-                # Step 2: Get synonyms
+                # Get synonyms data
                 syn_params = SynonymsParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_synonyms_url(syn_params)
+                api_url = self.worms_logic.get_synonyms_url(syn_params)
                 await process.log(f"Constructed API URL: {api_url}")
 
-                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
+                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.fetch_data(api_url))
                 
                 # Handle response format
                 if isinstance(raw_response, list):
@@ -151,7 +152,7 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Create detailed reply - WORKING VERSION
+                    # Create detailed reply
                     reply = f"Found {synonym_count} synonyms for {params.species_name} (AphiaID: {aphia_id})"
                     if sample_synonyms:
                         reply += f". Examples: {', '.join(sample_synonyms[:5])}"
@@ -168,28 +169,28 @@ class WoRMSiChatBioAgent:
                 await context.reply(f"I encountered an error while retrieving synonyms: {e}")
 
     async def run_get_distribution(self, context, params: MarineDistributionParams):
-        """Workflow for getting marine species distribution"""
+        """Get marine species distribution workflow"""
         async with context.begin_process(f"Getting distribution for '{params.species_name}'") as process:
             await process.log("Distribution search parameters", data=params.model_dump(exclude_defaults=True))
 
             try:
-                # Step 1: Get AphiaID
+                # Get AphiaID first
                 await process.log(f"Looking up AphiaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
-                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
+                species_id = await loop.run_in_executor(None, lambda: self.worms_logic.find_species_aphia_id(params.species_name))
                 
-                if not aphia_id:
+                if not species_id:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"Found AphiaID: {species_id}")
 
-                # Step 2: Get distribution
-                dist_params = DistributionParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_distribution_url(dist_params)
+                # Get distribution data
+                dist_params = DistributionParams(aphia_id=species_id)
+                api_url = self.worms_logic.get_distribution_url(dist_params)
                 await process.log(f"Constructed API URL: {api_url}")
 
-                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
+                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.fetch_data(api_url))
                 
                 # Handle response format
                 if isinstance(raw_response, list):
@@ -217,18 +218,18 @@ class WoRMSiChatBioAgent:
                     
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Marine species distribution for {params.species_name} (AphiaID: {aphia_id}) - {distribution_count} locations",
+                        description=f"Marine species distribution for {params.species_name} (AphiaID: {species_id}) - {distribution_count} locations",
                         uris=[api_url],
                         metadata={
                             "data_source": "WoRMS Distribution",
-                            "aphia_id": aphia_id,
+                            "aphia_id": species_id,
                             "scientific_name": params.species_name,
                             "distribution_count": distribution_count
                         }
                     )
                     
                     # Create detailed user-friendly response
-                    reply_parts = [f"Found distribution data for {params.species_name} (AphiaID: {aphia_id}) across {distribution_count} locations"]
+                    reply_parts = [f"Found distribution data for {params.species_name} (AphiaID: {species_id}) across {distribution_count} locations"]
                     
                     if countries:
                         country_list = sorted(list(countries))
@@ -254,34 +255,34 @@ class WoRMSiChatBioAgent:
                 await context.reply(f"I encountered an error while retrieving distribution data: {e}")
 
     async def run_get_vernacular_names(self, context, params: MarineVernacularParams):
-        """Workflow for getting marine species vernacular/common names"""
+        """Get marine species vernacular names workflow"""
         async with context.begin_process(f"Getting vernacular names for '{params.species_name}'") as process:
             await process.log("Vernacular names search parameters", data=params.model_dump(exclude_defaults=True))
 
             try:
-                # Step 1: Get AphiaID
+                # Get AphiaID first
                 await process.log(f"Looking up AphiaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
-                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
+                species_id = await loop.run_in_executor(None, lambda: self.worms_logic.find_species_aphia_id(params.species_name))
                 
-                if not aphia_id:
+                if not species_id:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"Found AphiaID: {species_id}")
 
-                # Step 2: Get vernacular names
-                vern_params = VernacularParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_vernacular_url(vern_params)
+                # Get vernacular names
+                vern_params = VernacularParams(aphia_id=species_id)
+                api_url = self.worms_logic.get_vernacular_url(vern_params)
                 await process.log(f"Constructed API URL: {api_url}")
 
-                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
+                response_data = await loop.run_in_executor(None, lambda: self.worms_logic.fetch_data(api_url))
                 
                 # Handle response format
-                if isinstance(raw_response, list):
-                    vernaculars = raw_response
-                elif isinstance(raw_response, dict):
-                    vernaculars = [raw_response]
+                if isinstance(response_data, list):
+                    vernaculars = response_data
+                elif isinstance(response_data, dict):
+                    vernaculars = [response_data]
                 else:
                     vernaculars = []
 
@@ -306,11 +307,11 @@ class WoRMSiChatBioAgent:
                     
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Marine species vernacular names for {params.species_name} (AphiaID: {aphia_id}) - {vernacular_count} names",
+                        description=f"Marine species vernacular names for {params.species_name} (AphiaID: {species_id}) - {vernacular_count} names",
                         uris=[api_url],
                         metadata={
                             "data_source": "WoRMS Vernacular Names",
-                            "aphia_id": aphia_id,
+                            "aphia_id": species_id,
                             "scientific_name": params.species_name,
                             "vernacular_count": vernacular_count,
                             "languages": list(languages)
@@ -318,7 +319,7 @@ class WoRMSiChatBioAgent:
                     )
                     
                     # Create detailed reply
-                    reply = f"Found {vernacular_count} vernacular names for {params.species_name} (AphiaID: {aphia_id})"
+                    reply = f"Found {vernacular_count} vernacular names for {params.species_name} (AphiaID: {species_id})"
                     if languages:
                         reply += f" in {len(languages)} languages ({', '.join(sorted(list(languages))[:5])}{'...' if len(languages) > 5 else ''})"
                     if sample_names:
@@ -336,15 +337,15 @@ class WoRMSiChatBioAgent:
                 await context.reply(f"I encountered an error while retrieving vernacular names: {e}")
 
     async def run_get_sources(self, context, params: MarineSourcesParams):
-        """Workflow for getting marine species literature sources/references"""
+        """Get marine species literature sources workflow"""
         async with context.begin_process(f"Getting sources for '{params.species_name}'") as process:
             await process.log("Sources search parameters", data=params.model_dump(exclude_defaults=True))
 
             try:
-                # Step 1: Get AphiaID
+                # Get AphiaID first
                 await process.log(f"Looking up AphiaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
-                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
+                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.find_species_aphia_id(params.species_name))
                 
                 if not aphia_id:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
@@ -352,18 +353,18 @@ class WoRMSiChatBioAgent:
 
                 await process.log(f"Found AphiaID: {aphia_id}")
 
-                # Step 2: Get sources
+                # Get sources
                 sources_params = SourcesParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_sources_url(sources_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                endpoint_url = self.worms_logic.get_sources_url(sources_params)
+                await process.log(f"Constructed API URL: {endpoint_url}")
 
-                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
+                api_data = await loop.run_in_executor(None, lambda: self.worms_logic.fetch_data(endpoint_url))
                 
                 # Handle response format
-                if isinstance(raw_response, list):
-                    sources = raw_response
-                elif isinstance(raw_response, dict):
-                    sources = [raw_response]
+                if isinstance(api_data, list):
+                    sources = api_data
+                elif isinstance(api_data, dict):
+                    sources = [api_data]
                 else:
                     sources = []
 
@@ -396,7 +397,7 @@ class WoRMSiChatBioAgent:
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Marine species literature sources for {params.species_name} (AphiaID: {aphia_id}) - {source_count} sources",
-                        uris=[api_url],
+                        uris=[endpoint_url],
                         metadata={
                             "data_source": "WoRMS Sources",
                             "aphia_id": aphia_id,
@@ -427,32 +428,32 @@ class WoRMSiChatBioAgent:
                 await context.reply(f"I encountered an error while retrieving sources: {e}")
 
     async def run_get_record(self, context, params: MarineRecordParams):
-        """Workflow for getting marine species basic taxonomic record"""
+        """Get marine species basic taxonomic record workflow"""
         async with context.begin_process(f"Getting basic record for '{params.species_name}'") as process:
             await process.log("Record search parameters", data=params.model_dump(exclude_defaults=True))
 
             try:
-                # Step 1: Get AphiaID
+                # Get AphiaID first
                 await process.log(f"Looking up AphiaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
-                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
+                species_id = await loop.run_in_executor(None, lambda: self.worms_logic.find_species_aphia_id(params.species_name))
                 
-                if not aphia_id:
+                if not species_id:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"Found AphiaID: {species_id}")
 
-                # Step 2: Get record
-                record_params = RecordParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_record_url(record_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                # Get record
+                record_params = RecordParams(aphia_id=species_id)
+                record_url = self.worms_logic.get_record_url(record_params)
+                await process.log(f"Constructed API URL: {record_url}")
 
-                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
+                response_data = await loop.run_in_executor(None, lambda: self.worms_logic.fetch_data(record_url))
                 
                 # Handle response format - this endpoint returns a single object
-                if isinstance(raw_response, dict):
-                    record = raw_response
+                if isinstance(response_data, dict):
+                    record = response_data
                 else:
                     await context.reply(f"Unexpected response format for {params.species_name} record.")
                     return
@@ -473,11 +474,11 @@ class WoRMSiChatBioAgent:
                 
                 await process.create_artifact(
                     mimetype="application/json",
-                    description=f"Marine species taxonomic record for {params.species_name} (AphiaID: {aphia_id})",
-                    uris=[api_url],
+                    description=f"Marine species taxonomic record for {params.species_name} (AphiaID: {species_id})",
+                    uris=[record_url],
                     metadata={
                         "data_source": "WoRMS Taxonomic Record",
-                        "aphia_id": aphia_id,
+                        "aphia_id": species_id,
                         "scientific_name": scientific_name,
                         "status": status,
                         "rank": rank,
@@ -519,34 +520,34 @@ class WoRMSiChatBioAgent:
                 await context.reply(f"I encountered an error while retrieving the taxonomic record: {e}")
 
     async def run_get_classification(self, context, params: MarineClassificationParams):
-        """Workflow for getting marine species taxonomic classification"""
+        """Get marine species taxonomic classification workflow"""
         async with context.begin_process(f"Getting classification for '{params.species_name}'") as process:
             await process.log("Classification search parameters", data=params.model_dump(exclude_defaults=True))
 
             try:
-                # Step 1: Get AphiaID
+                # Get AphiaID first
                 await process.log(f"Looking up AphiaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
-                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
+                species_id = await loop.run_in_executor(None, lambda: self.worms_logic.find_species_aphia_id(params.species_name))
                 
-                if not aphia_id:
+                if not species_id:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"Found AphiaID: {species_id}")
 
-                # Step 2: Get classification
-                class_params = ClassificationParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_classification_url(class_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                # Get classification
+                class_params = ClassificationParams(aphia_id=species_id)
+                classification_url = self.worms_logic.get_classification_url(class_params)
+                await process.log(f"Constructed API URL: {classification_url}")
 
-                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
+                api_response = await loop.run_in_executor(None, lambda: self.worms_logic.fetch_data(classification_url))
                 
                 # Handle response format
-                if isinstance(raw_response, list):
-                    classification = raw_response
-                elif isinstance(raw_response, dict):
-                    classification = [raw_response]
+                if isinstance(api_response, list):
+                    classification = api_response
+                elif isinstance(api_response, dict):
+                    classification = [api_response]
                 else:
                     classification = []
 
@@ -566,18 +567,18 @@ class WoRMSiChatBioAgent:
                     
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Marine species taxonomic classification for {params.species_name} (AphiaID: {aphia_id}) - {classification_count} levels",
-                        uris=[api_url],
+                        description=f"Marine species taxonomic classification for {params.species_name} (AphiaID: {species_id}) - {classification_count} levels",
+                        uris=[classification_url],
                         metadata={
                             "data_source": "WoRMS Classification",
-                            "aphia_id": aphia_id,
+                            "aphia_id": species_id,
                             "scientific_name": params.species_name,
                             "classification_levels": classification_count
                         }
                     )
                     
                     # Create detailed reply
-                    reply = f"Found complete taxonomic classification for {params.species_name} (AphiaID: {aphia_id}) with {classification_count} hierarchical levels"
+                    reply = f"Found complete taxonomic classification for {params.species_name} (AphiaID: {species_id}) with {classification_count} hierarchical levels"
                     if taxonomic_levels:
                         reply += f". Taxonomic hierarchy: {' → '.join(taxonomic_levels[:6])}"
                         if classification_count > 6:
@@ -593,15 +594,15 @@ class WoRMSiChatBioAgent:
                 await context.reply(f"I encountered an error while retrieving classification: {e}")
 
     async def run_get_children(self, context, params: MarineChildrenParams):
-        """Workflow for getting marine species child taxa"""
+        """Get marine species child taxa workflow"""
         async with context.begin_process(f"Getting child taxa for '{params.species_name}'") as process:
             await process.log("Children search parameters", data=params.model_dump(exclude_defaults=True))
 
             try:
-                # Step 1: Get AphiaID
+                # Get AphiaID first
                 await process.log(f"Looking up AphiaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
-                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
+                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.find_species_aphia_id(params.species_name))
                 
                 if not aphia_id:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
@@ -609,18 +610,18 @@ class WoRMSiChatBioAgent:
 
                 await process.log(f"Found AphiaID: {aphia_id}")
 
-                # Step 2: Get children
+                # Get children
                 children_params = ChildrenParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_children_url(children_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                children_url = self.worms_logic.get_children_url(children_params)
+                await process.log(f"Constructed API URL: {children_url}")
 
-                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
+                children_data = await loop.run_in_executor(None, lambda: self.worms_logic.fetch_data(children_url))
                 
                 # Handle response format
-                if isinstance(raw_response, list):
-                    children = raw_response
-                elif isinstance(raw_response, dict):
-                    children = [raw_response]
+                if isinstance(children_data, list):
+                    children = children_data
+                elif isinstance(children_data, dict):
+                    children = [children_data]
                 else:
                     children = []
 
@@ -650,7 +651,7 @@ class WoRMSiChatBioAgent:
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Marine species child taxa for {params.species_name} (AphiaID: {aphia_id}) - {children_count} children",
-                        uris=[api_url],
+                        uris=[children_url],
                         metadata={
                             "data_source": "WoRMS Child Taxa",
                             "aphia_id": aphia_id,
@@ -678,9 +679,8 @@ class WoRMSiChatBioAgent:
                 await process.log("Error during API request", data={"error": str(e)})
                 await context.reply(f"I encountered an error while retrieving child taxa: {e}")
 
-
                 
-# --- AgentCard definition with 7 endpoints ---
+# Agent card definition with all endpoints
 card = AgentCard(
     name="WoRMS Marine Species Agent",
     description="Retrieves detailed marine species information from WoRMS (World Register of Marine Species) database including synonyms, distribution, common names, literature sources, taxonomic records, classification, and child taxa.",
@@ -725,7 +725,7 @@ card = AgentCard(
     ]
 )
 
-# --- Implement the iChatBio agent class ---
+# Main agent class implementation
 class WoRMSAgent(IChatBioAgent):
     def __init__(self):
         self.workflow_agent = WoRMSiChatBioAgent()
@@ -737,7 +737,7 @@ class WoRMSAgent(IChatBioAgent):
 
     @override
     async def run(self, context: ResponseContext, request: str, entrypoint: str, params: BaseModel):
-        """Executes the requested agent entrypoint using the provided context."""
+        """Execute the requested agent entrypoint using the provided context."""
         
         # Debug logging 
         print(f"=== WoRMS DEBUG INFO ===")
