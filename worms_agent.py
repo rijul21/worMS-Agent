@@ -4,7 +4,7 @@ import json
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 
-from model import (
+from model import  (
     WoRMS,
     SynonymsParams, 
     DistributionParams,
