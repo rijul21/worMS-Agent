@@ -4,7 +4,7 @@ import json
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 
-from worms_client import (
+from model import (
     WoRMS,
     SynonymsParams, 
     DistributionParams,

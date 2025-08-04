@@ -1,6 +1,6 @@
 import os
 from ichatbio.server import run_agent_server
-from worms_agent_server import WoRMSAgent
+from model import WoRMSAgent
 
 if __name__ == "__main__":
     agent = WoRMSAgent()
