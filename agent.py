@@ -98,7 +98,7 @@ class WoRMSiChatBioAgent:
 
             try:
                 # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                await process.log(f"Getting AlphaID '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -106,12 +106,12 @@ class WoRMSiChatBioAgent:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"AlphaID is: {aphia_id}")
 
                 # Step 2: Get synonyms
                 syn_params = SynonymsParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_synonyms_url(syn_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                await process.log(f"Endpoint URL: {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
@@ -174,7 +174,7 @@ class WoRMSiChatBioAgent:
 
             try:
                 # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                await process.log(f"Getting AlphaID '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -182,12 +182,12 @@ class WoRMSiChatBioAgent:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"AlphaID is: {aphia_id}")
 
                 # Step 2: Get distribution
                 dist_params = DistributionParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_distribution_url(dist_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                await process.log(f"Endpoint URL: {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
@@ -260,7 +260,7 @@ class WoRMSiChatBioAgent:
 
             try:
                 # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                await process.log(f"Getting AlphaID '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -268,12 +268,12 @@ class WoRMSiChatBioAgent:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"AlphaID is: {aphia_id}")
 
                 # Step 2: Get vernacular names
                 vern_params = VernacularParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_vernacular_url(vern_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                await process.log(f"Endpoint URL: {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
@@ -342,7 +342,7 @@ class WoRMSiChatBioAgent:
 
             try:
                 # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                await process.log(f"Getting AlphaID '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -350,12 +350,12 @@ class WoRMSiChatBioAgent:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"AlphaID is: {aphia_id}")
 
                 # Step 2: Get sources
                 sources_params = SourcesParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_sources_url(sources_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                await process.log(f"Endpoint URL: {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
@@ -433,7 +433,7 @@ class WoRMSiChatBioAgent:
 
             try:
                 # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                await process.log(f"Getting AlphaID '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -441,12 +441,12 @@ class WoRMSiChatBioAgent:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"AlphaID is: {aphia_id}")
 
                 # Step 2: Get record
                 record_params = RecordParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_record_url(record_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                await process.log(f"Endpoint URL: {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
@@ -525,7 +525,7 @@ class WoRMSiChatBioAgent:
 
             try:
                 # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                await process.log(f"Getting AlphaID '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -533,12 +533,12 @@ class WoRMSiChatBioAgent:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"AlphaID is: {aphia_id}")
 
                 # Step 2: Get classification
                 class_params = ClassificationParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_classification_url(class_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                await process.log(f"Endpoint URL: {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
@@ -599,7 +599,7 @@ class WoRMSiChatBioAgent:
 
             try:
                 # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                await process.log(f"Getting AlphaID '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -607,12 +607,12 @@ class WoRMSiChatBioAgent:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"AlphaID is: {aphia_id}")
 
                 # Step 2: Get children
                 children_params = ChildrenParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_children_url(children_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                await process.log(f"Endpoint URL: {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
