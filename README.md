@@ -59,7 +59,7 @@ WORMS_API_URL: "https://www.marinespecies.org/rest"
 
 ### 4. Run the agent server
 ```bash
-python agent.py
+python main.py
 ```
 
 The agent will start on `http://localhost:9999` with the following output:
@@ -75,10 +75,7 @@ Available endpoints:
   - get_marine_info: Get child taxa (subspecies, varieties, forms) for a marine species from WoRMS.
 ```
 
-### 5. Test with main.py (optional)
-```bash
-python main.py
-```
+
 
 ## API Endpoints
 
