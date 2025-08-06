@@ -8,7 +8,7 @@ import asyncio
 import json
 from typing import Dict, Any, Optional
 
-# Import from worms_api instead of worms_client and worms_agent
+
 from worms_api import (
     WoRMS,
     SynonymsParams, 
@@ -20,7 +20,7 @@ from worms_api import (
     ChildrenParams,
     NoParams
 )
-# Simple Agent Parameter Models - 5 endpoints (removed attributes, added 3 new)
+
 class MarineSynonymsParams(BaseModel):
     """Parameters for getting marine species synonyms"""
     species_name: str = Field(...,
@@ -94,11 +94,11 @@ class WoRMSiChatBioAgent:
     async def run_get_synonyms(self, context, params: MarineSynonymsParams):
         """Workflow for getting marine species synonyms"""
         async with context.begin_process(f"Getting synonyms for '{params.species_name}'") as process:
-            await process.log("Synonyms search parameters", data=params.model_dump(exclude_defaults=True))
+            await process.log("Getting synonyms", data=params.model_dump(exclude_defaults=True))
 
             try:
-                # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                # Get AphiaID
+                await process.log(f"Getting Alpha ID for'{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -108,14 +108,14 @@ class WoRMSiChatBioAgent:
 
                 await process.log(f"Found AphiaID: {aphia_id}")
 
-                # Step 2: Get synonyms
+                # Get synonyms
                 syn_params = SynonymsParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_synonyms_url(syn_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                await process.log(f"Endpoint API : {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
-                # Handle response format
+                # response format
                 if isinstance(raw_response, list):
                     synonyms = raw_response
                 elif isinstance(raw_response, dict):
@@ -151,7 +151,7 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Create detailed reply - WORKING VERSION
+                    # Detailed reply
                     reply = f"Found {synonym_count} synonyms for {params.species_name} (AphiaID: {aphia_id})"
                     if sample_synonyms:
                         reply += f". Examples: {', '.join(sample_synonyms[:5])}"
@@ -173,8 +173,8 @@ class WoRMSiChatBioAgent:
             await process.log("Distribution search parameters", data=params.model_dump(exclude_defaults=True))
 
             try:
-                # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                # Get AphiaID
+                await process.log(f"Getting AphiaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -184,14 +184,14 @@ class WoRMSiChatBioAgent:
 
                 await process.log(f"Found AphiaID: {aphia_id}")
 
-                # Step 2: Get distribution
+                # Get distribution
                 dist_params = DistributionParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_distribution_url(dist_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                await process.log(f"Endpoint API : {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
-                # Handle response format
+                # Response format
                 if isinstance(raw_response, list):
                     distributions = raw_response
                 elif isinstance(raw_response, dict):
@@ -204,7 +204,7 @@ class WoRMSiChatBioAgent:
                 if distribution_count > 0:
                     await process.log(f"Found {distribution_count} distribution records")
                     
-                    # Extract location details for user-friendly response
+                    # Extracting location details
                     countries = set()
                     localities = []
                     
@@ -227,7 +227,7 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Create detailed user-friendly response
+                    # Create detailed response
                     reply_parts = [f"Found distribution data for {params.species_name} (AphiaID: {aphia_id}) across {distribution_count} locations"]
                     
                     if countries:
@@ -259,8 +259,8 @@ class WoRMSiChatBioAgent:
             await process.log("Vernacular names search parameters", data=params.model_dump(exclude_defaults=True))
 
             try:
-                # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                # Get AphiaID
+                await process.log(f"Getting AphiaID'{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -270,14 +270,14 @@ class WoRMSiChatBioAgent:
 
                 await process.log(f"Found AphiaID: {aphia_id}")
 
-                # Step 2: Get vernacular names
+                # Get vernacular names
                 vern_params = VernacularParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_vernacular_url(vern_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                await process.log(f"Endpoint API : {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
-                # Handle response format
+                # Response format
                 if isinstance(raw_response, list):
                     vernaculars = raw_response
                 elif isinstance(raw_response, dict):
@@ -290,7 +290,7 @@ class WoRMSiChatBioAgent:
                 if vernacular_count > 0:
                     await process.log(f"Found {vernacular_count} vernacular names")
                     
-                    # Extract sample vernacular names by language for display
+                    # Extract sample vernacular names for display
                     sample_names = []
                     languages = set()
                     
@@ -317,7 +317,7 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Create detailed reply
+                    # Detailed reply
                     reply = f"Found {vernacular_count} vernacular names for {params.species_name} (AphiaID: {aphia_id})"
                     if languages:
                         reply += f" in {len(languages)} languages ({', '.join(sorted(list(languages))[:5])}{'...' if len(languages) > 5 else ''})"
@@ -341,8 +341,8 @@ class WoRMSiChatBioAgent:
             await process.log("Sources search parameters", data=params.model_dump(exclude_defaults=True))
 
             try:
-                # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                # Get AphiaID
+                await process.log(f"Getting AlphaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -352,14 +352,14 @@ class WoRMSiChatBioAgent:
 
                 await process.log(f"Found AphiaID: {aphia_id}")
 
-                # Step 2: Get sources
+                # Get sources
                 sources_params = SourcesParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_sources_url(sources_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                await process.log(f"Endpoint API : {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
-                # Handle response format
+                # Response format
                 if isinstance(raw_response, list):
                     sources = raw_response
                 elif isinstance(raw_response, dict):
@@ -372,7 +372,7 @@ class WoRMSiChatBioAgent:
                 if source_count > 0:
                     await process.log(f"Found {source_count} sources")
                     
-                    # Extract sample sources for display
+                    # Sample sources for display
                     sample_sources = []
                     authors = set()
                     years = set()
@@ -407,7 +407,7 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Create detailed reply
+                    # Detailed reply
                     reply = f"Found {source_count} literature sources for {params.species_name} (AphiaID: {aphia_id})"
                     if years:
                         year_range = f"{min(years)}-{max(years)}" if len(years) > 1 else list(years)[0]
@@ -432,8 +432,8 @@ class WoRMSiChatBioAgent:
             await process.log("Record search parameters", data=params.model_dump(exclude_defaults=True))
 
             try:
-                # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                # Get AphiaID
+                await process.log(f"Getting AlphaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -443,14 +443,14 @@ class WoRMSiChatBioAgent:
 
                 await process.log(f"Found AphiaID: {aphia_id}")
 
-                # Step 2: Get record
+                # Get record
                 record_params = RecordParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_record_url(record_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                await process.log(f"Endpoint API : {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
-                # Handle response format - this endpoint returns a single object
+                # Response format
                 if isinstance(raw_response, dict):
                     record = raw_response
                 else:
@@ -459,7 +459,7 @@ class WoRMSiChatBioAgent:
 
                 await process.log("Found taxonomic record")
                 
-                # Extract key information for display
+                # Extracting information for display
                 scientific_name = record.get('scientificname', 'Unknown')
                 authority = record.get('authority', '')
                 status = record.get('status', 'Unknown')
@@ -492,7 +492,7 @@ class WoRMSiChatBioAgent:
                     }
                 )
                 
-                # Create detailed user-friendly response
+                # Create detailed response
                 reply_parts = [f"Retrieved taxonomic record for {scientific_name}"]
                 
                 if authority:
@@ -500,7 +500,7 @@ class WoRMSiChatBioAgent:
                 
                 reply_parts.append(f"Status: {status}, Rank: {rank}")
                 
-                # Build taxonomy string
+                # Taxonomy string
                 taxonomy_parts = []
                 for tax_rank, tax_name in [("Kingdom", kingdom), ("Phylum", phylum), ("Class", class_name), 
                                          ("Order", order), ("Family", family), ("Genus", genus)]:
@@ -524,8 +524,8 @@ class WoRMSiChatBioAgent:
             await process.log("Classification search parameters", data=params.model_dump(exclude_defaults=True))
 
             try:
-                # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                # Get AphiaID
+                await process.log(f"Getting AlphaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -535,14 +535,14 @@ class WoRMSiChatBioAgent:
 
                 await process.log(f"Found AphiaID: {aphia_id}")
 
-                # Step 2: Get classification
+                # Get classification
                 class_params = ClassificationParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_classification_url(class_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                await process.log(f"Endpoint API : {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
-                # Handle response format
+                # Response format
                 if isinstance(raw_response, list):
                     classification = raw_response
                 elif isinstance(raw_response, dict):
@@ -555,7 +555,7 @@ class WoRMSiChatBioAgent:
                 if classification_count > 0:
                     await process.log(f"Found {classification_count} taxonomic levels")
                     
-                    # Extract taxonomic hierarchy for display
+                    # Extract taxonomic hierarchy 
                     taxonomic_levels = []
                     for level in classification:
                         if isinstance(level, dict):
@@ -576,7 +576,7 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Create detailed reply
+                    # Detailed reply
                     reply = f"Found complete taxonomic classification for {params.species_name} (AphiaID: {aphia_id}) with {classification_count} hierarchical levels"
                     if taxonomic_levels:
                         reply += f". Taxonomic hierarchy: {' → '.join(taxonomic_levels[:6])}"
@@ -598,8 +598,8 @@ class WoRMSiChatBioAgent:
             await process.log("Children search parameters", data=params.model_dump(exclude_defaults=True))
 
             try:
-                # Step 1: Get AphiaID
-                await process.log(f"Looking up AphiaID for '{params.species_name}'...")
+                # Get AphiaID
+                await process.log(f"Getting AlphaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -609,14 +609,14 @@ class WoRMSiChatBioAgent:
 
                 await process.log(f"Found AphiaID: {aphia_id}")
 
-                # Step 2: Get children
+                # Get children
                 children_params = ChildrenParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_children_url(children_params)
-                await process.log(f"Constructed API URL: {api_url}")
+                await process.log(f"Endpoint API : {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
-                # Handle response format
+                # Rsponse format
                 if isinstance(raw_response, list):
                     children = raw_response
                 elif isinstance(raw_response, dict):
@@ -629,7 +629,7 @@ class WoRMSiChatBioAgent:
                 if children_count > 0:
                     await process.log(f"Found {children_count} child taxa")
                     
-                    # Extract sample children for display
+                    # Sample children
                     sample_children = []
                     ranks = set()
                     
@@ -660,7 +660,7 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    # Create detailed reply
+                    # Detailed reply
                     reply = f"Found {children_count} child taxa for {params.species_name} (AphiaID: {aphia_id})"
                     if ranks:
                         reply += f" at taxonomic levels: {', '.join(sorted(list(ranks)))}"
@@ -680,7 +680,7 @@ class WoRMSiChatBioAgent:
 
 
                 
-# --- AgentCard definition with 7 endpoints ---
+# -AgentCard  with 7 endpoints -
 card = AgentCard(
     name="WoRMS Marine Species Agent",
     description="Retrieves detailed marine species information from WoRMS (World Register of Marine Species) database including synonyms, distribution, common names, literature sources, taxonomic records, classification, and child taxa.",
@@ -725,7 +725,7 @@ card = AgentCard(
     ]
 )
 
-# --- Implement the iChatBio agent class ---
+#- iChatBio agent class -
 class WoRMSAgent(IChatBioAgent):
     def __init__(self):
         self.workflow_agent = WoRMSiChatBioAgent()
@@ -762,7 +762,7 @@ class WoRMSAgent(IChatBioAgent):
         elif entrypoint == "get_marine_info":
             await self.workflow_agent.run_get_children(context, params)
         else:
-            # Handle unexpected entrypoints 
+            # Unexpected entrypoints 
             await context.reply(f"Unknown entrypoint '{entrypoint}' received. Request was: '{request}'")
             raise ValueError(f"Unsupported entrypoint: {entrypoint}")
 
