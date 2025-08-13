@@ -98,15 +98,17 @@ class WoRMSiChatBioAgent:
 
             try:
                 # Get AphiaID
-                await process.log(f"Getting Alpha ID for'{params.species_name}'...")
+               
+                await process.log(f"Getting AphiaID for'{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
-                
+
                 if not aphia_id:
+                    await process.log("Species not found in WoRMS database")  
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"✓ Species found! AphiaID: {aphia_id}")  
 
                 # Get synonyms
                 syn_params = SynonymsParams(aphia_id=aphia_id)
@@ -342,7 +344,7 @@ class WoRMSiChatBioAgent:
 
             try:
                 # Get AphiaID
-                await process.log(f"Getting AlphaID for '{params.species_name}'...")
+                await process.log(f"Getting AphiaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -433,7 +435,7 @@ class WoRMSiChatBioAgent:
 
             try:
                 # Get AphiaID
-                await process.log(f"Getting AlphaID for '{params.species_name}'...")
+                await process.log(f"Getting AphiaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -525,7 +527,7 @@ class WoRMSiChatBioAgent:
 
             try:
                 # Get AphiaID
-                await process.log(f"Getting AlphaID for '{params.species_name}'...")
+                await process.log(f"Getting AphiaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
@@ -599,7 +601,7 @@ class WoRMSiChatBioAgent:
 
             try:
                 # Get AphiaID
-                await process.log(f"Getting AlphaID for '{params.species_name}'...")
+                await process.log(f"Getting AphiaID for '{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
