@@ -98,7 +98,8 @@ class WoRMSiChatBioAgent:
 
             try:
                 # Get AphiaID
-                await process.log(f"Getting AphiaID for '{params.species_name}'...")
+               
+                await process.log(f"Getting AphiaID ID for'{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
 
@@ -107,15 +108,14 @@ class WoRMSiChatBioAgent:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Species found, AphiaID: {aphia_id}")  
+                await process.log(f"✓ Species found! AphiaID: {aphia_id}")  
 
                 # Get synonyms
                 syn_params = SynonymsParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_synonyms_url(syn_params)
-                await process.log(f"Endpoint API: {api_url}")
+                await process.log(f"Endpoint API : {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
-                await process.log(f"API response received: {type(raw_response).__name__}")
                 
                 # response format
                 if isinstance(raw_response, list):
@@ -128,7 +128,7 @@ class WoRMSiChatBioAgent:
                 synonym_count = len(synonyms)
                 
                 if synonym_count > 0:
-                    await process.log(f"Successfully extracted {synonym_count} synonyms")
+                    await process.log(f"Found {synonym_count} synonyms")
                     
                     # Extract sample synonyms for display
                     sample_synonyms = []
@@ -153,8 +153,6 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    await process.log("Data artifact created successfully")
-                    
                     # Detailed reply
                     reply = f"Found {synonym_count} synonyms for {params.species_name} (AphiaID: {aphia_id})"
                     if sample_synonyms:
@@ -165,7 +163,6 @@ class WoRMSiChatBioAgent:
                     
                     await context.reply(reply)
                 else:
-                    await process.log("No synonyms found in API response")
                     await context.reply(f"No synonyms found for {params.species_name} in WoRMS.")
 
             except Exception as e:
@@ -184,19 +181,17 @@ class WoRMSiChatBioAgent:
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
                 if not aphia_id:
-                    await process.log("Species not found in WoRMS database")
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Species found, AphiaID: {aphia_id}")
+                await process.log(f"Found AphiaID: {aphia_id}")
 
                 # Get distribution
                 dist_params = DistributionParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_distribution_url(dist_params)
-                await process.log(f"Endpoint API: {api_url}")
+                await process.log(f"Endpoint API : {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
-                await process.log(f"API response received: {type(raw_response).__name__}")
                 
                 # Response format
                 if isinstance(raw_response, list):
@@ -209,7 +204,7 @@ class WoRMSiChatBioAgent:
                 distribution_count = len(distributions)
                 
                 if distribution_count > 0:
-                    await process.log(f"Successfully extracted {distribution_count} distribution records")
+                    await process.log(f"Found {distribution_count} distribution records")
                     
                     # Extracting location details
                     countries = set()
@@ -234,8 +229,6 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    await process.log("Data artifact created successfully")
-                    
                     # Create detailed response
                     reply_parts = [f"Found distribution data for {params.species_name} (AphiaID: {aphia_id}) across {distribution_count} locations"]
                     
@@ -256,7 +249,6 @@ class WoRMSiChatBioAgent:
                     
                     await context.reply(". ".join(reply_parts))
                 else:
-                    await process.log("No distribution records found in API response")
                     await context.reply(f"No distribution data found for {params.species_name} in WoRMS.")
 
             except Exception as e:
@@ -270,24 +262,22 @@ class WoRMSiChatBioAgent:
 
             try:
                 # Get AphiaID
-                await process.log(f"Getting AphiaID for '{params.species_name}'...")
+                await process.log(f"Getting AphiaID'{params.species_name}'...")
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
                 if not aphia_id:
-                    await process.log("Species not found in WoRMS database")
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Species found, AphiaID: {aphia_id}")
+                await process.log(f"Found AphiaID: {aphia_id}")
 
                 # Get vernacular names
                 vern_params = VernacularParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_vernacular_url(vern_params)
-                await process.log(f"Endpoint API: {api_url}")
+                await process.log(f"Endpoint API : {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
-                await process.log(f"API response received: {type(raw_response).__name__}")
                 
                 # Response format
                 if isinstance(raw_response, list):
@@ -300,7 +290,7 @@ class WoRMSiChatBioAgent:
                 vernacular_count = len(vernaculars)
                 
                 if vernacular_count > 0:
-                    await process.log(f"Successfully extracted {vernacular_count} vernacular names")
+                    await process.log(f"Found {vernacular_count} vernacular names")
                     
                     # Extract sample vernacular names for display
                     sample_names = []
@@ -329,8 +319,6 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    await process.log("Data artifact created successfully")
-                    
                     # Detailed reply
                     reply = f"Found {vernacular_count} vernacular names for {params.species_name} (AphiaID: {aphia_id})"
                     if languages:
@@ -343,7 +331,6 @@ class WoRMSiChatBioAgent:
                     
                     await context.reply(reply)
                 else:
-                    await process.log("No vernacular names found in API response")
                     await context.reply(f"No vernacular names found for {params.species_name} in WoRMS.")
 
             except Exception as e:
@@ -362,19 +349,17 @@ class WoRMSiChatBioAgent:
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
                 if not aphia_id:
-                    await process.log("Species not found in WoRMS database")
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Species found, AphiaID: {aphia_id}")
+                await process.log(f"Found AphiaID: {aphia_id}")
 
                 # Get sources
                 sources_params = SourcesParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_sources_url(sources_params)
-                await process.log(f"Endpoint API: {api_url}")
+                await process.log(f"Endpoint API : {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
-                await process.log(f"API response received: {type(raw_response).__name__}")
                 
                 # Response format
                 if isinstance(raw_response, list):
@@ -387,7 +372,7 @@ class WoRMSiChatBioAgent:
                 source_count = len(sources)
                 
                 if source_count > 0:
-                    await process.log(f"Successfully extracted {source_count} sources")
+                    await process.log(f"Found {source_count} sources")
                     
                     # Sample sources for display
                     sample_sources = []
@@ -424,8 +409,6 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    await process.log("Data artifact created successfully")
-                    
                     # Detailed reply
                     reply = f"Found {source_count} literature sources for {params.species_name} (AphiaID: {aphia_id})"
                     if years:
@@ -439,7 +422,6 @@ class WoRMSiChatBioAgent:
                     
                     await context.reply(reply)
                 else:
-                    await process.log("No literature sources found in API response")
                     await context.reply(f"No literature sources found for {params.species_name} in WoRMS.")
 
             except Exception as e:
@@ -458,29 +440,26 @@ class WoRMSiChatBioAgent:
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
                 if not aphia_id:
-                    await process.log("Species not found in WoRMS database")
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Species found, AphiaID: {aphia_id}")
+                await process.log(f"Found AphiaID: {aphia_id}")
 
                 # Get record
                 record_params = RecordParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_record_url(record_params)
-                await process.log(f"Endpoint API: {api_url}")
+                await process.log(f"Endpoint API : {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
-                await process.log(f"API response received: {type(raw_response).__name__}")
                 
                 # Response format
                 if isinstance(raw_response, dict):
                     record = raw_response
                 else:
-                    await process.log("Unexpected response format received")
                     await context.reply(f"Unexpected response format for {params.species_name} record.")
                     return
 
-                await process.log("Successfully extracted taxonomic record")
+                await process.log("Found taxonomic record")
                 
                 # Extracting information for display
                 scientific_name = record.get('scientificname', 'Unknown')
@@ -514,8 +493,6 @@ class WoRMSiChatBioAgent:
                         }
                     }
                 )
-                
-                await process.log("Data artifact created successfully")
                 
                 # Create detailed response
                 reply_parts = [f"Retrieved taxonomic record for {scientific_name}"]
@@ -555,19 +532,17 @@ class WoRMSiChatBioAgent:
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
                 if not aphia_id:
-                    await process.log("Species not found in WoRMS database")
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Species found, AphiaID: {aphia_id}")
+                await process.log(f"Found AphiaID: {aphia_id}")
 
                 # Get classification
                 class_params = ClassificationParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_classification_url(class_params)
-                await process.log(f"Endpoint API: {api_url}")
+                await process.log(f"Endpoint API : {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
-                await process.log(f"API response received: {type(raw_response).__name__}")
                 
                 # Response format
                 if isinstance(raw_response, list):
@@ -580,7 +555,7 @@ class WoRMSiChatBioAgent:
                 classification_count = len(classification)
                 
                 if classification_count > 0:
-                    await process.log(f"Successfully extracted {classification_count} taxonomic levels")
+                    await process.log(f"Found {classification_count} taxonomic levels")
                     
                     # Extract taxonomic hierarchy 
                     taxonomic_levels = []
@@ -603,8 +578,6 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    await process.log("Data artifact created successfully")
-                    
                     # Detailed reply
                     reply = f"Found complete taxonomic classification for {params.species_name} (AphiaID: {aphia_id}) with {classification_count} hierarchical levels"
                     if taxonomic_levels:
@@ -615,7 +588,6 @@ class WoRMSiChatBioAgent:
                     
                     await context.reply(reply)
                 else:
-                    await process.log("No taxonomic classification found in API response")
                     await context.reply(f"No taxonomic classification found for {params.species_name} in WoRMS.")
 
             except Exception as e:
@@ -634,21 +606,19 @@ class WoRMSiChatBioAgent:
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
                 if not aphia_id:
-                    await process.log("Species not found in WoRMS database")
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Species found, AphiaID: {aphia_id}")
+                await process.log(f"Found AphiaID: {aphia_id}")
 
                 # Get children
                 children_params = ChildrenParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_children_url(children_params)
-                await process.log(f"Endpoint API: {api_url}")
+                await process.log(f"Endpoint API : {api_url}")
 
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
-                await process.log(f"API response received: {type(raw_response).__name__}")
                 
-                # Response format
+                # Rsponse format
                 if isinstance(raw_response, list):
                     children = raw_response
                 elif isinstance(raw_response, dict):
@@ -659,7 +629,7 @@ class WoRMSiChatBioAgent:
                 children_count = len(children)
                 
                 if children_count > 0:
-                    await process.log(f"Successfully extracted {children_count} child taxa")
+                    await process.log(f"Found {children_count} child taxa")
                     
                     # Sample children
                     sample_children = []
@@ -692,8 +662,6 @@ class WoRMSiChatBioAgent:
                         }
                     )
                     
-                    await process.log("Data artifact created successfully")
-                    
                     # Detailed reply
                     reply = f"Found {children_count} child taxa for {params.species_name} (AphiaID: {aphia_id})"
                     if ranks:
@@ -706,7 +674,6 @@ class WoRMSiChatBioAgent:
                     
                     await context.reply(reply)
                 else:
-                    await process.log("No child taxa found in API response")
                     await context.reply(f"No child taxa found for {params.species_name} in WoRMS. This may indicate it's a terminal taxonomic unit (species level) with no subspecies or varieties.")
 
             except Exception as e:
