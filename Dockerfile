@@ -30,4 +30,4 @@ RUN python3 -m venv $VIRTUAL_ENV
 RUN uv pip install --no-cache --python $VIRTUAL_ENV/bin/python -e .
 EXPOSE 9999
 
-CMD ["python3", "-m", "src"]
+CMD ["python3", "-m", "src.main"]
