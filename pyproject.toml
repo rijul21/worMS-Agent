@@ -1,0 +1,19 @@
+[project]
+name = "woRMS"
+version = "0.1.0"
+description = "description"
+readme = "README.md"
+requires-python = ">=3.12"
+
+dependencies = [
+    "pydantic==2.11.7",
+    "httpx==0.28.1",
+    "openai==1.97.1",
+    "python-dotenv==1.1.1",
+    "ichatbio-sdk==0.2.2",
+    "instructor==1.10.0",
+    "typing_extensions",
+    "requests",
+    "cloudscraper",
+    "PyYAML",
+]
