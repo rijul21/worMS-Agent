@@ -9,7 +9,7 @@ import json
 from typing import Dict, Any, Optional
 
 
-from worms_api import (
+from .worms_api import (
     WoRMS,
     SynonymsParams, 
     DistributionParams,
