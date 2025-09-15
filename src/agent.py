@@ -18,6 +18,7 @@ from .worms_api import (
     RecordParams,
     ClassificationParams,
     ChildrenParams,
+    AttributesParams, 
     NoParams
 )
 
@@ -83,6 +84,16 @@ class MarineChildrenParams(BaseModel):
     )
     include_children: Optional[bool] = Field(True,
         description="Include child taxa in results"
+    )
+
+class MarineAttributesParams(BaseModel):
+    """Parameters for getting marine species attributes/measurements"""
+    species_name: str = Field(...,
+        description="Scientific name of the marine species",
+        examples=["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]
+    )
+    include_attributes: Optional[bool] = Field(True,
+        description="Include attributes/measurements in results"
     )
 
 class WoRMSiChatBioAgent:
@@ -681,8 +692,105 @@ class WoRMSiChatBioAgent:
                 await context.reply(f"I encountered an error while retrieving child taxa: {e}")
 
 
+    
+    async def run_get_attributes(self, context, params: MarineAttributesParams):
+        """Workflow for getting marine species attributes/measurements"""
+        async with context.begin_process(f"Getting attributes for '{params.species_name}'") as process:
+            await process.log("Attributes search parameters", data=params.model_dump(exclude_defaults=True))
+
+            try:
+                # Get AphiaID
+                await process.log(f"Getting AphiaID for '{params.species_name}'...")
+                loop = asyncio.get_event_loop()
+                aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
-# -AgentCard  with 7 endpoints -
+                if not aphia_id:
+                    await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
+                    return
+
+                await process.log(f"Found AphiaID: {aphia_id}")
+
+                # Get attributes
+                attr_params = AttributesParams(aphia_id=aphia_id)
+                api_url = self.worms_logic.build_attributes_url(attr_params)
+                await process.log(f"Endpoint API : {api_url}")
+
+                raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
+                
+                # Response format
+                if isinstance(raw_response, list):
+                    attributes = raw_response
+                elif isinstance(raw_response, dict):
+                    attributes = [raw_response]
+                else:
+                    attributes = []
+
+                attribute_count = len(attributes)
+                
+                if attribute_count > 0:
+                    await process.log(f"Found {attribute_count} attributes")
+                    
+                    # Sample attributes for display
+                    sample_attributes = []
+                    measurement_types = set()
+                    sources = set()
+                    
+                    for attr in attributes[:8]:  # Show first 8
+                        if isinstance(attr, dict):
+                            measurement_type = attr.get('measurementType', 'Unknown')
+                            measurement_value = attr.get('measurementValue', '')
+                            source = attr.get('source', '')
+                            
+                            if measurement_type != 'Unknown':
+                                measurement_types.add(measurement_type)
+                            if source:
+                                sources.add(source)
+                            
+                            if measurement_value:
+                                sample_attributes.append(f"{measurement_type}: {measurement_value}")
+                            else:
+                                sample_attributes.append(measurement_type)
+                    
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Marine species attributes for {params.species_name} (AphiaID: {aphia_id}) - {attribute_count} attributes",
+                        uris=[api_url],
+                        content=json.dumps(raw_response, indent=2),
+                        metadata={
+                            "data_source": "WoRMS Attributes",
+                            "aphia_id": aphia_id,
+                            "scientific_name": params.species_name,
+                            "attribute_count": attribute_count,
+                            "measurement_types": list(measurement_types),
+                            "sources": list(sources)
+                        }
+                    )
+                    
+                    # Detailed reply
+                    reply = f"Found {attribute_count} attributes/measurements for {params.species_name} (AphiaID: {aphia_id})"
+                    if measurement_types:
+                        reply += f" including: {', '.join(sorted(list(measurement_types))[:5])}"
+                        if len(measurement_types) > 5:
+                            reply += f" and {len(measurement_types) - 5} more types"
+                    if sample_attributes:
+                        reply += f". Examples: {'; '.join(sample_attributes[:3])}"
+                        if attribute_count > 3:
+                            reply += f" and {attribute_count - 3} more"
+                    reply += ". I've created an artifact with all the attributes."
+                    
+                    await context.reply(reply)
+                else:
+                    await context.reply(f"No attributes found for {params.species_name} in WoRMS.")
+
+            except Exception as e:
+                await process.log("Error during API request", data={"error": str(e)})
+                await context.reply(f"I encountered an error while retrieving attributes: {e}")
+
+        
+
+
+                
+# -AgentCard  with 8 endpoints -
 card = AgentCard(
     name="WoRMS Marine Species Agent",
     description="Retrieves detailed marine species information from WoRMS (World Register of Marine Species) database including synonyms, distribution, common names, literature sources, taxonomic records, classification, and child taxa.",
@@ -723,6 +831,11 @@ card = AgentCard(
             id="get_marine_info",
             description="Get child taxa (subspecies, varieties, forms) for a marine species from WoRMS.",
             parameters=MarineChildrenParams
+        ),
+        AgentEntrypoint(
+            id="get_attributes",
+            description="Get attributes and measurements for a marine species from WoRMS.",
+            parameters=MarineAttributesParams
         )
     ]
 )
@@ -763,6 +876,8 @@ class WoRMSAgent(IChatBioAgent):
             await self.workflow_agent.run_get_classification(context, params)
         elif entrypoint == "get_marine_info":
             await self.workflow_agent.run_get_children(context, params)
+        elif entrypoint == "get_attributes":
+            await self.workflow_agent.run_get_attributes(context, params)
         else:
             # Unexpected entrypoints 
             await context.reply(f"Unknown entrypoint '{entrypoint}' received. Request was: '{request}'")

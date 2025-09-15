@@ -70,7 +70,12 @@ class ChildrenParams(BaseModel):
         description="The AphiaID of the species to get child taxa for",
         examples=[137205, 104625, 137094]
     )
-
+class AttributesParams(BaseModel):
+    """Parameters for getting attributes/measurements of a species"""
+    aphia_id: int = Field(...,
+        description="The AphiaID of the species to get attributes for",
+        examples=[137205, 104625, 137094]
+    )
 class NoParams(BaseModel):
     """An empty model for entrypoints that require no parameters."""
     pass
@@ -137,6 +142,10 @@ class WoRMS:
     def build_children_url(self, params: ChildrenParams) -> str:
         """Build URL for getting species child taxa"""
         return f"{self.worms_api_base_url}/AphiaChildrenByAphiaID/{params.aphia_id}"
+    
+    def build_attributes_url(self, params: AttributesParams) -> str:
+        """Build URL for getting species attributes/measurements"""
+        return f"{self.worms_api_base_url}/AphiaAttributesByAphiaID/{params.aphia_id}"
 
     # Request execution methods (following ALA pattern)
     def execute_request(self, url: str) -> Dict:
