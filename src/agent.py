@@ -855,7 +855,11 @@ card = AgentCard(
         )
     ]
 )
-
+print(f"REGISTERED ENDPOINTS: {[ep.id for ep in card.entrypoints]}")
+if any(ep.id == 'get_attributes' for ep in card.entrypoints):
+    print(" get_attributes IS registered in card")
+else:
+    print("get_attributes NOT found in card!")
 #- iChatBio agent class -
 class WoRMSAgent(IChatBioAgent):
     def __init__(self):
@@ -867,7 +871,10 @@ class WoRMSAgent(IChatBioAgent):
         return card
 
     @override
+    @override
     async def run(self, context: ResponseContext, request: str, entrypoint: str, params: BaseModel):
+        print(f"INCOMING: entrypoint='{entrypoint}' | available=['get_synonyms','get_distribution','get_vernacular_names','get_sources','get_record','get_taxonomy','get_marine_info','get_attributes']")
+    
         """Executes the requested agent entrypoint using the provided context."""
         
         # Debug logging 
