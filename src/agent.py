@@ -692,31 +692,47 @@ class WoRMSiChatBioAgent:
                 await context.reply(f"I encountered an error while retrieving child taxa: {e}")
 
 
-    
     async def run_get_attributes(self, context, params: MarineAttributesParams):
         """Workflow for getting marine species attributes/measurements"""
+        print(f">>> INSIDE run_get_attributes method")
+        print(f">>> Species name: {params.species_name}")
+        
         async with context.begin_process(f"Getting attributes for '{params.species_name}'") as process:
             await process.log("Attributes search parameters", data=params.model_dump(exclude_defaults=True))
+            print(f">>> Process started for attributes")
 
             try:
                 # Get AphiaID
                 await process.log(f"Getting AphiaID for '{params.species_name}'...")
+                print(f">>> About to get AphiaID for: {params.species_name}")
+                
                 loop = asyncio.get_event_loop()
                 aphia_id = await loop.run_in_executor(None, lambda: self.worms_logic.get_species_aphia_id(params.species_name))
                 
+                print(f">>> AphiaID result: {aphia_id}")
+                
                 if not aphia_id:
+                    print(f">>> No AphiaID found - exiting")
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
                 await process.log(f"Found AphiaID: {aphia_id}")
+                print(f">>> AphiaID found: {aphia_id}")
 
                 # Get attributes
+                print(f">>> Creating AttributesParams with AphiaID: {aphia_id}")
                 attr_params = AttributesParams(aphia_id=aphia_id)
                 api_url = self.worms_logic.build_attributes_url(attr_params)
+                print(f">>> Built API URL: {api_url}")
+                
                 await process.log(f"Endpoint API : {api_url}")
 
+                print(f">>> About to execute request to: {api_url}")
                 raw_response = await loop.run_in_executor(None, lambda: self.worms_logic.execute_request(api_url))
                 
+                print(f">>> Raw response type: {type(raw_response)}")
+                print(f">>> Raw response preview: {str(raw_response)[:200]}...")
+    
                 # Response format
                 if isinstance(raw_response, list):
                     attributes = raw_response
@@ -877,6 +893,9 @@ class WoRMSAgent(IChatBioAgent):
         elif entrypoint == "get_marine_info":
             await self.workflow_agent.run_get_children(context, params)
         elif entrypoint == "get_attributes":
+            print(f">>> ROUTING TO: get_attributes")
+            print(f">>> ATTRIBUTES ENDPOINT TRIGGERED!")
+            print(f">>> Params for attributes: {params}")
             await self.workflow_agent.run_get_attributes(context, params)
         else:
             # Unexpected entrypoints 

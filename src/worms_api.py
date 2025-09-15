@@ -145,7 +145,9 @@ class WoRMS:
     
     def build_attributes_url(self, params: AttributesParams) -> str:
         """Build URL for getting species attributes/measurements"""
-        return f"{self.worms_api_base_url}/AphiaAttributesByAphiaID/{params.aphia_id}"
+        url = f"{self.worms_api_base_url}/AphiaAttributesByAphiaID/{params.aphia_id}"
+        print(f">>> WoRMS API: Built attributes URL: {url}")
+        return url
 
     # Request execution methods (following ALA pattern)
     def execute_request(self, url: str) -> Dict:
