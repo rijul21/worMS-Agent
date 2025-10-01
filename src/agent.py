@@ -1,6 +1,8 @@
 from typing_extensions import override
 from pydantic import BaseModel, Field
 from ichatbio.agent import IChatBioAgent
+from openai import OpenAI
+import os
 from ichatbio.agent_response import ResponseContext  
 from ichatbio.server import run_agent_server
 from ichatbio.types import AgentCard, AgentEntrypoint
@@ -84,6 +86,7 @@ class MarineChildrenParams(BaseModel):
     include_children: Optional[bool] = Field(True,
         description="Include child taxa in results"
     )
+
 
 class WoRMSiChatBioAgent:
     """The iChatBio agent implementation for WoRMS - 5 endpoint version"""
