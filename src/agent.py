@@ -743,7 +743,7 @@ class WoRMSAgent(IChatBioAgent):
     @override
     async def run(self, context: ResponseContext, request: str, entrypoint: str, params: BaseModel):
         """Executes the requested agent entrypoint using the provided context."""
-        
+        print("f you see this, the code has been updated!")
         # Debug logging 
         print(f"=== WoRMS DEBUG INFO ===")
         print(f"request: {request}")
