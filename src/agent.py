@@ -187,7 +187,7 @@ class WoRMSiChatBioAgent:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"AphiaID for the species : {aphia_id}")
 
                 # Get distribution
                 dist_params = DistributionParams(aphia_id=aphia_id)
@@ -273,7 +273,7 @@ class WoRMSiChatBioAgent:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"AphiaID for the species : {aphia_id}")
 
                 # Get vernacular names
                 vern_params = VernacularParams(aphia_id=aphia_id)
@@ -355,7 +355,7 @@ class WoRMSiChatBioAgent:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"AphiaID for the species : {aphia_id}")
 
                 # Get sources
                 sources_params = SourcesParams(aphia_id=aphia_id)
@@ -446,7 +446,7 @@ class WoRMSiChatBioAgent:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"AphiaID for the species : {aphia_id}")
 
                 # Get record
                 record_params = RecordParams(aphia_id=aphia_id)
@@ -538,7 +538,7 @@ class WoRMSiChatBioAgent:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"AphiaID for the species : {aphia_id}")
 
                 # Get classification
                 class_params = ClassificationParams(aphia_id=aphia_id)
@@ -612,7 +612,7 @@ class WoRMSiChatBioAgent:
                     await context.reply(f"Could not find '{params.species_name}' in WoRMS database.")
                     return
 
-                await process.log(f"Found AphiaID: {aphia_id}")
+                await process.log(f"AphiaID for the species : {aphia_id}")
 
                 # Get children
                 children_params = ChildrenParams(aphia_id=aphia_id)
