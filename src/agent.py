@@ -17,6 +17,7 @@ import dotenv
 import asyncio
 
 from worms_api import WoRMS
+from worms_api import SynonymsParams
 
 dotenv.load_dotenv()
 
@@ -94,14 +95,80 @@ class WoRMSReActAgent(IChatBioAgent):
             Provide a summary of what you found.
             """
             await context.reply(summary)
+
+        @tool
+        async def get_species_synonyms(species_name: str) -> str:
+            """
+            Get all synonyms and alternative scientific names for a marine species.
+            
+            Args:
+                species_name: Scientific name of the species (e.g., "Orcinus orca")
+            
+            Returns:
+                Summary of synonyms found or error message
+            """
+            async with context.begin_process(f"Getting synonyms for '{species_name}'") as process:
+                try:
+                    # Get AphiaID
+                    loop = asyncio.get_event_loop()
+                    aphia_id = await loop.run_in_executor(
+                        None, 
+                        lambda: self.worms_logic.get_species_aphia_id(species_name)
+                    )
+                    
+                    if not aphia_id:
+                        return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    await process.log(f"Found AphiaID: {aphia_id}")
+                    
+                    # Get synonyms using your existing API
+                    from worms_api import SynonymsParams
+                    syn_params = SynonymsParams(aphia_id=aphia_id)
+                    api_url = self.worms_logic.build_synonyms_url(syn_params)
+                    
+                    raw_response = await loop.run_in_executor(
+                        None,
+                        lambda: self.worms_logic.execute_request(api_url)
+                    )
+                    
+                    # Parse response
+                    if isinstance(raw_response, list):
+                        synonyms = raw_response
+                    elif isinstance(raw_response, dict):
+                        synonyms = [raw_response]
+                    else:
+                        synonyms = []
+                    
+                    count = len(synonyms)
+                    
+                    if count > 0:
+                        # Create artifact
+                        await process.create_artifact(
+                            mimetype="application/json",
+                            description=f"Synonyms for {species_name} (AphiaID: {aphia_id})",
+                            uris=[api_url],
+                            metadata={"aphia_id": aphia_id, "count": count}
+                        )
+                        
+                        # Extract sample names
+                        samples = [s.get('scientificname', 'Unknown') for s in synonyms[:3] if isinstance(s, dict)]
+                        sample_text = ", ".join(samples)
+                        
+                        return f"Found {count} synonyms for {species_name} (AphiaID: {aphia_id}). Examples: {sample_text}. Artifact created with full data."
+                    else:
+                        return f"No synonyms found for {species_name} in WoRMS."
+                        
+                except Exception as e:
+                    await process.log(f"Error: {str(e)}")
+                    return f"Error retrieving synonyms: {str(e)}"
         
         # Build tools list (will add WoRMS tools in next step)
         tools = [
+            get_species_synonyms,
             abort,
             finish,
-            # TODO: Add WoRMS operation tools here in next step
         ]
-        
+                
         # Create LangChain agent
         llm = ChatOpenAI(model="gpt-4o-mini")
         
