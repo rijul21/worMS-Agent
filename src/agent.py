@@ -12,6 +12,7 @@ from ichatbio.types import AgentCard, AgentEntrypoint
 from langchain.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
+from langchain_core.messages import SystemMessage, HumanMessage
 import dotenv
 import asyncio
 
@@ -107,8 +108,7 @@ class WoRMSReActAgent(IChatBioAgent):
         system_prompt = self._make_system_prompt(params.species_names, request)
         agent = create_react_agent(
             llm,
-            tools,
-            state_modifier=system_prompt
+            tools
         )
         
         # Execute agent with logging
@@ -119,7 +119,10 @@ class WoRMSReActAgent(IChatBioAgent):
             
             try:
                 await agent.ainvoke({
-                    "messages": [request]
+                    "messages": [
+                        SystemMessage(content=system_prompt),
+                        HumanMessage(content=request)
+                    ]
                 })
                 
             except Exception as e:
