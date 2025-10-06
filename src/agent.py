@@ -15,7 +15,7 @@ import langchain.agents
 import dotenv
 import asyncio
 
-from .worms_api import WoRMS
+from worms_api import WoRMS
 
 dotenv.load_dotenv()
 

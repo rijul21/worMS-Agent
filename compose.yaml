@@ -3,3 +3,10 @@ services:
     build: .
     ports:
       - "29201:9999"
+    environment:
+      - PORT=9999
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+      - WORMS_API_URL=${WORMS_API_URL}
+    env_file:
+      - .env
