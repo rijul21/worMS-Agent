@@ -11,7 +11,7 @@ from ichatbio.server import run_agent_server
 from ichatbio.types import AgentCard, AgentEntrypoint
 from langchain.tools import tool
 from langchain_openai import ChatOpenAI
-import langchain.agents
+from langgraph.prebuilt import create_react_agent
 import dotenv
 import asyncio
 
@@ -102,13 +102,13 @@ class WoRMSReActAgent(IChatBioAgent):
         ]
         
         # Create LangChain agent
-        llm = ChatOpenAI(model="gpt-4o-mini", tool_choice="required")
+        llm = ChatOpenAI(model="gpt-4o-mini")
         
-        system_message = self._make_system_prompt(params.species_names, request)
-        agent = langchain.agents.create_agent(
-            model=llm,
-            tools=tools,
-            prompt=system_message,
+        system_prompt = self._make_system_prompt(params.species_names, request)
+        agent = create_react_agent(
+            llm,
+            tools,
+            state_modifier=system_prompt
         )
         
         # Execute agent with logging
@@ -119,10 +119,9 @@ class WoRMSReActAgent(IChatBioAgent):
             
             try:
                 await agent.ainvoke({
-                    "messages": [
-                        {"role": "user", "content": request}
-                    ]
+                    "messages": [request]
                 })
+                
             except Exception as e:
                 await process.log(f"Agent error: {str(e)}")
                 await context.reply(f"An error occurred: {str(e)}")
