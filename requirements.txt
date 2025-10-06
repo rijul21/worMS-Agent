@@ -8,7 +8,12 @@ instructor==1.10.0
 typing_extensions
 requests  
 cloudscraper    
-PyYAML  
+PyYAML
+
+# LangChain for ReAct agent
+langchain>=0.3.0
+langchain-openai>=0.2.0
+langchain-core>=0.3.0
 
 # Testing dependencies
 pytest==8.3.3
