@@ -11,22 +11,19 @@ from langchain_core.messages import SystemMessage, HumanMessage
 import dotenv
 import asyncio
 
-from worms_api import WoRMS
-from worms_api import SynonymsParams
+from worms_api import WoRMS, SynonymsParams
 
 dotenv.load_dotenv()
 
-# Single  entrypoint parameter
 class MarineResearchParams(BaseModel):
     """Parameters for marine species research requests"""
     species_names: list[str] = Field(
         default=[],
-        description="Scientific names of marine species to research (optional - can be extracted from natural language)",
+        description="Scientific names of marine species to research",
         examples=[["Orcinus orca"], ["Orcinus orca", "Delphinus delphis"]]
     )
 
-AGENT_DESCRIPTION = """Worms Agent
-"""
+AGENT_DESCRIPTION = "Marine species research assistant using WoRMS database"
 
 
 class WoRMSReActAgent(IChatBioAgent):
@@ -36,7 +33,7 @@ class WoRMSReActAgent(IChatBioAgent):
     @override
     def get_agent_card(self) -> AgentCard:
         return AgentCard(
-            name="WoRMS Research Agent (ReAct)",
+            name="WoRMS Agent",
             description=AGENT_DESCRIPTION,
             icon="https://www.marinespecies.org/images/WoRMS_logo.png",
             url="http://localhost:9999",
@@ -57,33 +54,30 @@ class WoRMSReActAgent(IChatBioAgent):
         entrypoint: str,
         params: MarineResearchParams,
     ):
-        """
-        Main entry point - builds and executes the ReAct agent loop
-        """
+        """Main entry point - builds and executes the ReAct agent loop"""
         
-        # Create control tools
+        # Control tools
         @tool(return_direct=True)
         async def abort(reason: str):
-            """Call this if you cannot fulfill the user's request. Provide a clear explanation."""
-            await context.reply(f"I couldn't complete your request: {reason}")
+            """Call if you cannot fulfill the request."""
+            await context.reply(f"Unable to complete request: {reason}")
 
         @tool(return_direct=True)
         async def finish(summary: str):
-            """Call this when you have successfully completed the user's request with a summary."""
+            """Call when request is successfully completed."""
             await context.reply(summary)
 
         @tool
         async def get_species_synonyms(species_name: str) -> str:
-            """
-            Args:
-                species_name: Scientific name of the species
+            """Get synonyms and alternative scientific names for a marine species.
             
-            Returns:
-                Summary of synonyms found or error message
+            Args:
+                species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Getting synonyms for '{species_name}'") as process:
+            async with context.begin_process(f"Fetching synonyms: {species_name}") as process:
                 try:
-                    # Get AphiaID
+                    await process.log(f"Looking up species: {species_name}")
+                    
                     loop = asyncio.get_event_loop()
                     aphia_id = await loop.run_in_executor(
                         None, 
@@ -91,119 +85,106 @@ class WoRMSReActAgent(IChatBioAgent):
                     )
                     
                     if not aphia_id:
+                        await process.log(f"Species not found: {species_name}")
                         return f"Species '{species_name}' not found in WoRMS database."
                     
-                    await process.log(f"Found AphiaID: {aphia_id}")
+                    await process.log(f" Found AphiaID: {aphia_id}")
                     
-                    # Get synonyms using your existing API
-                    from worms_api import SynonymsParams
+                    # Build API request
                     syn_params = SynonymsParams(aphia_id=aphia_id)
                     api_url = self.worms_logic.build_synonyms_url(syn_params)
+                    await process.log(f"API endpoint: {api_url}")
                     
+                    # Execute request
+                    await process.log("Calling WoRMS API...")
                     raw_response = await loop.run_in_executor(
                         None,
                         lambda: self.worms_logic.execute_request(api_url)
                     )
                     
-                    # Parse response
-                    if isinstance(raw_response, list):
-                        synonyms = raw_response
-                    elif isinstance(raw_response, dict):
-                        synonyms = [raw_response]
-                    else:
-                        synonyms = []
+                    # Normalize response
+                    synonyms = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                    await process.log(f"Received {len(synonyms)} synonym records")
                     
-                    count = len(synonyms)
+                    if not synonyms:
+                        await process.log(f"⚠️ No synonyms found for {species_name}")
+                        return f"No synonyms found for {species_name}"
                     
-                    if count > 0:
-                        # Create artifact
-                        await process.create_artifact(
-                            mimetype="application/json",
-                            description=f"Synonyms for {species_name} (AphiaID: {aphia_id})",
-                            uris=[api_url],
-                            metadata={"aphia_id": aphia_id, "count": count}
-                        )
-                        
-                        # Extract sample names
-                        samples = [s.get('scientificname', 'Unknown') for s in synonyms[:3] if isinstance(s, dict)]
-                        sample_text = ", ".join(samples)
-                        
-                        return f"Found {count} synonyms for {species_name} (AphiaID: {aphia_id}). Examples: {sample_text}. Artifact created with full data."
-                    else:
-                        return f"No synonyms found for {species_name} in WoRMS."
+                    # Create artifact
+                    await process.log("Creating artifact with synonym data...")
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Synonyms for {species_name} (AphiaID: {aphia_id}) - {len(synonyms)} total",
+                        uris=[api_url],
+                        metadata={
+                            "aphia_id": aphia_id, 
+                            "count": len(synonyms),
+                            "species": species_name
+                        }
+                    )
+                    
+                    # Build summary
+                    samples = [s.get('scientificname', 'Unknown') for s in synonyms[:3] if isinstance(s, dict)]
+                    await process.log(f"Complete. Sample synonyms: {', '.join(samples)}")
+                    
+                    return f"Found {len(synonyms)} synonyms for {species_name}. Examples: {', '.join(samples)}. Full data in artifact."
                         
                 except Exception as e:
-                    await process.log(f"Error: {str(e)}")
+                    await process.log(f"ERROR: {type(e).__name__}: {str(e)}")
                     return f"Error retrieving synonyms: {str(e)}"
         
-        # Build tools list (will add WoRMS tools in next step)
-        tools = [
-            get_species_synonyms,
-            abort,
-            finish,
-        ]
-                
-        # Create LangChain agent
-        llm = ChatOpenAI(model="gpt-4o-mini")
+        tools = [get_species_synonyms, abort, finish]
         
-        system_prompt = self._make_system_prompt(params.species_names, request)
-        agent = create_react_agent(
-            llm,
-            tools
-        )
-        
-        # Execute agent with logging
-        async with context.begin_process("Analyzing your marine species request") as process:
-            await process.log(f"User Query {request}")
+        # Execute agent
+        async with context.begin_process("Processing request") as process:
+            await process.log(f"User query: '{request}'")
+            
             if params.species_names:
-                await process.log(f"Species context: {', '.join(params.species_names)}")
+                await process.log(f"🐠 Species context: {', '.join(params.species_names)}")
+            
+            await process.log("Initializing LangChain ReAct agent...")
+            llm = ChatOpenAI(model="gpt-4o-mini")
+            system_prompt = self._make_system_prompt(params.species_names, request)
+            agent = create_react_agent(llm, tools)
             
             try:
+                await process.log("Starting agent reasoning loop...")
                 await agent.ainvoke({
                     "messages": [
                         SystemMessage(content=system_prompt),
                         HumanMessage(content=request)
                     ]
                 })
+                await process.log("Agent completed successfully")
                 
             except Exception as e:
-                await process.log(f"Agent error: {str(e)}")
+                await process.log(f"Agent error: {type(e).__name__}: {str(e)}")
                 await context.reply(f"An error occurred: {str(e)}")
     
     def _make_system_prompt(self, species_names: list[str], user_request: str) -> str:
-        """Generate system prompt to guide the agent's reasoning"""
-        
-        species_context = ""
-        if species_names:
-            species_context = f"\n\nSpecies mentioned: {', '.join(species_names)}"
+        """Generate system prompt"""
+        species_context = f"\n\nSpecies: {', '.join(species_names)}" if species_names else ""
         
         return f"""\
-You are a marine biology research assistant with access to the WoRMS (World Register of Marine Species) database.
+                        You are a marine biology assistant with access to the WoRMS database.
 
-Your mission: Help users research marine species by retrieving and analyzing taxonomic data from WoRMS.
+                        Request: "{user_request}"{species_context}
 
-Current request: "{user_request}"{species_context}
+                        Instructions:
+                        - Use get_species_synonyms to retrieve synonym data
+                        - Call finish() with a summary when done
+                        - Call abort() if you cannot complete the request
 
-Guidelines:
-1. Break complex requests into steps
-2. Always verify species exist in WoRMS before fetching detailed data
-3. When comparing species, retrieve the same data type for all species
-4. Create artifacts for data you retrieve so users can examine details
-5. If a request is ambiguous, make reasonable assumptions and explain them
-6. If you cannot complete a request, call abort() with a clear reason
-7. When finished, call finish() with a comprehensive summary
-
-Available in next step: Tools to search species, get synonyms, distribution, vernacular names, sources, taxonomic records, classifications, and child taxa.
-"""
+                        Always create artifacts when retrieving data.
+                        """
 
 
 if __name__ == "__main__":
     agent = WoRMSReActAgent()
     print("=" * 60)
-    print("WoRMS Server")
+    print("WoRMS Agent Server")
     print("=" * 60)
-    print(f"Starting at: http://localhost:9999")
-    print(f"Agent: {agent.get_agent_card().name}")
-    print("Status: Tools not yet implemented (placeholder)")
+    print(f"URL: http://localhost:9999")
+    print(f"Status: Synonyms tool ready")
     print("=" * 60)
     run_agent_server(agent, host="0.0.0.0", port=9999)
