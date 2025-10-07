@@ -544,17 +544,17 @@ class WoRMSReActAgent(IChatBioAgent):
                     await process.log(f"Error retrieving child taxa for {species_name}: {type(e).__name__} - {str(e)}")
                     return f"Error retrieving child taxa: {str(e)}"
                 
-            tools = [
-                get_species_synonyms,
-                get_species_distribution,
-                get_vernacular_names,
-                get_literature_sources,
-                get_taxonomic_record,
-                get_taxonomic_classification,
-                get_child_taxa,
-                abort,
-                finish
-            ]
+        tools = [
+            get_species_synonyms,
+            get_species_distribution,
+            get_vernacular_names,
+            get_literature_sources,
+            get_taxonomic_record,
+            get_taxonomic_classification,
+            get_child_taxa,
+            abort,
+            finish
+        ]
         
         # Execute agent
         async with context.begin_process("Processing your request") as process:
