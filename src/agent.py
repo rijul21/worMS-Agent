@@ -56,7 +56,6 @@ class WoRMSReActAgent(IChatBioAgent):
     ):
         """Main entry point - builds and executes the ReAct agent loop"""
         
-        # Control tools
         @tool(return_direct=True)
         async def abort(reason: str):
             """Call if you cannot fulfill the request."""
@@ -74,29 +73,26 @@ class WoRMSReActAgent(IChatBioAgent):
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Fetching synonyms: {species_name}") as process:
+            async with context.begin_process(f"Fetching synonyms for {species_name}") as process:
                 try:
-                    await process.log(f"Looking up species: {species_name}")
-                    
                     loop = asyncio.get_event_loop()
+                    
+                    # Get AphiaID
                     aphia_id = await loop.run_in_executor(
                         None, 
                         lambda: self.worms_logic.get_species_aphia_id(species_name)
                     )
                     
                     if not aphia_id:
-                        await process.log(f"Species not found: {species_name}")
+                        await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
                     
-                    await process.log(f" Found AphiaID: {aphia_id}")
+                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
                     
-                    # Build API request
+                    # Get synonyms from WoRMS API
                     syn_params = SynonymsParams(aphia_id=aphia_id)
                     api_url = self.worms_logic.build_synonyms_url(syn_params)
-                    await process.log(f"API endpoint: {api_url}")
                     
-                    # Execute request
-                    await process.log("Calling WoRMS API...")
                     raw_response = await loop.run_in_executor(
                         None,
                         lambda: self.worms_logic.execute_request(api_url)
@@ -104,14 +100,14 @@ class WoRMSReActAgent(IChatBioAgent):
                     
                     # Normalize response
                     synonyms = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
-                    await process.log(f"Received {len(synonyms)} synonym records")
                     
                     if not synonyms:
-                        await process.log(f"⚠️ No synonyms found for {species_name}")
+                        await process.log(f"No synonyms found for {species_name} (AphiaID: {aphia_id})")
                         return f"No synonyms found for {species_name}"
                     
+                    await process.log(f"Found {len(synonyms)} synonym records for {species_name} from WoRMS API")
+                    
                     # Create artifact
-                    await process.log("Creating artifact with synonym data...")
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Synonyms for {species_name} (AphiaID: {aphia_id}) - {len(synonyms)} total",
@@ -125,40 +121,36 @@ class WoRMSReActAgent(IChatBioAgent):
                     
                     # Build summary
                     samples = [s.get('scientificname', 'Unknown') for s in synonyms[:3] if isinstance(s, dict)]
-                    await process.log(f"Complete. Sample synonyms: {', '.join(samples)}")
                     
-                    return f"Found {len(synonyms)} synonyms for {species_name}. Examples: {', '.join(samples)}. Full data in artifact."
+                    return f"Found {len(synonyms)} synonyms for {species_name}. Examples: {', '.join(samples)}. Full data available in artifact."
                         
                 except Exception as e:
-                    await process.log(f"ERROR: {type(e).__name__}: {str(e)}")
+                    await process.log(f"Error retrieving synonyms for {species_name}: {type(e).__name__} - {str(e)}")
                     return f"Error retrieving synonyms: {str(e)}"
         
         tools = [get_species_synonyms, abort, finish]
         
         # Execute agent
-        async with context.begin_process("Processing request") as process:
-            await process.log(f"User query: '{request}'")
+        async with context.begin_process("Processing marine species request") as process:
+            await process.log(f"Initializing ReAct agent for query: '{request}' with {len(tools)} available tools")
             
             if params.species_names:
-                await process.log(f"🐠 Species context: {', '.join(params.species_names)}")
+                await process.log(f"Pre-identified species in context: {', '.join(params.species_names)}")
             
-            await process.log("Initializing LangChain ReAct agent...")
             llm = ChatOpenAI(model="gpt-4o-mini")
             system_prompt = self._make_system_prompt(params.species_names, request)
             agent = create_react_agent(llm, tools)
             
             try:
-                await process.log("Starting agent reasoning loop...")
                 await agent.ainvoke({
                     "messages": [
                         SystemMessage(content=system_prompt),
                         HumanMessage(content=request)
                     ]
                 })
-                await process.log("Agent completed successfully")
                 
             except Exception as e:
-                await process.log(f"Agent error: {type(e).__name__}: {str(e)}")
+                await process.log(f"Agent execution failed: {type(e).__name__} - {str(e)}")
                 await context.reply(f"An error occurred: {str(e)}")
     
     def _make_system_prompt(self, species_names: list[str], user_request: str) -> str:
@@ -166,17 +158,17 @@ class WoRMSReActAgent(IChatBioAgent):
         species_context = f"\n\nSpecies: {', '.join(species_names)}" if species_names else ""
         
         return f"""\
-                        You are a marine biology assistant with access to the WoRMS database.
+You are a marine biology assistant with access to the WoRMS database.
 
-                        Request: "{user_request}"{species_context}
+Request: "{user_request}"{species_context}
 
-                        Instructions:
-                        - Use get_species_synonyms to retrieve synonym data
-                        - Call finish() with a summary when done
-                        - Call abort() if you cannot complete the request
+Instructions:
+- Use get_species_synonyms to retrieve synonym data
+- Call finish() with a summary when done
+- Call abort() if you cannot complete the request
 
-                        Always create artifacts when retrieving data.
-                        """
+Always create artifacts when retrieving data.
+"""
 
 
 if __name__ == "__main__":
