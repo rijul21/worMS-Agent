@@ -11,7 +11,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 import dotenv
 import asyncio
 
-from worms_api import WoRMS, SynonymsParams
+from worms_api import WoRMS, SynonymsParams, DistributionParams
 
 dotenv.load_dotenv()
 
@@ -127,8 +127,71 @@ class WoRMSReActAgent(IChatBioAgent):
                 except Exception as e:
                     await process.log(f"Error retrieving synonyms for {species_name}: {type(e).__name__} - {str(e)}")
                     return f"Error retrieving synonyms: {str(e)}"
-        
-        tools = [get_species_synonyms, abort, finish]
+                
+        @tool
+        async def get_species_distribution(species_name: str) -> str:
+            """Get geographic distribution data for a marine species.
+            
+            Args:
+                species_name: Scientific name (e.g., "Orcinus orca")
+            """
+            async with context.begin_process(f"Fetching distribution for {species_name}") as process:
+                try:
+                    loop = asyncio.get_event_loop()
+                    
+                    # Get AphiaID
+                    aphia_id = await loop.run_in_executor(
+                        None, 
+                        lambda: self.worms_logic.get_species_aphia_id(species_name)
+                    )
+                    
+                    if not aphia_id:
+                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
+                    
+                    # Get distribution from WoRMS API
+                    from worms_api import DistributionParams
+                    dist_params = DistributionParams(aphia_id=aphia_id)
+                    api_url = self.worms_logic.build_distribution_url(dist_params)
+                    
+                    raw_response = await loop.run_in_executor(
+                        None,
+                        lambda: self.worms_logic.execute_request(api_url)
+                    )
+                    
+                    # Normalize response
+                    distributions = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                    
+                    if not distributions:
+                        await process.log(f"No distribution data found for {species_name} (AphiaID: {aphia_id})")
+                        return f"No distribution data found for {species_name}"
+                    
+                    await process.log(f"Found {len(distributions)} distribution records for {species_name} from WoRMS API")
+                    
+                    # Extract location info
+                    locations = [d.get('locality', d.get('location', 'Unknown')) for d in distributions[:5] if isinstance(d, dict)]
+                    
+                    # Create artifact
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Distribution for {species_name} (AphiaID: {aphia_id}) - {len(distributions)} locations",
+                        uris=[api_url],
+                        metadata={
+                            "aphia_id": aphia_id, 
+                            "count": len(distributions),
+                            "species": species_name
+                        }
+                    )
+                    
+                    return f"Found {len(distributions)} distribution records for {species_name}. Sample locations: {', '.join(locations)}. Full data available in artifact."
+                        
+                except Exception as e:
+                    await process.log(f"Error retrieving distribution for {species_name}: {type(e).__name__} - {str(e)}")
+                    return f"Error retrieving distribution: {str(e)}"
+                
+        tools = [get_species_synonyms, get_species_distribution, abort, finish]
         
         # Execute agent
         async with context.begin_process("Processing your request") as process:
@@ -162,6 +225,7 @@ Request: "{user_request}"{species_context}
 
 Instructions:
 - Use get_species_synonyms to retrieve synonym data
+- Use get_species_distribution to retrieve geographic distribution data
 - Call finish() with a summary when done
 - Call abort() if you cannot complete the request
 
