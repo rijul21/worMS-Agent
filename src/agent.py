@@ -131,11 +131,11 @@ class WoRMSReActAgent(IChatBioAgent):
         tools = [get_species_synonyms, abort, finish]
         
         # Execute agent
-        async with context.begin_process("Processing marine species request") as process:
-            await process.log(f"Initializing ReAct agent for query: '{request}' with {len(tools)} available tools")
+        async with context.begin_process("Processing yoor request") as process:
+            await process.log(f"Initializing agent for query: '{request}' with {len(tools)} available tools")
             
             if params.species_names:
-                await process.log(f"Pre-identified species in context: {', '.join(params.species_names)}")
+                await process.log(f"Identified species {', '.join(params.species_names)}")
             
             llm = ChatOpenAI(model="gpt-4o-mini")
             system_prompt = self._make_system_prompt(params.species_names, request)
