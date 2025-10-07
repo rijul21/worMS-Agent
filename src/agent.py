@@ -1,8 +1,3 @@
-"""
-WoRMS ReAct Agent - Intelligent marine species research assistant
-Uses LangChain to enable natural language queries and multi-step research
-"""
-
 from typing import override
 from pydantic import BaseModel, Field
 from ichatbio.agent import IChatBioAgent
@@ -21,7 +16,7 @@ from worms_api import SynonymsParams
 
 dotenv.load_dotenv()
 
-# Single flexible entrypoint parameter
+# Single  entrypoint parameter
 class MarineResearchParams(BaseModel):
     """Parameters for marine species research requests"""
     species_names: list[str] = Field(
@@ -30,20 +25,7 @@ class MarineResearchParams(BaseModel):
         examples=[["Orcinus orca"], ["Orcinus orca", "Delphinus delphis"]]
     )
 
-AGENT_DESCRIPTION = """\
-Intelligent marine species research assistant using the WoRMS (World Register of Marine Species) database.
-
-Capabilities:
-- Look up taxonomic information for single or multiple species
-- Compare species data (distribution, taxonomy, synonyms, etc.)
-- Retrieve synonyms, vernacular names, and literature sources
-- Analyze taxonomic relationships and classifications
-- Aggregate information across multiple data types
-
-Simply describe what you want to know in natural language, like:
-- "What are the synonyms for Orcinus orca?"
-- "Compare the distribution of killer whales and dolphins"
-- "Give me all taxonomic information for Tursiops truncatus"
+AGENT_DESCRIPTION = """Worms Agent
 """
 
 
@@ -60,7 +42,7 @@ class WoRMSReActAgent(IChatBioAgent):
             url="http://localhost:9999",
             entrypoints=[
                 AgentEntrypoint(
-                    id="research_marine_species",
+                    id="marine_species",
                     description=AGENT_DESCRIPTION,
                     parameters=MarineResearchParams
                 )
@@ -82,27 +64,17 @@ class WoRMSReActAgent(IChatBioAgent):
         # Create control tools
         @tool(return_direct=True)
         async def abort(reason: str):
-            """
-            Call this if you cannot fulfill the user's request.
-            Provide a clear explanation of why.
-            """
             await context.reply(f"I couldn't complete your request: {reason}")
         
         @tool(return_direct=True)
         async def finish(summary: str):
-            """
-            Call this when you have successfully completed the user's request.
-            Provide a summary of what you found.
-            """
             await context.reply(summary)
 
         @tool
         async def get_species_synonyms(species_name: str) -> str:
             """
-            Get all synonyms and alternative scientific names for a marine species.
-            
             Args:
-                species_name: Scientific name of the species (e.g., "Orcinus orca")
+                species_name: Scientific name of the species
             
             Returns:
                 Summary of synonyms found or error message
@@ -180,7 +152,7 @@ class WoRMSReActAgent(IChatBioAgent):
         
         # Execute agent with logging
         async with context.begin_process("Analyzing your marine species request") as process:
-            await process.log(f"User request: {request}")
+            await process.log(f"User Query {request}")
             if params.species_names:
                 await process.log(f"Species context: {', '.join(params.species_names)}")
             
@@ -226,7 +198,7 @@ Available in next step: Tools to search species, get synonyms, distribution, ver
 if __name__ == "__main__":
     agent = WoRMSReActAgent()
     print("=" * 60)
-    print("WoRMS ReAct Agent Server")
+    print("WoRMS Server")
     print("=" * 60)
     print(f"Starting at: http://localhost:9999")
     print(f"Agent: {agent.get_agent_card().name}")
