@@ -64,10 +64,12 @@ class WoRMSReActAgent(IChatBioAgent):
         # Create control tools
         @tool(return_direct=True)
         async def abort(reason: str):
+            """Call this if you cannot fulfill the user's request. Provide a clear explanation."""
             await context.reply(f"I couldn't complete your request: {reason}")
-        
+
         @tool(return_direct=True)
         async def finish(summary: str):
+            """Call this when you have successfully completed the user's request with a summary."""
             await context.reply(summary)
 
         @tool
