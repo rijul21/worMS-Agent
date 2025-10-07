@@ -11,7 +11,16 @@ from langchain_core.messages import SystemMessage, HumanMessage
 import dotenv
 import asyncio
 
-from worms_api import WoRMS, SynonymsParams, DistributionParams
+from worms_api import (
+    WoRMS, 
+    SynonymsParams, 
+    DistributionParams, 
+    VernacularParams, 
+    SourcesParams, 
+    RecordParams, 
+    ClassificationParams, 
+    ChildrenParams
+)
 
 dotenv.load_dotenv()
 
@@ -191,7 +200,361 @@ class WoRMSReActAgent(IChatBioAgent):
                     await process.log(f"Error retrieving distribution for {species_name}: {type(e).__name__} - {str(e)}")
                     return f"Error retrieving distribution: {str(e)}"
                 
-        tools = [get_species_synonyms, get_species_distribution, abort, finish]
+        @tool
+        async def get_vernacular_names(species_name: str) -> str:
+            """Get common/vernacular names for a marine species in different languages.
+            
+            Args:
+                species_name: Scientific name (e.g., "Orcinus orca")
+            """
+            async with context.begin_process(f"Fetching vernacular names for {species_name}") as process:
+                try:
+                    loop = asyncio.get_event_loop()
+                    
+                    # Get AphiaID
+                    aphia_id = await loop.run_in_executor(
+                        None, 
+                        lambda: self.worms_logic.get_species_aphia_id(species_name)
+                    )
+                    
+                    if not aphia_id:
+                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
+                    
+                    # Get vernacular names from WoRMS API
+                    from worms_api import VernacularParams
+                    vern_params = VernacularParams(aphia_id=aphia_id)
+                    api_url = self.worms_logic.build_vernacular_url(vern_params)
+                    
+                    raw_response = await loop.run_in_executor(
+                        None,
+                        lambda: self.worms_logic.execute_request(api_url)
+                    )
+                    
+                    # Normalize response
+                    vernaculars = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                    
+                    if not vernaculars:
+                        await process.log(f"No vernacular names found for {species_name} (AphiaID: {aphia_id})")
+                        return f"No vernacular names found for {species_name}"
+                    
+                    await process.log(f"Found {len(vernaculars)} vernacular name records for {species_name} from WoRMS API")
+                    
+                    # Extract sample names with languages
+                    samples = []
+                    languages = set()
+                    for v in vernaculars[:5]:
+                        if isinstance(v, dict):
+                            name = v.get('vernacular', 'Unknown')
+                            lang = v.get('language', 'Unknown')
+                            languages.add(lang)
+                            samples.append(f"{name} ({lang})")
+                    
+                    # Create artifact
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Vernacular names for {species_name} (AphiaID: {aphia_id}) - {len(vernaculars)} names",
+                        uris=[api_url],
+                        metadata={
+                            "aphia_id": aphia_id, 
+                            "count": len(vernaculars),
+                            "species": species_name,
+                            "languages": list(languages)
+                        }
+                    )
+                    
+                    return f"Found {len(vernaculars)} vernacular names for {species_name} in {len(languages)} languages. Examples: {', '.join(samples)}. Full data available in artifact."
+                        
+                except Exception as e:
+                    await process.log(f"Error retrieving vernacular names for {species_name}: {type(e).__name__} - {str(e)}")
+                    return f"Error retrieving vernacular names: {str(e)}"
+                
+        
+
+        @tool
+        async def get_literature_sources(species_name: str) -> str:
+            """Get scientific literature sources and references for a marine species.
+            
+            Args:
+                species_name: Scientific name (e.g., "Orcinus orca")
+            """
+            async with context.begin_process(f"Fetching literature sources for {species_name}") as process:
+                try:
+                    loop = asyncio.get_event_loop()
+                    
+                    # Get AphiaID
+                    aphia_id = await loop.run_in_executor(
+                        None, 
+                        lambda: self.worms_logic.get_species_aphia_id(species_name)
+                    )
+                    
+                    if not aphia_id:
+                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
+                    
+                    # Get sources from WoRMS API
+                    from worms_api import SourcesParams
+                    sources_params = SourcesParams(aphia_id=aphia_id)
+                    api_url = self.worms_logic.build_sources_url(sources_params)
+                    
+                    raw_response = await loop.run_in_executor(
+                        None,
+                        lambda: self.worms_logic.execute_request(api_url)
+                    )
+                    
+                    # Normalize response
+                    sources = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                    
+                    if not sources:
+                        await process.log(f"No literature sources found for {species_name} (AphiaID: {aphia_id})")
+                        return f"No literature sources found for {species_name}"
+                    
+                    await process.log(f"Found {len(sources)} literature source records for {species_name} from WoRMS API")
+                    
+                    # Extract sample citations
+                    samples = []
+                    for s in sources[:3]:
+                        if isinstance(s, dict):
+                            title = s.get('title', s.get('reference', 'Unknown'))[:50]
+                            samples.append(title + "..." if len(title) == 50 else title)
+                    
+                    # Create artifact
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Literature sources for {species_name} (AphiaID: {aphia_id}) - {len(sources)} sources",
+                        uris=[api_url],
+                        metadata={
+                            "aphia_id": aphia_id, 
+                            "count": len(sources),
+                            "species": species_name
+                        }
+                    )
+                    
+                    return f"Found {len(sources)} literature sources for {species_name}. Sample titles: {', '.join(samples)}. Full data available in artifact."
+                        
+                except Exception as e:
+                    await process.log(f"Error retrieving literature sources for {species_name}: {type(e).__name__} - {str(e)}")
+                    return f"Error retrieving literature sources: {str(e)}"
+                
+
+        
+        @tool
+        async def get_taxonomic_record(species_name: str) -> str:
+            """Get basic taxonomic record and classification for a marine species.
+            
+            Args:
+                species_name: Scientific name (e.g., "Orcinus orca")
+            """
+            async with context.begin_process(f"Fetching taxonomic record for {species_name}") as process:
+                try:
+                    loop = asyncio.get_event_loop()
+                    
+                    # Get AphiaID
+                    aphia_id = await loop.run_in_executor(
+                        None, 
+                        lambda: self.worms_logic.get_species_aphia_id(species_name)
+                    )
+                    
+                    if not aphia_id:
+                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
+                    
+                    # Get record from WoRMS API
+                    from worms_api import RecordParams
+                    record_params = RecordParams(aphia_id=aphia_id)
+                    api_url = self.worms_logic.build_record_url(record_params)
+                    
+                    raw_response = await loop.run_in_executor(
+                        None,
+                        lambda: self.worms_logic.execute_request(api_url)
+                    )
+                    
+                    if not isinstance(raw_response, dict):
+                        await process.log(f"Invalid record format for {species_name}")
+                        return f"Could not retrieve taxonomic record for {species_name}"
+                    
+                    await process.log(f"Retrieved taxonomic record for {species_name} from WoRMS API")
+                    
+                    # Extract key taxonomic info
+                    rank = raw_response.get('rank', 'Unknown')
+                    status = raw_response.get('status', 'Unknown')
+                    kingdom = raw_response.get('kingdom', 'Unknown')
+                    phylum = raw_response.get('phylum', 'Unknown')
+                    class_name = raw_response.get('class', 'Unknown')
+                    order = raw_response.get('order', 'Unknown')
+                    family = raw_response.get('family', 'Unknown')
+                    
+                    # Create artifact
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Taxonomic record for {species_name} (AphiaID: {aphia_id})",
+                        uris=[api_url],
+                        metadata={
+                            "aphia_id": aphia_id,
+                            "species": species_name,
+                            "rank": rank,
+                            "status": status
+                        }
+                    )
+                    
+                    return f"Taxonomic record for {species_name}: Rank={rank}, Status={status}, Kingdom={kingdom}, Phylum={phylum}, Class={class_name}, Order={order}, Family={family}. Full data available in artifact."
+                        
+                except Exception as e:
+                    await process.log(f"Error retrieving taxonomic record for {species_name}: {type(e).__name__} - {str(e)}")
+                    return f"Error retrieving taxonomic record: {str(e)}"
+                
+
+        
+
+        @tool
+        async def get_taxonomic_classification(species_name: str) -> str:
+            """Get complete taxonomic classification hierarchy for a marine species.
+            
+            Args:
+                species_name: Scientific name (e.g., "Orcinus orca")
+            """
+            async with context.begin_process(f"Fetching taxonomic classification for {species_name}") as process:
+                try:
+                    loop = asyncio.get_event_loop()
+                    
+                    # Get AphiaID
+                    aphia_id = await loop.run_in_executor(
+                        None, 
+                        lambda: self.worms_logic.get_species_aphia_id(species_name)
+                    )
+                    
+                    if not aphia_id:
+                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
+                    
+                    # Get classification from WoRMS API
+                    from worms_api import ClassificationParams
+                    class_params = ClassificationParams(aphia_id=aphia_id)
+                    api_url = self.worms_logic.build_classification_url(class_params)
+                    
+                    raw_response = await loop.run_in_executor(
+                        None,
+                        lambda: self.worms_logic.execute_request(api_url)
+                    )
+                    
+                    # Normalize response
+                    classification = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                    
+                    if not classification:
+                        await process.log(f"No classification data found for {species_name} (AphiaID: {aphia_id})")
+                        return f"No classification data found for {species_name}"
+                    
+                    await process.log(f"Found {len(classification)} taxonomic levels for {species_name} from WoRMS API")
+                    
+                    # Extract taxonomic hierarchy
+                    hierarchy = []
+                    for level in classification[:6]:
+                        if isinstance(level, dict):
+                            rank = level.get('rank', 'Unknown')
+                            name = level.get('scientificname', 'Unknown')
+                            hierarchy.append(f"{rank}: {name}")
+                    
+                    # Create artifact
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Taxonomic classification for {species_name} (AphiaID: {aphia_id}) - {len(classification)} levels",
+                        uris=[api_url],
+                        metadata={
+                            "aphia_id": aphia_id, 
+                            "count": len(classification),
+                            "species": species_name
+                        }
+                    )
+                    
+                    return f"Found {len(classification)}-level taxonomic classification for {species_name}. Hierarchy: {' > '.join(hierarchy)}. Full data available in artifact."
+                        
+                except Exception as e:
+                    await process.log(f"Error retrieving classification for {species_name}: {type(e).__name__} - {str(e)}")
+                    return f"Error retrieving classification: {str(e)}"
+                
+
+        @tool
+        async def get_child_taxa(species_name: str) -> str:
+            """Get child taxa (subspecies, varieties, forms) for a marine species.
+            
+            Args:
+                species_name: Scientific name (e.g., "Orcinus orca")
+            """
+            async with context.begin_process(f"Fetching child taxa for {species_name}") as process:
+                try:
+                    loop = asyncio.get_event_loop()
+                    
+                    # Get AphiaID
+                    aphia_id = await loop.run_in_executor(
+                        None, 
+                        lambda: self.worms_logic.get_species_aphia_id(species_name)
+                    )
+                    
+                    if not aphia_id:
+                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
+                    
+                    # Get child taxa from WoRMS API
+                    from worms_api import ChildrenParams
+                    children_params = ChildrenParams(aphia_id=aphia_id)
+                    api_url = self.worms_logic.build_children_url(children_params)
+                    
+                    raw_response = await loop.run_in_executor(
+                        None,
+                        lambda: self.worms_logic.execute_request(api_url)
+                    )
+                    
+                    # Normalize response
+                    children = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                    
+                    if not children:
+                        await process.log(f"No child taxa found for {species_name} (AphiaID: {aphia_id})")
+                        return f"No child taxa found for {species_name}. This may be a terminal taxonomic unit."
+                    
+                    await process.log(f"Found {len(children)} child taxa for {species_name} from WoRMS API")
+                    
+                    # Extract sample child names
+                    samples = [c.get('scientificname', 'Unknown') for c in children[:3] if isinstance(c, dict)]
+                    
+                    # Create artifact
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Child taxa for {species_name} (AphiaID: {aphia_id}) - {len(children)} children",
+                        uris=[api_url],
+                        metadata={
+                            "aphia_id": aphia_id, 
+                            "count": len(children),
+                            "species": species_name
+                        }
+                    )
+                    
+                    return f"Found {len(children)} child taxa for {species_name}. Examples: {', '.join(samples)}. Full data available in artifact."
+                        
+                except Exception as e:
+                    await process.log(f"Error retrieving child taxa for {species_name}: {type(e).__name__} - {str(e)}")
+                    return f"Error retrieving child taxa: {str(e)}"
+                
+            tools = [
+                get_species_synonyms,
+                get_species_distribution,
+                get_vernacular_names,
+                get_literature_sources,
+                get_taxonomic_record,
+                get_taxonomic_classification,
+                get_child_taxa,
+                abort,
+                finish
+            ]
         
         # Execute agent
         async with context.begin_process("Processing your request") as process:
@@ -213,6 +576,7 @@ class WoRMSReActAgent(IChatBioAgent):
             except Exception as e:
                 await process.log(f"Agent execution failed: {type(e).__name__} - {str(e)}")
                 await context.reply(f"An error occurred: {str(e)}")
+                
     
     def _make_system_prompt(self, species_names: list[str], user_request: str) -> str:
         """Generate system prompt"""
@@ -224,8 +588,13 @@ You are a marine biology assistant with access to the WoRMS database.
 Request: "{user_request}"{species_context}
 
 Instructions:
-- Use get_species_synonyms to retrieve synonym data
-- Use get_species_distribution to retrieve geographic distribution data
+- Use get_species_synonyms for synonym data
+- Use get_species_distribution for geographic distribution
+- Use get_vernacular_names for common names in different languages
+- Use get_literature_sources for scientific references
+- Use get_taxonomic_record for basic taxonomy
+- Use get_taxonomic_classification for full taxonomic hierarchy
+- Use get_child_taxa for subspecies and varieties
 - Call finish() with a summary when done
 - Call abort() if you cannot complete the request
 
