@@ -42,7 +42,7 @@ class WoRMSReActAgent(IChatBioAgent):
             url="http://localhost:9999",
             entrypoints=[
                 AgentEntrypoint(
-                    id="marine_species",
+                    id="research_marine_species",
                     description=AGENT_DESCRIPTION,
                     parameters=MarineResearchParams
                 )
