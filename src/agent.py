@@ -396,12 +396,14 @@ class WoRMSReActAgent(IChatBioAgent):
                     
                     # Collect all data
                     all_data = {}
+                    all_urls = []  
                     total_items = 0
                     
                     # 1. Basic Record
                     if include_basic_record:
                         record_params = RecordParams(aphia_id=aphia_id)
                         record_url = self.worms_logic.build_record_url(record_params)
+                        all_urls.append(record_url)
                         record_data = await loop.run_in_executor(
                             None,
                             lambda: self.worms_logic.execute_request(record_url)
@@ -414,6 +416,7 @@ class WoRMSReActAgent(IChatBioAgent):
                     if include_full_record:
                         full_params = RecordFullParams(aphia_id=aphia_id)
                         full_url = self.worms_logic.build_record_full_url(full_params)
+                        all_urls.append(full_url)
                         full_data = await loop.run_in_executor(
                             None,
                             lambda: self.worms_logic.execute_request(full_url)
@@ -426,6 +429,7 @@ class WoRMSReActAgent(IChatBioAgent):
                     if include_classification:
                         class_params = ClassificationParams(aphia_id=aphia_id)
                         class_url = self.worms_logic.build_classification_url(class_params)
+                        all_urls.append(class_url) 
                         class_data = await loop.run_in_executor(
                             None,
                             lambda: self.worms_logic.execute_request(class_url)
@@ -441,6 +445,7 @@ class WoRMSReActAgent(IChatBioAgent):
                     if include_children:
                         children_params = ChildrenParams(aphia_id=aphia_id)
                         children_url = self.worms_logic.build_children_url(children_params)
+                        all_urls.append(children_url)
                         children_data = await loop.run_in_executor(
                             None,
                             lambda: self.worms_logic.execute_request(children_url)
@@ -457,17 +462,18 @@ class WoRMSReActAgent(IChatBioAgent):
                         return f"No taxonomic data found for {species_name}"
                     
                     # Create artifact with all data
+                    # Create artifact with all data
                     await process.create_artifact(
-                    content=json.dumps(all_data, indent=2),
-                    mimetype="application/json",
-                    description=f"Taxonomic information for {species_name} (AphiaID: {aphia_id})",
-                    metadata={
-                        "aphia_id": aphia_id,
-                        "species": species_name,
-                        "data_types": list(all_data.keys()),
-                        "total_items": total_items
-                    }
-                )
+                        mimetype="application/json",
+                        description=f"Taxonomic information for {species_name} (AphiaID: {aphia_id})",
+                        uris=all_urls,
+                        metadata={
+                            "aphia_id": aphia_id,
+                            "species": species_name,
+                            "data_types": list(all_data.keys()),
+                            "total_items": total_items
+                        }
+                    )
                     
                     # Build summary
                     summary_parts = []
