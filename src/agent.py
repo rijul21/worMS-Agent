@@ -10,6 +10,7 @@ from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage, HumanMessage
 import dotenv
 import asyncio
+import json
 
 from worms_api import (
     WoRMS, 
@@ -457,16 +458,16 @@ class WoRMSReActAgent(IChatBioAgent):
                     
                     # Create artifact with all data
                     await process.create_artifact(
-                        mimetype="application/json",
-                        description=f"Taxonomic information for {species_name} (AphiaID: {aphia_id})",
-                        uris=[],  # Could add all URLs used
-                        metadata={
-                            "aphia_id": aphia_id,
-                            "species": species_name,
-                            "data_types": list(all_data.keys()),
-                            "total_items": total_items
-                        }
-                    )
+                    content=json.dumps(all_data, indent=2),
+                    mimetype="application/json",
+                    description=f"Taxonomic information for {species_name} (AphiaID: {aphia_id})",
+                    metadata={
+                        "aphia_id": aphia_id,
+                        "species": species_name,
+                        "data_types": list(all_data.keys()),
+                        "total_items": total_items
+                    }
+                )
                     
                     # Build summary
                     summary_parts = []
