@@ -71,6 +71,41 @@ class ChildrenParams(BaseModel):
         examples=[137205, 104625, 137094]
     )
 
+class RecordFullParams(BaseModel):
+    """Parameters for getting full detailed taxonomic record"""
+    aphia_id: int = Field(...,
+        description="The AphiaID of the species to get full record for",
+        examples=[137205, 104625, 137094]
+    )
+
+class TaxonRanksByIDParams(BaseModel):
+    """Parameters for getting taxonomic rank information by ID"""
+    rank_id: int = Field(...,
+        description="The taxonomic rank ID",
+        examples=[10, 20, 30]
+    )
+
+class TaxonRanksByNameParams(BaseModel):
+    """Parameters for getting taxonomic rank information by name"""
+    rank_name: str = Field(...,
+        description="The taxonomic rank name",
+        examples=["Species", "Genus", "Family"]
+    )
+
+class RecordsByTaxonRankIDParams(BaseModel):
+    """Parameters for getting records by taxonomic rank"""
+    rank_id: int = Field(...,
+        description="The taxonomic rank ID to filter by",
+        examples=[10, 20, 30]
+    )
+
+class IDByNameParams(BaseModel):
+    """Parameters for getting AphiaID by name"""
+    scientific_name: str = Field(...,
+        description="Scientific name to get ID for",
+        examples=["Orcinus orca", "Delphinus delphis"]
+    )
+
 class NoParams(BaseModel):
     """An empty model for entrypoints that require no parameters."""
     pass
@@ -137,6 +172,32 @@ class WoRMS:
     def build_children_url(self, params: ChildrenParams) -> str:
         """Build URL for getting species child taxa"""
         return f"{self.worms_api_base_url}/AphiaChildrenByAphiaID/{params.aphia_id}"
+
+
+    def build_record_full_url(self, params: RecordFullParams) -> str:
+        """Build URL for getting full detailed taxonomic record"""
+        return f"{self.worms_api_base_url}/AphiaRecordFullByAphiaID/{params.aphia_id}"
+
+    def build_taxon_ranks_by_id_url(self, params: TaxonRanksByIDParams) -> str:
+        """Build URL for getting taxonomic rank by ID"""
+        return f"{self.worms_api_base_url}/AphiaTaxonRanksByID/{params.rank_id}"
+
+    def build_taxon_ranks_by_name_url(self, params: TaxonRanksByNameParams) -> str:
+        """Build URL for getting taxonomic rank by name"""
+        encoded_name = quote(params.rank_name)
+        return f"{self.worms_api_base_url}/AphiaTaxonRanksByName/{encoded_name}"
+
+    def build_records_by_taxon_rank_url(self, params: RecordsByTaxonRankIDParams) -> str:
+        """Build URL for getting records by taxonomic rank"""
+        return f"{self.worms_api_base_url}/AphiaRecordsByTaxonRankID/{params.rank_id}"
+
+    def build_id_by_name_url(self, params: IDByNameParams) -> str:
+        """Build URL for getting AphiaID by name"""
+        encoded_name = quote(params.scientific_name)
+        return f"{self.worms_api_base_url}/AphiaIDByName/{encoded_name}"
+
+    
+
 
     # Request execution methods (following ALA pattern)
     def execute_request(self, url: str) -> Dict:
