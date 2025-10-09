@@ -483,7 +483,7 @@ class WoRMSReActAgent(IChatBioAgent):
                     # ===== ENDPOINT 5: Taxon Ranks by ID =====
                     if include_taxon_ranks_by_id:
                         try:
-                            rank_id_params = TaxonRanksByIDParams(aphia_id=aphia_id)
+                            rank_id_params = TaxonRanksByIDParams(rank_id=aphia_id)
                             rank_id_url = self.worms_logic.build_taxon_ranks_by_id_url(rank_id_params)
                             all_urls.append(rank_id_url)
                             rank_id_data = await loop.run_in_executor(
@@ -499,7 +499,7 @@ class WoRMSReActAgent(IChatBioAgent):
                     # ===== ENDPOINT 6: Taxon Ranks by Name =====
                     if include_taxon_ranks_by_name:
                         try:
-                            rank_name_params = TaxonRanksByNameParams(name=species_name)
+                            rank_name_params = TaxonRanksByNameParams(rank_name=species_name)
                             rank_name_url = self.worms_logic.build_taxon_ranks_by_name_url(rank_name_params)
                             all_urls.append(rank_name_url)
                             rank_name_data = await loop.run_in_executor(
@@ -534,7 +534,7 @@ class WoRMSReActAgent(IChatBioAgent):
                     # ===== ENDPOINT 8: ID by Name (verification) =====
                     if verify_aphia_id:
                         try:
-                            id_by_name_params = IDByNameParams(name=species_name)
+                            id_by_name_params = IDByNameParams(scientific_name=species_name)
                             id_by_name_url = self.worms_logic.build_id_by_name_url(id_by_name_params)
                             all_urls.append(id_by_name_url)
                             id_by_name_data = await loop.run_in_executor(
@@ -607,7 +607,6 @@ class WoRMSReActAgent(IChatBioAgent):
                 except Exception as e:
                     await process.log(f"Error retrieving taxonomic info for {species_name}: {type(e).__name__} - {str(e)}")
                     return f"Error retrieving taxonomic info: {str(e)}"
-        
       
                     
         tools = [
