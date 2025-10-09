@@ -21,8 +21,7 @@ from worms_api import (
     RecordParams, 
     ClassificationParams, 
     ChildrenParams,
-    #  for taxonomic info
-    RecordFullParams,
+    #RecordFullParams,
     TaxonRanksByIDParams,
     TaxonRanksByNameParams,
     RecordsByTaxonRankIDParams,
@@ -359,7 +358,7 @@ class WoRMSReActAgent(IChatBioAgent):
         async def get_taxonomic_info(
             species_name: str,
             include_basic_record: bool = True,
-            include_full_record: bool = False,
+            include_full_record: bool = False,  # Disabled by default due to non-JSON responses
             include_classification: bool = True,
             include_children: bool = True
         ) -> str:
@@ -401,67 +400,78 @@ class WoRMSReActAgent(IChatBioAgent):
                     
                     # 1. Basic Record
                     if include_basic_record:
-                        record_params = RecordParams(aphia_id=aphia_id)
-                        record_url = self.worms_logic.build_record_url(record_params)
-                        all_urls.append(record_url)
-                        record_data = await loop.run_in_executor(
-                            None,
-                            lambda: self.worms_logic.execute_request(record_url)
-                        )
-                        if record_data:
-                            all_data['basic_record'] = record_data
-                            await process.log(f"Retrieved basic taxonomic record")
+                        try:
+                            record_params = RecordParams(aphia_id=aphia_id)
+                            record_url = self.worms_logic.build_record_url(record_params)
+                            all_urls.append(record_url)
+                            record_data = await loop.run_in_executor(
+                                None,
+                                lambda: self.worms_logic.execute_request(record_url)
+                            )
+                            if record_data:
+                                all_data['basic_record'] = record_data
+                                await process.log(f"Retrieved basic taxonomic record")
+                        except Exception as e:
+                            await process.log(f"Warning: Could not retrieve basic record (non-JSON response): {str(e)}")
                     
-                    # 2. Full Record
-                    if include_full_record:
-                        full_params = RecordFullParams(aphia_id=aphia_id)
-                        full_url = self.worms_logic.build_record_full_url(full_params)
-                        all_urls.append(full_url)
-                        full_data = await loop.run_in_executor(
-                            None,
-                            lambda: self.worms_logic.execute_request(full_url)
-                        )
-                        if full_data:
-                            all_data['full_record'] = full_data
-                            await process.log(f"Retrieved full detailed record")
+                    # 2. Full Record - COMMENTED OUT DUE TO NON-JSON RESPONSES
+                    # if include_full_record:
+                    #     try:
+                    #         full_params = RecordFullParams(aphia_id=aphia_id)
+                    #         full_url = self.worms_logic.build_record_full_url(full_params)
+                    #         all_urls.append(full_url)
+                    #         full_data = await loop.run_in_executor(
+                    #             None,
+                    #             lambda: self.worms_logic.execute_request(full_url)
+                    #         )
+                    #         if full_data:
+                    #             all_data['full_record'] = full_data
+                    #             await process.log(f"Retrieved full detailed record")
+                    #     except Exception as e:
+                    #         await process.log(f"Warning: Could not retrieve full record (non-JSON response): {str(e)}")
                     
                     # 3. Classification
                     if include_classification:
-                        class_params = ClassificationParams(aphia_id=aphia_id)
-                        class_url = self.worms_logic.build_classification_url(class_params)
-                        all_urls.append(class_url) 
-                        class_data = await loop.run_in_executor(
-                            None,
-                            lambda: self.worms_logic.execute_request(class_url)
-                        )
-                        # Normalize to list
-                        classification = class_data if isinstance(class_data, list) else [class_data] if class_data else []
-                        if classification:
-                            all_data['classification'] = classification
-                            total_items += len(classification)
-                            await process.log(f"Retrieved {len(classification)}-level classification hierarchy")
+                        try:
+                            class_params = ClassificationParams(aphia_id=aphia_id)
+                            class_url = self.worms_logic.build_classification_url(class_params)
+                            all_urls.append(class_url) 
+                            class_data = await loop.run_in_executor(
+                                None,
+                                lambda: self.worms_logic.execute_request(class_url)
+                            )
+                            # Normalize to list
+                            classification = class_data if isinstance(class_data, list) else [class_data] if class_data else []
+                            if classification:
+                                all_data['classification'] = classification
+                                total_items += len(classification)
+                                await process.log(f"Retrieved {len(classification)}-level classification hierarchy")
+                        except Exception as e:
+                            await process.log(f"Warning: Could not retrieve classification (non-JSON response): {str(e)}")
                     
                     # 4. Children
                     if include_children:
-                        children_params = ChildrenParams(aphia_id=aphia_id)
-                        children_url = self.worms_logic.build_children_url(children_params)
-                        all_urls.append(children_url)
-                        children_data = await loop.run_in_executor(
-                            None,
-                            lambda: self.worms_logic.execute_request(children_url)
-                        )
-                        # Normalize to list
-                        children = children_data if isinstance(children_data, list) else [children_data] if children_data else []
-                        if children:
-                            all_data['children'] = children
-                            total_items += len(children)
-                            await process.log(f"Retrieved {len(children)} child taxa")
+                        try:
+                            children_params = ChildrenParams(aphia_id=aphia_id)
+                            children_url = self.worms_logic.build_children_url(children_params)
+                            all_urls.append(children_url)
+                            children_data = await loop.run_in_executor(
+                                None,
+                                lambda: self.worms_logic.execute_request(children_url)
+                            )
+                            # Normalize to list
+                            children = children_data if isinstance(children_data, list) else [children_data] if children_data else []
+                            if children:
+                                all_data['children'] = children
+                                total_items += len(children)
+                                await process.log(f"Retrieved {len(children)} child taxa")
+                        except Exception as e:
+                            await process.log(f"Warning: Could not retrieve children (non-JSON response): {str(e)}")
                     
                     if not all_data:
                         await process.log(f"No taxonomic data found for {species_name}")
-                        return f"No taxonomic data found for {species_name}"
+                        return f"No taxonomic data could be retrieved for {species_name}. Some API endpoints may be returning non-JSON formats."
                     
-                    # Create artifact with all data
                     # Create artifact with all data
                     await process.create_artifact(
                         mimetype="application/json",
