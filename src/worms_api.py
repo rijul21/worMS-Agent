@@ -6,7 +6,10 @@ from typing import Optional, Dict
 from urllib.parse import urlencode, quote
 import cloudscraper
 
-# Parameter Models - 7 endpoints total
+# ============================================================================
+# PARAMETER MODELS - All WoRMS API Endpoints
+# ============================================================================
+
 class SpeciesSearchParams(BaseModel):
     """Parameters for searching marine species in WoRMS"""
     scientific_name: str = Field(..., 
@@ -71,6 +74,7 @@ class ChildrenParams(BaseModel):
         examples=[137205, 104625, 137094]
     )
 
+# Taxonomy Tool - Additional Endpoints
 class RecordFullParams(BaseModel):
     """Parameters for getting full detailed taxonomic record"""
     aphia_id: int = Field(...,
@@ -110,6 +114,11 @@ class NoParams(BaseModel):
     """An empty model for entrypoints that require no parameters."""
     pass
 
+
+# ============================================================================
+# WoRMS API CLASS
+# ============================================================================
+
 class WoRMS:
     def __init__(self):
         self.worms_api_base_url = self._get_config_value("WORMS_API_URL", "https://www.marinespecies.org/rest")
@@ -130,7 +139,10 @@ class WoRMS:
                 value = config.get(key, default)
         return value if value is not None else default
 
-    # URL Building Methods - 5 core endpoints + search
+    # ========================================================================
+    # URL BUILDING METHODS - Core Endpoints
+    # ========================================================================
+    
     def build_species_search_url(self, params: SpeciesSearchParams) -> str:
         """Build URL for searching species by name"""
         encoded_name = quote(params.scientific_name)
@@ -173,6 +185,9 @@ class WoRMS:
         """Build URL for getting species child taxa"""
         return f"{self.worms_api_base_url}/AphiaChildrenByAphiaID/{params.aphia_id}"
 
+    # ========================================================================
+    # URL BUILDING METHODS - Taxonomy Tool (Extended)
+    # ========================================================================
 
     def build_record_full_url(self, params: RecordFullParams) -> str:
         """Build URL for getting full detailed taxonomic record"""
@@ -187,8 +202,8 @@ class WoRMS:
         encoded_name = quote(params.rank_name)
         return f"{self.worms_api_base_url}/AphiaTaxonRanksByName/{encoded_name}"
 
-    def build_records_by_taxon_rank_url(self, params: RecordsByTaxonRankIDParams) -> str:
-        """Build URL for getting records by taxonomic rank"""
+    def build_records_by_taxon_rank_id_url(self, params: RecordsByTaxonRankIDParams) -> str:
+        """Build URL for getting records by taxonomic rank ID"""
         return f"{self.worms_api_base_url}/AphiaRecordsByTaxonRankID/{params.rank_id}"
 
     def build_id_by_name_url(self, params: IDByNameParams) -> str:
@@ -196,10 +211,10 @@ class WoRMS:
         encoded_name = quote(params.scientific_name)
         return f"{self.worms_api_base_url}/AphiaIDByName/{encoded_name}"
 
-    
+    # ========================================================================
+    # REQUEST EXECUTION METHODS
+    # ========================================================================
 
-
-    # Request execution methods (following ALA pattern)
     def execute_request(self, url: str) -> Dict:
         """Execute GET request and return JSON response"""
         try:
@@ -212,7 +227,10 @@ class WoRMS:
         except requests.exceptions.RequestException as e:
             raise ConnectionError(f"API request failed: {e}")
 
-    # Helper method for getting AphiaID from species name
+    # ========================================================================
+    # HELPER METHODS
+    # ========================================================================
+
     def get_species_aphia_id(self, scientific_name: str) -> Optional[int]:
         """Get AphiaID for a species name - synchronous helper"""
         params = SpeciesSearchParams(scientific_name=scientific_name)
