@@ -352,36 +352,46 @@ class WoRMSReActAgent(IChatBioAgent):
                     await process.log(f"Error retrieving literature sources for {species_name}: {type(e).__name__} - {str(e)}")
                     return f"Error retrieving literature sources: {str(e)}"
                 
-
-        
         @tool
         async def get_taxonomic_info(
             species_name: str,
             include_basic_record: bool = True,
-            include_full_record: bool = False,  # Disabled by default due to non-JSON responses
+            include_full_record: bool = False,  # Disabled - returns non-JSON (RDF)
             include_classification: bool = True,
-            include_children: bool = True
+            include_children: bool = True,
+            include_taxon_ranks_by_id: bool = False,
+            include_taxon_ranks_by_name: bool = False,
+            get_records_by_rank_id: bool = False,
+            specific_rank_id: int = None,  # For RecordsByTaxonRankID
+            verify_aphia_id: bool = False  # For IDByNameParams
         ) -> str:
             """Get comprehensive taxonomic information for a marine species.
             
             This retrieves taxonomic classification, hierarchy, and relationships including:
-            - Basic or full detailed taxonomic record
-            - Complete classification hierarchy (Kingdom to Species)
-            - Child taxa (subspecies, varieties, forms)
-            - Taxonomic rank information
+            - Basic or full detailed taxonomic record (Endpoints 1-2)
+            - Complete classification hierarchy (Endpoint 3)
+            - Child taxa (Endpoint 4)
+            - Taxonomic rank information by ID or name (Endpoints 5-6)
+            - Records by taxonomic rank (Endpoint 7)
+            - AphiaID verification (Endpoint 8)
             
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
                 include_basic_record: Include basic taxonomic record (default: True)
-                include_full_record: Include detailed full record with extra metadata (default: False)
+                include_full_record: Include detailed full record - DISABLED (non-JSON)
                 include_classification: Include full classification hierarchy (default: True)
                 include_children: Include child taxa if available (default: True)
+                include_taxon_ranks_by_id: Get taxon rank info by AphiaID (default: False)
+                include_taxon_ranks_by_name: Get taxon rank info by name (default: False)
+                get_records_by_rank_id: Get all records for specific rank (default: False)
+                specific_rank_id: Rank ID for RecordsByTaxonRankID query
+                verify_aphia_id: Verify/get AphiaID by name (default: False)
             """
             async with context.begin_process(f"Fetching taxonomic information for {species_name}") as process:
                 try:
                     loop = asyncio.get_event_loop()
                     
-                    # Get AphiaID first
+                    # Get AphiaID first (needed for most endpoints)
                     aphia_id = await loop.run_in_executor(
                         None, 
                         lambda: self.worms_logic.get_species_aphia_id(species_name)
@@ -398,7 +408,7 @@ class WoRMSReActAgent(IChatBioAgent):
                     all_urls = []  
                     total_items = 0
                     
-                    # 1. Basic Record
+                    # ===== ENDPOINT 1: Basic Record =====
                     if include_basic_record:
                         try:
                             record_params = RecordParams(aphia_id=aphia_id)
@@ -410,11 +420,11 @@ class WoRMSReActAgent(IChatBioAgent):
                             )
                             if record_data:
                                 all_data['basic_record'] = record_data
-                                await process.log(f"Retrieved basic taxonomic record")
+                                await process.log(f"✓ Retrieved basic taxonomic record")
                         except Exception as e:
-                            await process.log(f"Warning: Could not retrieve basic record (non-JSON response): {str(e)}")
+                            await process.log(f"✗ Basic record failed (non-JSON?): {str(e)}")
                     
-                    # 2. Full Record - COMMENTED OUT DUE TO NON-JSON RESPONSES
+                    # ===== ENDPOINT 2: Full Record - COMMENTED OUT =====
                     # if include_full_record:
                     #     try:
                     #         full_params = RecordFullParams(aphia_id=aphia_id)
@@ -426,11 +436,11 @@ class WoRMSReActAgent(IChatBioAgent):
                     #         )
                     #         if full_data:
                     #             all_data['full_record'] = full_data
-                    #             await process.log(f"Retrieved full detailed record")
+                    #             await process.log(f"✓ Retrieved full detailed record")
                     #     except Exception as e:
-                    #         await process.log(f"Warning: Could not retrieve full record (non-JSON response): {str(e)}")
+                    #         await process.log(f"✗ Full record failed (non-JSON): {str(e)}")
                     
-                    # 3. Classification
+                    # ===== ENDPOINT 3: Classification =====
                     if include_classification:
                         try:
                             class_params = ClassificationParams(aphia_id=aphia_id)
@@ -445,11 +455,11 @@ class WoRMSReActAgent(IChatBioAgent):
                             if classification:
                                 all_data['classification'] = classification
                                 total_items += len(classification)
-                                await process.log(f"Retrieved {len(classification)}-level classification hierarchy")
+                                await process.log(f"✓ Retrieved {len(classification)}-level classification hierarchy")
                         except Exception as e:
-                            await process.log(f"Warning: Could not retrieve classification (non-JSON response): {str(e)}")
+                            await process.log(f"✗ Classification failed (non-JSON?): {str(e)}")
                     
-                    # 4. Children
+                    # ===== ENDPOINT 4: Children =====
                     if include_children:
                         try:
                             children_params = ChildrenParams(aphia_id=aphia_id)
@@ -464,15 +474,85 @@ class WoRMSReActAgent(IChatBioAgent):
                             if children:
                                 all_data['children'] = children
                                 total_items += len(children)
-                                await process.log(f"Retrieved {len(children)} child taxa")
+                                await process.log(f"✓ Retrieved {len(children)} child taxa")
+                            else:
+                                await process.log(f"✓ No child taxa found (this species may not have subspecies)")
                         except Exception as e:
-                            await process.log(f"Warning: Could not retrieve children (non-JSON response): {str(e)}")
+                            await process.log(f"✗ Children failed (non-JSON?): {str(e)}")
                     
+                    # ===== ENDPOINT 5: Taxon Ranks by ID =====
+                    if include_taxon_ranks_by_id:
+                        try:
+                            rank_id_params = TaxonRanksByIDParams(aphia_id=aphia_id)
+                            rank_id_url = self.worms_logic.build_taxon_ranks_by_id_url(rank_id_params)
+                            all_urls.append(rank_id_url)
+                            rank_id_data = await loop.run_in_executor(
+                                None,
+                                lambda: self.worms_logic.execute_request(rank_id_url)
+                            )
+                            if rank_id_data:
+                                all_data['taxon_ranks_by_id'] = rank_id_data
+                                await process.log(f"✓ Retrieved taxon ranks by ID")
+                        except Exception as e:
+                            await process.log(f"✗ Taxon ranks by ID failed (non-JSON?): {str(e)}")
+                    
+                    # ===== ENDPOINT 6: Taxon Ranks by Name =====
+                    if include_taxon_ranks_by_name:
+                        try:
+                            rank_name_params = TaxonRanksByNameParams(name=species_name)
+                            rank_name_url = self.worms_logic.build_taxon_ranks_by_name_url(rank_name_params)
+                            all_urls.append(rank_name_url)
+                            rank_name_data = await loop.run_in_executor(
+                                None,
+                                lambda: self.worms_logic.execute_request(rank_name_url)
+                            )
+                            if rank_name_data:
+                                all_data['taxon_ranks_by_name'] = rank_name_data
+                                await process.log(f"✓ Retrieved taxon ranks by name")
+                        except Exception as e:
+                            await process.log(f"✗ Taxon ranks by name failed (non-JSON?): {str(e)}")
+                    
+                    # ===== ENDPOINT 7: Records by Taxon Rank ID =====
+                    if get_records_by_rank_id and specific_rank_id:
+                        try:
+                            records_rank_params = RecordsByTaxonRankIDParams(taxon_rank_id=specific_rank_id)
+                            records_rank_url = self.worms_logic.build_records_by_taxon_rank_id_url(records_rank_params)
+                            all_urls.append(records_rank_url)
+                            records_rank_data = await loop.run_in_executor(
+                                None,
+                                lambda: self.worms_logic.execute_request(records_rank_url)
+                            )
+                            # Normalize to list
+                            records = records_rank_data if isinstance(records_rank_data, list) else [records_rank_data] if records_rank_data else []
+                            if records:
+                                all_data['records_by_rank'] = records
+                                total_items += len(records)
+                                await process.log(f"✓ Retrieved {len(records)} records for rank ID {specific_rank_id}")
+                        except Exception as e:
+                            await process.log(f"✗ Records by rank failed (non-JSON?): {str(e)}")
+                    
+                    # ===== ENDPOINT 8: ID by Name (verification) =====
+                    if verify_aphia_id:
+                        try:
+                            id_by_name_params = IDByNameParams(name=species_name)
+                            id_by_name_url = self.worms_logic.build_id_by_name_url(id_by_name_params)
+                            all_urls.append(id_by_name_url)
+                            id_by_name_data = await loop.run_in_executor(
+                                None,
+                                lambda: self.worms_logic.execute_request(id_by_name_url)
+                            )
+                            if id_by_name_data:
+                                all_data['id_verification'] = id_by_name_data
+                                await process.log(f"✓ Verified AphiaID via name lookup")
+                        except Exception as e:
+                            await process.log(f"✗ ID verification failed (non-JSON?): {str(e)}")
+                    
+                    # ===== Check if we got any data =====
                     if not all_data:
-                        await process.log(f"No taxonomic data found for {species_name}")
-                        return f"No taxonomic data could be retrieved for {species_name}. Some API endpoints may be returning non-JSON formats."
+                        await process.log(f"No taxonomic data could be retrieved for {species_name}")
+                        return f"No taxonomic data could be retrieved for {species_name}. All API endpoints may be returning non-JSON formats."
                     
-                    # Create artifact with all data
+                    # ===== Create artifact with all data =====
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Taxonomic information for {species_name} (AphiaID: {aphia_id})",
@@ -481,40 +561,55 @@ class WoRMSReActAgent(IChatBioAgent):
                             "aphia_id": aphia_id,
                             "species": species_name,
                             "data_types": list(all_data.keys()),
-                            "total_items": total_items
+                            "total_items": total_items,
+                            "endpoints_queried": len(all_urls)
                         }
                     )
                     
-                    # Build summary
+                    # ===== Build comprehensive summary =====
                     summary_parts = []
                     
+                    # Basic record info
                     if 'basic_record' in all_data:
                         record = all_data['basic_record']
                         rank = record.get('rank', 'Unknown')
                         status = record.get('status', 'Unknown')
-                        summary_parts.append(f"Rank: {rank}, Status: {status}")
+                        authority = record.get('authority', 'Unknown')
+                        summary_parts.append(f"Rank: {rank}, Status: {status}, Authority: {authority}")
                     
+                    # Classification hierarchy
                     if 'classification' in all_data:
                         hierarchy = []
-                        for level in all_data['classification'][:4]:
+                        for level in all_data['classification']:
                             if isinstance(level, dict):
                                 rank = level.get('rank', 'Unknown')
                                 name = level.get('scientificname', 'Unknown')
                                 hierarchy.append(f"{rank}: {name}")
-                        summary_parts.append(f"Classification: {' > '.join(hierarchy)}")
+                        summary_parts.append(f"Classification hierarchy: {' > '.join(hierarchy[:5])}")
                     
+                    # Children
                     if 'children' in all_data:
                         child_samples = [c.get('scientificname', 'Unknown') for c in all_data['children'][:3] if isinstance(c, dict)]
                         summary_parts.append(f"{len(all_data['children'])} child taxa. Examples: {', '.join(child_samples)}")
                     
-                    summary = f"Taxonomic information for {species_name}: " + "; ".join(summary_parts) + ". Full data available in artifact."
+                    # Taxon ranks
+                    if 'taxon_ranks_by_id' in all_data or 'taxon_ranks_by_name' in all_data:
+                        summary_parts.append(f"Taxon rank information retrieved")
+                    
+                    # Records by rank
+                    if 'records_by_rank' in all_data:
+                        summary_parts.append(f"{len(all_data['records_by_rank'])} records found for specified rank")
+                    
+                    summary = f"Taxonomic information for {species_name} (AphiaID: {aphia_id}): " + "; ".join(summary_parts) + f". Total {len(all_data)} data types retrieved. Full data available in artifact."
                     
                     return summary
                         
                 except Exception as e:
                     await process.log(f"Error retrieving taxonomic info for {species_name}: {type(e).__name__} - {str(e)}")
                     return f"Error retrieving taxonomic info: {str(e)}"
-                
+        
+      
+                    
         tools = [
         get_species_synonyms,
         get_species_distribution,
