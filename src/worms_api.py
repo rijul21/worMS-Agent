@@ -6,10 +6,7 @@ from typing import Optional, Dict
 from urllib.parse import urlencode, quote
 import cloudscraper
 
-# ============================================================================
-# PARAMETER MODELS - All WoRMS API Endpoints
-# ============================================================================
-
+# Parameter Models - 7 endpoints total
 class SpeciesSearchParams(BaseModel):
     """Parameters for searching marine species in WoRMS"""
     scientific_name: str = Field(..., 
@@ -74,50 +71,9 @@ class ChildrenParams(BaseModel):
         examples=[137205, 104625, 137094]
     )
 
-# Taxonomy Tool - Additional Endpoints
-class RecordFullParams(BaseModel):
-    """Parameters for getting full detailed taxonomic record"""
-    aphia_id: int = Field(...,
-        description="The AphiaID of the species to get full record for",
-        examples=[137205, 104625, 137094]
-    )
-
-class TaxonRanksByIDParams(BaseModel):
-    """Parameters for getting taxonomic rank information by ID"""
-    rank_id: int = Field(...,
-        description="The taxonomic rank ID",
-        examples=[10, 20, 30]
-    )
-
-class TaxonRanksByNameParams(BaseModel):
-    """Parameters for getting taxonomic rank information by name"""
-    rank_name: str = Field(...,
-        description="The taxonomic rank name",
-        examples=["Species", "Genus", "Family"]
-    )
-
-class RecordsByTaxonRankIDParams(BaseModel):
-    """Parameters for getting records by taxonomic rank"""
-    rank_id: int = Field(...,
-        description="The taxonomic rank ID to filter by",
-        examples=[10, 20, 30]
-    )
-
-class IDByNameParams(BaseModel):
-    """Parameters for getting AphiaID by name"""
-    scientific_name: str = Field(...,
-        description="Scientific name to get ID for",
-        examples=["Orcinus orca", "Delphinus delphis"]
-    )
-
 class NoParams(BaseModel):
     """An empty model for entrypoints that require no parameters."""
     pass
-
-
-# ============================================================================
-# WoRMS API CLASS
-# ============================================================================
 
 class WoRMS:
     def __init__(self):
@@ -139,10 +95,7 @@ class WoRMS:
                 value = config.get(key, default)
         return value if value is not None else default
 
-    # ========================================================================
-    # URL BUILDING METHODS - Core Endpoints
-    # ========================================================================
-    
+    # URL Building Methods - 5 core endpoints + search
     def build_species_search_url(self, params: SpeciesSearchParams) -> str:
         """Build URL for searching species by name"""
         encoded_name = quote(params.scientific_name)
@@ -185,36 +138,7 @@ class WoRMS:
         """Build URL for getting species child taxa"""
         return f"{self.worms_api_base_url}/AphiaChildrenByAphiaID/{params.aphia_id}"
 
-    # ========================================================================
-    # URL BUILDING METHODS - Taxonomy Tool (Extended)
-    # ========================================================================
-
-    def build_record_full_url(self, params: RecordFullParams) -> str:
-        """Build URL for getting full detailed taxonomic record"""
-        return f"{self.worms_api_base_url}/AphiaRecordFullByAphiaID/{params.aphia_id}"
-
-    def build_taxon_ranks_by_id_url(self, params: TaxonRanksByIDParams) -> str:
-        """Build URL for getting taxonomic rank by ID"""
-        return f"{self.worms_api_base_url}/AphiaTaxonRanksByID/{params.rank_id}"
-
-    def build_taxon_ranks_by_name_url(self, params: TaxonRanksByNameParams) -> str:
-        """Build URL for getting taxonomic rank by name"""
-        encoded_name = quote(params.rank_name)
-        return f"{self.worms_api_base_url}/AphiaTaxonRanksByName/{encoded_name}"
-
-    def build_records_by_taxon_rank_id_url(self, params: RecordsByTaxonRankIDParams) -> str:
-        """Build URL for getting records by taxonomic rank ID"""
-        return f"{self.worms_api_base_url}/AphiaRecordsByTaxonRankID/{params.rank_id}"
-
-    def build_id_by_name_url(self, params: IDByNameParams) -> str:
-        """Build URL for getting AphiaID by name"""
-        encoded_name = quote(params.scientific_name)
-        return f"{self.worms_api_base_url}/AphiaIDByName/{encoded_name}"
-
-    # ========================================================================
-    # REQUEST EXECUTION METHODS
-    # ========================================================================
-
+    # Request execution methods (following ALA pattern)
     def execute_request(self, url: str) -> Dict:
         """Execute GET request and return JSON response"""
         try:
@@ -227,10 +151,7 @@ class WoRMS:
         except requests.exceptions.RequestException as e:
             raise ConnectionError(f"API request failed: {e}")
 
-    # ========================================================================
-    # HELPER METHODS
-    # ========================================================================
-
+    # Helper method for getting AphiaID from species name
     def get_species_aphia_id(self, scientific_name: str) -> Optional[int]:
         """Get AphiaID for a species name - synchronous helper"""
         params = SpeciesSearchParams(scientific_name=scientific_name)
