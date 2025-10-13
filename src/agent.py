@@ -606,7 +606,7 @@ class WoRMSReActAgent(IChatBioAgent):
                         }
                     )
 
-                    return f"External database IDs for {species_name}: {ids_display}. Note: These are unlabeled IDs from WoRMS. For specific databases (FishBase, NCBI, etc.), the database type must be specified in the query. Full data available in artifact."
+                    return f"External database IDs for {species_name}: {ids_display}. Full data in artifact."
                                 
                 except Exception as e:
                     await process.log(f"Error retrieving external IDs for {species_name}: {type(e).__name__} - {str(e)}")
