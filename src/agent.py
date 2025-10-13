@@ -20,7 +20,8 @@ from worms_api import (
     RecordParams, 
     ClassificationParams, 
     ChildrenParams,
-    ExternalIDParams  
+    ExternalIDParams,
+    AttributesParams  
 )
 dotenv.load_dotenv()
 
@@ -612,18 +613,92 @@ class WoRMSReActAgent(IChatBioAgent):
                     await process.log(f"Error retrieving external IDs for {species_name}: {type(e).__name__} - {str(e)}")
                     return f"Error retrieving external IDs: {str(e)}"
                 
+
+
+
+        @tool
+        async def get_species_attributes(species_name: str) -> str:
+            """Get ecological attributes and traits for a marine species.
+            This includes habitat preferences, depth range, salinity, temperature, substrate, etc.
+            
+            Args:
+                species_name: Scientific name (e.g., "Orcinus orca")
+            """
+            async with context.begin_process(f"Fetching attributes for {species_name}") as process:
+                try:
+                    loop = asyncio.get_event_loop()
+                    
+                    # Get AphiaID
+                    aphia_id = await loop.run_in_executor(
+                        None, 
+                        lambda: self.worms_logic.get_species_aphia_id(species_name)
+                    )
+                    
+                    if not aphia_id:
+                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
+                    
+                    # Get attributes from WoRMS API
+                    attr_params = AttributesParams(aphia_id=aphia_id)
+                    api_url = self.worms_logic.build_attributes_url(attr_params)
+                    
+                    raw_response = await loop.run_in_executor(
+                        None,
+                        lambda: self.worms_logic.execute_request(api_url)
+                    )
+                    
+                    # Normalize response
+                    attributes = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                    
+                    if not attributes:
+                        await process.log(f"No attributes found for {species_name} (AphiaID: {aphia_id})")
+                        return f"No ecological attributes found for {species_name}"
+                    
+                    await process.log(f"Found {len(attributes)} attribute records for {species_name} from WoRMS API")
+                    
+                    # Extract sample attributes
+                    attr_summary = []
+                    for attr in attributes[:5]:
+                        if isinstance(attr, dict):
+                            measure = attr.get('measurementType', 'Unknown')
+                            value = attr.get('measurementValue', 'Unknown')
+                            attr_summary.append(f"{measure}: {value}")
+                    
+                    # Create artifact
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Ecological attributes for {species_name} (AphiaID: {aphia_id}) - {len(attributes)} attributes",
+                        uris=[api_url],
+                        metadata={
+                            "aphia_id": aphia_id, 
+                            "count": len(attributes),
+                            "species": species_name
+                        }
+                    )
+                    
+                    summary_text = "; ".join(attr_summary) if attr_summary else "Various attributes"
+                    return f"Found {len(attributes)} ecological attributes for {species_name}. Sample: {summary_text}. Full data in artifact."
+                        
+                except Exception as e:
+                    await process.log(f"Error retrieving attributes for {species_name}: {type(e).__name__} - {str(e)}")
+                    return f"Error retrieving attributes: {str(e)}"
+        
+
         tools = [
-            get_species_synonyms,
-            get_species_distribution,
-            get_vernacular_names,
-            get_literature_sources,
-            get_taxonomic_record,
-            get_taxonomic_classification,
-            get_child_taxa,
-            get_external_ids,  
-            abort,
-            finish
-        ]
+        get_species_synonyms,
+        get_species_distribution,
+        get_vernacular_names,
+        get_literature_sources,
+        get_taxonomic_record,
+        get_taxonomic_classification,
+        get_child_taxa,
+        get_external_ids,
+        get_species_attributes,  
+        abort,
+        finish
+    ]
         
         # Execute agent
         async with context.begin_process("Processing your request") as process:
@@ -662,14 +737,15 @@ class WoRMSReActAgent(IChatBioAgent):
     - Avoid calling tools you don't need for the specific request
 
     2. TOOL USAGE GUIDELINES:
-    - get_taxonomic_record: Basic taxonomy (rank, status, kingdom, phylum, class, order, family)
-    - get_taxonomic_classification: Full taxonomic hierarchy (use for detailed taxonomy)
-    - get_species_distribution: Geographic distribution data
-    - get_vernacular_names: Common names in different languages
-    - get_species_synonyms: Alternative scientific names
-    - get_literature_sources: Scientific references (only if explicitly needed)
-    - get_child_taxa: Subspecies/varieties (may return empty for terminal species - this is normal)
-    - - get_external_ids: External database identifiers (returns unlabeled IDs - may be FishBase, NCBI, TSN, BOLD, etc.)
+   - get_taxonomic_record: Basic taxonomy (rank, status, kingdom, phylum, class, order, family)
+   - get_taxonomic_classification: Full taxonomic hierarchy (use for detailed taxonomy)
+   - get_species_distribution: Geographic distribution data
+   - get_vernacular_names: Common names in different languages
+   - get_species_synonyms: Alternative scientific names
+   - get_literature_sources: Scientific references (only if explicitly needed)
+   - get_child_taxa: Subspecies/varieties (may return empty for terminal species - this is normal)
+   - get_external_ids: External database identifiers (FishBase, NCBI, etc.)
+   - get_species_attributes: Ecological traits (habitat, depth range, salinity, temperature, substrate)
 
     3. ERROR HANDLING:
     - If child taxa returns an error or empty result, this is NORMAL for terminal species

@@ -82,6 +82,13 @@ class ExternalIDParams(BaseModel):
         examples=["fishbase", "ncbi", "tsn"]
     )
 
+class AttributesParams(BaseModel):
+    """Parameters for getting species attributes/traits"""
+    aphia_id: int = Field(...,
+        description="The AphiaID of the species to get attributes for",
+        examples=[137205, 104625, 137094]
+    )
+
 class NoParams(BaseModel):
     """An empty model for entrypoints that require no parameters."""
     pass
@@ -155,8 +162,12 @@ class WoRMS:
         if params.id_type:
             return f"{base_url}?type={params.id_type}"
         return base_url
+    
+    def build_attributes_url(self, params: AttributesParams) -> str:
+        """Build URL for getting species attributes/traits"""
+        return f"{self.worms_api_base_url}/AphiaAttributesByAphiaID/{params.aphia_id}"
 
-    # Request execution methods (following ALA pattern)
+    # Execution methods 
     def execute_request(self, url: str) -> Dict:
         """Execute GET request and return JSON response"""
         try:
