@@ -1,4 +1,4 @@
-from typing import override
+from typing import override, Optional  
 from pydantic import BaseModel, Field
 from ichatbio.agent import IChatBioAgent
 from ichatbio.agent_response import ResponseContext
