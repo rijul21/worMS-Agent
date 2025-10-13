@@ -19,9 +19,9 @@ from worms_api import (
     SourcesParams, 
     RecordParams, 
     ClassificationParams, 
-    ChildrenParams
+    ChildrenParams,
+    ExternalIDParams  
 )
-
 dotenv.load_dotenv()
 
 class MarineResearchParams(BaseModel):
@@ -544,6 +544,79 @@ class WoRMSReActAgent(IChatBioAgent):
                     await process.log(f"Error retrieving child taxa for {species_name}: {type(e).__name__} - {str(e)}")
                     return f"Error retrieving child taxa: {str(e)}"
                 
+
+
+        @tool
+        async def get_external_ids(species_name: str) -> str:
+            """Get external database identifiers (FishBase, GBIF, NCBI, ITIS, etc.) for a marine species.
+            Useful for linking to other databases.
+            
+            Args:
+                species_name: Scientific name (e.g., "Orcinus orca")
+            """
+            async with context.begin_process(f"Fetching external database IDs for {species_name}") as process:
+                try:
+                    loop = asyncio.get_event_loop()
+                    
+                    # Get AphiaID
+                    aphia_id = await loop.run_in_executor(
+                        None, 
+                        lambda: self.worms_logic.get_species_aphia_id(species_name)
+                    )
+                    
+                    if not aphia_id:
+                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
+                    
+                    # Get external IDs from WoRMS API
+                    ext_params = ExternalIDParams(aphia_id=aphia_id)
+                    api_url = self.worms_logic.build_external_id_url(ext_params)
+                    
+                    raw_response = await loop.run_in_executor(
+                        None,
+                        lambda: self.worms_logic.execute_request(api_url)
+                    )
+                    
+                    # Normalize response (can be dict with database names as keys)
+                    if isinstance(raw_response, dict):
+                        external_ids = [{"database": k, "id": v} for k, v in raw_response.items()]
+                    elif isinstance(raw_response, list):
+                        external_ids = raw_response
+                    else:
+                        external_ids = [raw_response] if raw_response else []
+                    
+                    if not external_ids:
+                        await process.log(f"No external database IDs found for {species_name} (AphiaID: {aphia_id})")
+                        return f"No external database IDs found for {species_name}"
+                    
+                    await process.log(f"Found {len(external_ids)} external database IDs for {species_name} from WoRMS API")
+                    
+                    # Extract sample database names
+                    if isinstance(external_ids[0], dict):
+                        databases = [e.get('database', 'Unknown') for e in external_ids[:5]]
+                    else:
+                        databases = ['Various databases']
+                    
+                    # Create artifact
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"External database IDs for {species_name} (AphiaID: {aphia_id}) - {len(external_ids)} databases",
+                        uris=[api_url],
+                        metadata={
+                            "aphia_id": aphia_id, 
+                            "count": len(external_ids),
+                            "species": species_name
+                        }
+                    )
+                    
+                    return f"Found {len(external_ids)} external database IDs for {species_name}. Databases: {', '.join(databases)}. Full data available in artifact."
+                        
+                except Exception as e:
+                    await process.log(f"Error retrieving external IDs for {species_name}: {type(e).__name__} - {str(e)}")
+                    return f"Error retrieving external IDs: {str(e)}"
+                
         tools = [
             get_species_synonyms,
             get_species_distribution,
@@ -552,6 +625,7 @@ class WoRMSReActAgent(IChatBioAgent):
             get_taxonomic_record,
             get_taxonomic_classification,
             get_child_taxa,
+            get_external_ids,  
             abort,
             finish
         ]
@@ -580,52 +654,53 @@ class WoRMSReActAgent(IChatBioAgent):
     
     def _make_system_prompt(self, species_names: list[str], user_request: str) -> str:
         species_context = f"\n\nSpecies to research: {', '.join(species_names)}" if species_names else ""
-    
+
         return f"""\
-You are a marine biology research assistant with access to the WoRMS database.
+    You are a marine biology research assistant with access to the WoRMS database.
 
-Request: "{user_request}"{species_context}
+    Request: "{user_request}"{species_context}
 
-INSTRUCTIONS:
-1. PLAN YOUR APPROACH:
-   - For comparison queries, decide which data points to compare
-   - For each species, call tools in this order: taxonomy → distribution → names → sources
-   - Avoid calling tools you don't need for the specific request
+    INSTRUCTIONS:
+    1. PLAN YOUR APPROACH:
+    - For comparison queries, decide which data points to compare
+    - For each species, call tools in this order: taxonomy → distribution → names → sources
+    - Avoid calling tools you don't need for the specific request
 
-2. TOOL USAGE GUIDELINES:
-   - get_taxonomic_record: Basic taxonomy (rank, status, kingdom, phylum, class, order, family)
-   - get_taxonomic_classification: Full taxonomic hierarchy (use for detailed taxonomy)
-   - get_species_distribution: Geographic distribution data
-   - get_vernacular_names: Common names in different languages
-   - get_species_synonyms: Alternative scientific names
-   - get_literature_sources: Scientific references (only if explicitly needed)
-   - get_child_taxa: Subspecies/varieties (may return empty for terminal species - this is normal)
+    2. TOOL USAGE GUIDELINES:
+    - get_taxonomic_record: Basic taxonomy (rank, status, kingdom, phylum, class, order, family)
+    - get_taxonomic_classification: Full taxonomic hierarchy (use for detailed taxonomy)
+    - get_species_distribution: Geographic distribution data
+    - get_vernacular_names: Common names in different languages
+    - get_species_synonyms: Alternative scientific names
+    - get_literature_sources: Scientific references (only if explicitly needed)
+    - get_child_taxa: Subspecies/varieties (may return empty for terminal species - this is normal)
+    - get_external_ids: External database identifiers (FishBase, GBIF, NCBI, ITIS, etc.)
 
-3. ERROR HANDLING:
-   - If child taxa returns an error or empty result, this is NORMAL for terminal species
-   - Don't retry failed calls
-   - Continue with other data gathering
+    3. ERROR HANDLING:
+    - If child taxa returns an error or empty result, this is NORMAL for terminal species
+    - Don't retry failed calls
+    - Continue with other data gathering
 
-4. COMPARISON REQUIREMENTS:
-   - When comparing multiple species, provide comparative insights:
-     * Which has wider distribution?
-     * Which is more studied (more literature)?
-     * What are taxonomic relationships?
-     * Any conservation status differences?
-   - Don't just list facts - provide analysis
+    4. COMPARISON REQUIREMENTS:
+    - When comparing multiple species, provide comparative insights:
+        * Which has wider distribution?
+        * Which is more studied (more literature)?
+        * What are taxonomic relationships?
+        * Any conservation status differences?
+    - Don't just list facts - provide analysis
 
-5. EFFICIENCY:
-   - Only call tools that are relevant to the user's request
-   - If user asks for "everything", call all relevant tools
-   - If user asks for specific info (e.g., "distribution"), only call those tools
+    5. EFFICIENCY:
+    - Only call tools that are relevant to the user's request
+    - If user asks for "everything", call all relevant tools
+    - If user asks for specific info (e.g., "distribution"), only call those tools
 
-6. FINISHING:
-   - Call finish() with a comprehensive summary that ANSWERS the user's question
-   - For comparisons, include comparative analysis, not just individual descriptions
-   - Highlight key differences and similarities
+    6. FINISHING:
+    - Call finish() with a comprehensive summary that ANSWERS the user's question
+    - For comparisons, include comparative analysis, not just individual descriptions
+    - Highlight key differences and similarities
 
-Always create artifacts when retrieving data from WoRMS.
-"""
+    Always create artifacts when retrieving data from WoRMS.
+    """
 
 if __name__ == "__main__":
     agent = WoRMSReActAgent()
