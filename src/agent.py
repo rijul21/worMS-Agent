@@ -40,6 +40,7 @@ AGENT_DESCRIPTION = "Marine species research assistant using WoRMS database"
 class WoRMSReActAgent(IChatBioAgent):
     def __init__(self):
         self.worms_logic = WoRMS()
+        self.aphia_id_cache = {}
         
     @override
     def get_agent_card(self) -> AgentCard:
@@ -56,6 +57,28 @@ class WoRMSReActAgent(IChatBioAgent):
                 )
             ]
         )
+    
+    async def _get_cached_aphia_id(self, species_name: str, process) -> Optional[int]:
+        """Get AphiaID with caching to avoid redundant API calls"""
+        # Check cache first
+        if species_name in self.aphia_id_cache:
+            aphia_id = self.aphia_id_cache[species_name]
+            await process.log(f"✓ Using cached AphiaID {aphia_id} for {species_name}")
+            return aphia_id
+        
+        # Not in cache, fetch it
+        await process.log(f"⚠ Fetching AphiaID for {species_name} (not in cache)")
+        loop = asyncio.get_event_loop()
+        aphia_id = await loop.run_in_executor(
+            None, 
+            lambda: self.worms_logic.get_species_aphia_id(species_name)
+        )
+        
+        if aphia_id:
+            self.aphia_id_cache[species_name] = aphia_id
+            await process.log(f"✓ Cached AphiaID {aphia_id} for {species_name}")
+        
+        return aphia_id
     
     @override
     async def run(
@@ -86,19 +109,12 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Fetching synonyms for {species_name}") as process:
                 try:
-                    loop = asyncio.get_event_loop()
-                    
-                    # Get AphiaID
-                    aphia_id = await loop.run_in_executor(
-                        None, 
-                        lambda: self.worms_logic.get_species_aphia_id(species_name)
-                    )
-                    
+                    # Get AphiaID (cached)
+                    aphia_id = await self._get_cached_aphia_id(species_name, process)
+
                     if not aphia_id:
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
-                    
-                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
                     
                     # Get synonyms from WoRMS API
                     syn_params = SynonymsParams(aphia_id=aphia_id)
@@ -148,19 +164,12 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Fetching distribution for {species_name}") as process:
                 try:
-                    loop = asyncio.get_event_loop()
-                    
-                    # Get AphiaID
-                    aphia_id = await loop.run_in_executor(
-                        None, 
-                        lambda: self.worms_logic.get_species_aphia_id(species_name)
-                    )
-                    
+                    # Get AphiaID (cached)
+                    aphia_id = await self._get_cached_aphia_id(species_name, process)
+
                     if not aphia_id:
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
-                    
-                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
                     
                     # Get distribution from WoRMS API
                     from worms_api import DistributionParams
@@ -211,20 +220,12 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Fetching vernacular names for {species_name}") as process:
                 try:
-                    loop = asyncio.get_event_loop()
-                    
-                    # Get AphiaID
-                    aphia_id = await loop.run_in_executor(
-                        None, 
-                        lambda: self.worms_logic.get_species_aphia_id(species_name)
-                    )
-                    
+                   # Get AphiaID (cached)
+                    aphia_id = await self._get_cached_aphia_id(species_name, process)
                     if not aphia_id:
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
-                    
-                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
-                    
+                                        
                     # Get vernacular names from WoRMS API
                     from worms_api import VernacularParams
                     vern_params = VernacularParams(aphia_id=aphia_id)
@@ -284,19 +285,11 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Fetching literature sources for {species_name}") as process:
                 try:
-                    loop = asyncio.get_event_loop()
-                    
-                    # Get AphiaID
-                    aphia_id = await loop.run_in_executor(
-                        None, 
-                        lambda: self.worms_logic.get_species_aphia_id(species_name)
-                    )
-                    
+                    # Get AphiaID (cached)
+                    aphia_id = await self._get_cached_aphia_id(species_name, process)
                     if not aphia_id:
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
-                    
-                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
                     
                     # Get sources from WoRMS API
                     from worms_api import SourcesParams
@@ -353,19 +346,11 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Fetching taxonomic record for {species_name}") as process:
                 try:
-                    loop = asyncio.get_event_loop()
-                    
-                    # Get AphiaID
-                    aphia_id = await loop.run_in_executor(
-                        None, 
-                        lambda: self.worms_logic.get_species_aphia_id(species_name)
-                    )
-                    
+                    # Get AphiaID (cached)
+                    aphia_id = await self._get_cached_aphia_id(species_name, process)
                     if not aphia_id:
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
-                    
-                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
                     
                     # Get record from WoRMS API
                     from worms_api import RecordParams
@@ -423,19 +408,11 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Fetching taxonomic classification for {species_name}") as process:
                 try:
-                    loop = asyncio.get_event_loop()
-                    
-                    # Get AphiaID
-                    aphia_id = await loop.run_in_executor(
-                        None, 
-                        lambda: self.worms_logic.get_species_aphia_id(species_name)
-                    )
-                    
+                    # Get AphiaID (cached)
+                    aphia_id = await self._get_cached_aphia_id(species_name, process)
                     if not aphia_id:
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
-                    
-                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
                     
                     # Get classification from WoRMS API
                     from worms_api import ClassificationParams
@@ -492,19 +469,11 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Fetching child taxa for {species_name}") as process:
                 try:
-                    loop = asyncio.get_event_loop()
-                    
-                    # Get AphiaID
-                    aphia_id = await loop.run_in_executor(
-                        None, 
-                        lambda: self.worms_logic.get_species_aphia_id(species_name)
-                    )
-                    
+                    # Get AphiaID (cached)
+                    aphia_id = await self._get_cached_aphia_id(species_name, process)
                     if not aphia_id:
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
-                    
-                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
                     
                     # Get child taxa from WoRMS API
                     from worms_api import ChildrenParams
@@ -558,19 +527,11 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Fetching external database IDs for {species_name}") as process:
                 try:
-                    loop = asyncio.get_event_loop()
-                    
-                    # Get AphiaID
-                    aphia_id = await loop.run_in_executor(
-                        None, 
-                        lambda: self.worms_logic.get_species_aphia_id(species_name)
-                    )
-                    
+                    # Get AphiaID (cached)
+                    aphia_id = await self._get_cached_aphia_id(species_name, process)
                     if not aphia_id:
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
-                    
-                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
                     
                     # Get external IDs from WoRMS API
                     ext_params = ExternalIDParams(aphia_id=aphia_id)
@@ -626,19 +587,11 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Fetching attributes for {species_name}") as process:
                 try:
-                    loop = asyncio.get_event_loop()
-                    
-                    # Get AphiaID
-                    aphia_id = await loop.run_in_executor(
-                        None, 
-                        lambda: self.worms_logic.get_species_aphia_id(species_name)
-                    )
-                    
+                    # Get AphiaID (cached)
+                    aphia_id = await self._get_cached_aphia_id(species_name, process)
                     if not aphia_id:
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
-                    
-                    await process.log(f"Retrieved AphiaID {aphia_id} for species {species_name}")
                     
                     # Get attributes from WoRMS API
                     attr_params = AttributesParams(aphia_id=aphia_id)
@@ -922,7 +875,8 @@ CRITICAL INSTRUCTIONS:
 
 7. RESPONSE QUALITY:
    - Lead with KEY INFORMATION that directly answers the user's question
-   - For conservation queries, highlight IUCN status and CITES listing
+   - DON'T ask "Would you like me to...?" - just provide the answer
+   - For conservation queries, ALWAYS extract and state IUCN status if available
    - For size queries, mention both male and female sizes if available
    - Always mention that full data is available in artifacts
    - Be concise but comprehensive
