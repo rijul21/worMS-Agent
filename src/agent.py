@@ -615,7 +615,6 @@ class WoRMSReActAgent(IChatBioAgent):
                 
 
 
-
         @tool
         async def get_species_attributes(species_name: str) -> str:
             """Get ecological attributes and traits for a marine species.
@@ -658,14 +657,60 @@ class WoRMSReActAgent(IChatBioAgent):
                     
                     await process.log(f"Found {len(attributes)} attribute records for {species_name} from WoRMS API")
                     
-                    # Extract sample attributes
+                    # Extract and flatten attributes with children
                     attr_summary = []
-                    for attr in attributes[:5]:
-                        if isinstance(attr, dict):
-                            measure = attr.get('measurementType', 'Unknown')
-                            value = attr.get('measurementValue', 'Unknown')
-                            attr_summary.append(f"{measure}: {value}")
-                    
+                    important_attrs = []
+
+                    def extract_attribute_info(attr, depth=0):
+                        """Recursively extract attribute information"""
+                        if not isinstance(attr, dict):
+                            return []
+                        
+                        results = []
+                        measure_type = attr.get('measurementType', 'Unknown')
+                        measure_value = attr.get('measurementValue', 'Unknown')
+                        quality = attr.get('qualitystatus', '')
+                        
+                        # Build readable string
+                        indent = "  " * depth
+                        attr_str = f"{indent}{measure_type}: {measure_value}"
+                        if quality == 'checked':
+                            attr_str += " ✓"
+                        
+                        results.append(attr_str)
+                        
+                        # Process children recursively
+                        children = attr.get('children', [])
+                        if children:
+                            for child in children:
+                                results.extend(extract_attribute_info(child, depth + 1))
+                        
+                        return results
+
+                    # Extract all attributes
+                    for attr in attributes:
+                        attr_lines = extract_attribute_info(attr)
+                        attr_summary.extend(attr_lines)
+                        
+                        # Also build a simplified summary for important ones
+                        measure_type = attr.get('measurementType', '')
+                        measure_value = attr.get('measurementValue', '')
+                        
+                        if measure_type in ['IUCN Red List Category', 'Body size', 'CITES Annex']:
+                            important_attrs.append(f"{measure_type}: {measure_value}")
+                        
+                        # Extract nested important values
+                        for child in attr.get('children', []):
+                            if isinstance(child, dict):
+                                child_type = child.get('measurementType', '')
+                                child_value = child.get('measurementValue', '')
+                                if child_type == 'IUCN Red List Category':
+                                    important_attrs.append(f"Conservation status: {child_value}")
+                                elif child_type == 'CITES Annex':
+                                    important_attrs.append(f"CITES: Annex {child_value}")
+
+                    await process.log(f"Extracted {len(attr_summary)} attribute details for {species_name}")
+
                     # Create artifact
                     await process.create_artifact(
                         mimetype="application/json",
@@ -674,17 +719,22 @@ class WoRMSReActAgent(IChatBioAgent):
                         metadata={
                             "aphia_id": aphia_id, 
                             "count": len(attributes),
-                            "species": species_name
+                            "species": species_name,
+                            "attribute_types": list(set([a.get('measurementType', '') for a in attributes if isinstance(a, dict)]))
                         }
                     )
-                    
-                    summary_text = "; ".join(attr_summary) if attr_summary else "Various attributes"
-                    return f"Found {len(attributes)} ecological attributes for {species_name}. Sample: {summary_text}. Full data in artifact."
-                        
+
+                    # Build response
+                    if important_attrs:
+                        key_info = "; ".join(important_attrs[:5])
+                        return f"{species_name} has {len(attributes)} ecological attributes. Key info: {key_info}. Full detailed data in artifact."
+                    else:
+                        summary_preview = "; ".join([a.split(':')[0] for a in attr_summary[:5] if ':' in a])
+                        return f"{species_name} has {len(attributes)} ecological attributes including: {summary_preview}. Full data in artifact."
+                            
                 except Exception as e:
                     await process.log(f"Error retrieving attributes for {species_name}: {type(e).__name__} - {str(e)}")
-                    return f"Error retrieving attributes: {str(e)}"
-        
+                    return f"Error retrieving attributes: {str(e)}"          
 
         tools = [
         get_species_synonyms,
