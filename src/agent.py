@@ -63,11 +63,11 @@ class WoRMSReActAgent(IChatBioAgent):
         # Check cache first
         if species_name in self.aphia_id_cache:
             aphia_id = self.aphia_id_cache[species_name]
-            await process.log(f"✓ Using cached AphiaID {aphia_id} for {species_name}")
+            await process.log(f"Using cached AphiaID {aphia_id} for {species_name}")
             return aphia_id
         
         # Not in cache, fetch it
-        await process.log(f"⚠ Fetching AphiaID for {species_name} (not in cache)")
+        await process.log(f"Fetching AphiaID for {species_name} (not in cache)")
         loop = asyncio.get_event_loop()
         aphia_id = await loop.run_in_executor(
             None, 
@@ -76,7 +76,7 @@ class WoRMSReActAgent(IChatBioAgent):
         
         if aphia_id:
             self.aphia_id_cache[species_name] = aphia_id
-            await process.log(f"✓ Cached AphiaID {aphia_id} for {species_name}")
+            await process.log(f"Cached AphiaID {aphia_id} for {species_name}")
         
         return aphia_id
     
@@ -89,6 +89,14 @@ class WoRMSReActAgent(IChatBioAgent):
         params: MarineResearchParams,
     ):
         """Main entry point - builds and executes the ReAct agent loop"""
+
+        if params.species_names:
+            async with context.begin_process("Resolving species identifiers") as process:
+                for species_name in params.species_names:
+                    aphia_id = await self._get_cached_aphia_id(species_name, process)
+                    if not aphia_id:
+                        await process.log(f"Warning: Could not resolve {species_name}")
+    
         
         @tool(return_direct=True)
         async def abort(reason: str):
@@ -610,7 +618,7 @@ class WoRMSReActAgent(IChatBioAgent):
                         return f"Species '{species_name}' not found in WoRMS database."
                     
                     loop = asyncio.get_event_loop()
-                    
+
                     # Get attributes from WoRMS API
                     attr_params = AttributesParams(aphia_id=aphia_id)
                     api_url = self.worms_logic.build_attributes_url(attr_params)
