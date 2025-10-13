@@ -579,30 +579,25 @@ class WoRMSReActAgent(IChatBioAgent):
                         lambda: self.worms_logic.execute_request(api_url)
                     )
                     
-                    # Normalize response (can be dict with database names as keys)
-                    if isinstance(raw_response, dict):
-                        external_ids = [{"database": k, "id": v} for k, v in raw_response.items()]
-                    elif isinstance(raw_response, list):
+                    # Normalize response - it's usually just a list of ID strings
+                    if isinstance(raw_response, list):
                         external_ids = raw_response
                     else:
                         external_ids = [raw_response] if raw_response else []
-                    
+
                     if not external_ids:
                         await process.log(f"No external database IDs found for {species_name} (AphiaID: {aphia_id})")
                         return f"No external database IDs found for {species_name}"
-                    
-                    await process.log(f"Found {len(external_ids)} external database IDs for {species_name} from WoRMS API")
-                    
-                    # Extract sample database names
-                    if isinstance(external_ids[0], dict):
-                        databases = [e.get('database', 'Unknown') for e in external_ids[:5]]
-                    else:
-                        databases = ['Various databases']
-                    
+
+                    await process.log(f"Found {len(external_ids)} external database ID(s) for {species_name} from WoRMS API")
+
+                    # Format the IDs for display
+                    ids_display = ", ".join([str(id_val) for id_val in external_ids])
+
                     # Create artifact
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"External database IDs for {species_name} (AphiaID: {aphia_id}) - {len(external_ids)} databases",
+                        description=f"External database IDs for {species_name} (AphiaID: {aphia_id}) - {len(external_ids)} ID(s)",
                         uris=[api_url],
                         metadata={
                             "aphia_id": aphia_id, 
@@ -610,9 +605,9 @@ class WoRMSReActAgent(IChatBioAgent):
                             "species": species_name
                         }
                     )
-                    
-                    return f"Found {len(external_ids)} external database IDs for {species_name}. Databases: {', '.join(databases)}. Full data available in artifact."
-                        
+
+                    return f"External database IDs for {species_name}: {ids_display}. Note: These are unlabeled IDs from WoRMS. For specific databases (FishBase, NCBI, etc.), the database type must be specified in the query. Full data available in artifact."
+                                
                 except Exception as e:
                     await process.log(f"Error retrieving external IDs for {species_name}: {type(e).__name__} - {str(e)}")
                     return f"Error retrieving external IDs: {str(e)}"
@@ -674,7 +669,7 @@ class WoRMSReActAgent(IChatBioAgent):
     - get_species_synonyms: Alternative scientific names
     - get_literature_sources: Scientific references (only if explicitly needed)
     - get_child_taxa: Subspecies/varieties (may return empty for terminal species - this is normal)
-    - get_external_ids: External database identifiers (FishBase, GBIF, NCBI, ITIS, etc.)
+    - - get_external_ids: External database identifiers (returns unlabeled IDs - may be FishBase, NCBI, TSN, BOLD, etc.)
 
     3. ERROR HANDLING:
     - If child taxa returns an error or empty result, this is NORMAL for terminal species

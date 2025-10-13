@@ -77,6 +77,10 @@ class ExternalIDParams(BaseModel):
         description="The AphiaID of the species to get external IDs for",
         examples=[137205, 104625, 137094]
     )
+    id_type: Optional[str] = Field(None,
+        description="Specific database type (e.g., 'fishbase', 'ncbi', 'tsn', 'bold', 'gisd')",
+        examples=["fishbase", "ncbi", "tsn"]
+    )
 
 class NoParams(BaseModel):
     """An empty model for entrypoints that require no parameters."""
@@ -147,7 +151,10 @@ class WoRMS:
     
     def build_external_id_url(self, params: ExternalIDParams) -> str:
         """Build URL for getting external database IDs"""
-        return f"{self.worms_api_base_url}/AphiaExternalIDByAphiaID/{params.aphia_id}"
+        base_url = f"{self.worms_api_base_url}/AphiaExternalIDByAphiaID/{params.aphia_id}"
+        if params.id_type:
+            return f"{base_url}?type={params.id_type}"
+        return base_url
 
     # Request execution methods (following ALA pattern)
     def execute_request(self, url: str) -> Dict:
