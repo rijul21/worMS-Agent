@@ -21,7 +21,8 @@ from worms_api import (
     ClassificationParams, 
     ChildrenParams,
     ExternalIDParams,
-    AttributesParams  
+    AttributesParams,
+    VernacularSearchParams  
 )
 dotenv.load_dotenv()
 
@@ -734,7 +735,80 @@ class WoRMSReActAgent(IChatBioAgent):
                             
                 except Exception as e:
                     await process.log(f"Error retrieving attributes for {species_name}: {type(e).__name__} - {str(e)}")
-                    return f"Error retrieving attributes: {str(e)}"          
+                    return f"Error retrieving attributes: {str(e)}"
+
+
+
+
+
+        @tool
+        async def search_by_common_name(common_name: str) -> str:
+            """Search for marine species by their common/vernacular name.
+            Use this when the user provides a common name like 'killer whale', 'great white shark', etc.
+            
+            Args:
+                common_name: Common name to search for (e.g., "killer whale", "bottlenose dolphin")
+            """
+            async with context.begin_process(f"Searching for species with common name '{common_name}'") as process:
+                try:
+                    loop = asyncio.get_event_loop()
+                    
+                    # Search by vernacular name
+                    search_params = VernacularSearchParams(vernacular_name=common_name, like=True)
+                    api_url = self.worms_logic.build_vernacular_search_url(search_params)
+                    
+                    raw_response = await loop.run_in_executor(
+                        None,
+                        lambda: self.worms_logic.execute_request(api_url)
+                    )
+                    
+                    # Normalize response
+                    results = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                    
+                    if not results:
+                        await process.log(f"No species found with common name '{common_name}'")
+                        return f"No species found with common name '{common_name}'. Try a different name or use scientific name."
+                    
+                    await process.log(f"Found {len(results)} species matching '{common_name}'")
+                    
+                    # Extract species info
+                    species_list = []
+                    for result in results[:10]:  # Limit to top 10
+                        if isinstance(result, dict):
+                            scientific_name = result.get('scientificname', 'Unknown')
+                            aphia_id = result.get('AphiaID', 'Unknown')
+                            status = result.get('status', 'Unknown')
+                            authority = result.get('authority', '')
+                            
+                            species_info = f"{scientific_name} (AphiaID: {aphia_id}, Status: {status})"
+                            if authority:
+                                species_info += f" - {authority}"
+                            species_list.append(species_info)
+                    
+                    # Create artifact
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Search results for common name '{common_name}' - {len(results)} species found",
+                        uris=[api_url],
+                        metadata={
+                            "search_term": common_name,
+                            "count": len(results),
+                            "top_result": results[0].get('scientificname', '') if results else ''
+                        }
+                    )
+                    
+                    # Build response
+                    if len(results) == 1:
+                        sci_name = results[0].get('scientificname', 'Unknown')
+                        aphia_id = results[0].get('AphiaID', 'Unknown')
+                        return f"Common name '{common_name}' refers to {sci_name} (AphiaID: {aphia_id}). Full details in artifact."
+                    else:
+                        top_5 = "\n".join(species_list[:5])
+                        return f"Found {len(results)} species with common name '{common_name}':\n{top_5}\n\nFull list in artifact."
+                            
+                except Exception as e:
+                    await process.log(f"Error searching for common name '{common_name}': {type(e).__name__} - {str(e)}")
+                    return f"Error searching for common name: {str(e)}"
 
         tools = [
         get_species_synonyms,
@@ -745,11 +819,12 @@ class WoRMSReActAgent(IChatBioAgent):
         get_taxonomic_classification,
         get_child_taxa,
         get_external_ids,
-        get_species_attributes,  
+        get_species_attributes,
+        search_by_common_name,  
         abort,
         finish
     ]
-        
+            
         # Execute agent
         async with context.begin_process("Processing your request") as process:
             await process.log(f"Initializing agent for query: '{request}' with {len(tools)} available tools")
@@ -776,52 +851,105 @@ class WoRMSReActAgent(IChatBioAgent):
         species_context = f"\n\nSpecies to research: {', '.join(species_names)}" if species_names else ""
 
         return f"""\
-    You are a marine biology research assistant with access to the WoRMS database.
+You are a marine biology research assistant with access to the WoRMS (World Register of Marine Species) database.
 
-    Request: "{user_request}"{species_context}
+Request: "{user_request}"{species_context}
 
-    INSTRUCTIONS:
-    1. PLAN YOUR APPROACH:
-    - For comparison queries, decide which data points to compare
-    - For each species, call tools in this order: taxonomy → distribution → names → sources
-    - Avoid calling tools you don't need for the specific request
+CRITICAL INSTRUCTIONS:
 
-    2. TOOL USAGE GUIDELINES:
+1. HANDLING COMMON NAMES:
+   - If the user provides a COMMON NAME (e.g., "killer whale", "great white shark"), ALWAYS call search_by_common_name FIRST
+   - Once you get the scientific name, use it for all subsequent tool calls
+   - Examples of common names: killer whale, great white, bottlenose dolphin, tiger shark, hammerhead
+   - Examples of scientific names: Orcinus orca, Carcharodon carcharias, Tursiops truncatus
+
+2. PLANNING YOUR APPROACH:
+   - For simple queries (e.g., "What's the conservation status?"), call only relevant tools
+   - For comprehensive queries (e.g., "Tell me everything about X"), call multiple tools systematically
+   - For comparison queries, gather the same data points for each species
+   - Typical order: search (if common name) → taxonomy → attributes → distribution → names → sources
+
+3. TOOL USAGE GUIDELINES:
+   
+   SEARCH & IDENTIFICATION:
+   - search_by_common_name: Convert common names to scientific names (e.g., "killer whale" → "Orcinus orca")
+     * USE THIS FIRST if user provides common/vernacular names
+     * Returns scientific name and AphiaID
+   
+   TAXONOMY:
    - get_taxonomic_record: Basic taxonomy (rank, status, kingdom, phylum, class, order, family)
    - get_taxonomic_classification: Full taxonomic hierarchy (use for detailed taxonomy)
-   - get_species_distribution: Geographic distribution data
-   - get_vernacular_names: Common names in different languages
-   - get_species_synonyms: Alternative scientific names
-   - get_literature_sources: Scientific references (only if explicitly needed)
-   - get_child_taxa: Subspecies/varieties (may return empty for terminal species - this is normal)
-   - get_external_ids: External database identifiers (FishBase, NCBI, etc.)
-   - get_species_attributes: Ecological traits (habitat, depth range, salinity, temperature, substrate)
+   
+   ECOLOGY & CONSERVATION:
+   - get_species_attributes: Ecological traits, conservation status, body size, IUCN Red List status, CITES
+     * Use for: conservation status, body size, ecological traits, habitat preferences
+     * Returns nested data including IUCN status, CITES Annex, size measurements
+   
+   DISTRIBUTION & NAMES:
+   - get_species_distribution: Geographic distribution data (where the species lives)
+   - get_vernacular_names: Common names in different languages for a known species
+   - get_species_synonyms: Alternative scientific names (historical names, misspellings)
+   
+   REFERENCES & DATABASES:
+   - get_literature_sources: Scientific references and publications (only if explicitly needed)
+   - get_external_ids: External database identifiers (FishBase, NCBI, ITIS, BOLD)
+   
+   OTHER:
+   - get_child_taxa: Subspecies/varieties (may return empty for terminal species - this is NORMAL)
 
-    3. ERROR HANDLING:
-    - If child taxa returns an error or empty result, this is NORMAL for terminal species
-    - Don't retry failed calls
-    - Continue with other data gathering
+4. ERROR HANDLING:
+   - If search_by_common_name returns no results, ask user for clarification or try scientific name
+   - If get_child_taxa returns empty or error, this is NORMAL for terminal species - don't retry
+   - Don't repeatedly call the same tool if it returns empty results
+   - If a species is not found, clearly inform the user and suggest alternatives
 
-    4. COMPARISON REQUIREMENTS:
-    - When comparing multiple species, provide comparative insights:
-        * Which has wider distribution?
-        * Which is more studied (more literature)?
-        * What are taxonomic relationships?
-        * Any conservation status differences?
-    - Don't just list facts - provide analysis
+5. EFFICIENCY & AVOIDING LOOPS:
+   - Call each tool AT MOST ONCE per species (except search_by_common_name if needed)
+   - Don't retry failed calls - move on to other tools
+   - If you get a complete answer, call finish() immediately
+   - Only call tools that are relevant to the user's specific question
+   - If user asks for "everything", call all relevant tools systematically
 
-    5. EFFICIENCY:
-    - Only call tools that are relevant to the user's request
-    - If user asks for "everything", call all relevant tools
-    - If user asks for specific info (e.g., "distribution"), only call those tools
+6. COMPARISON REQUIREMENTS:
+   When comparing multiple species, provide comparative analysis:
+   - Which has wider distribution?
+   - Which has larger body size?
+   - Conservation status differences (IUCN Red List categories)
+   - Taxonomic relationships (same family/order?)
+   - Which is more studied (literature count)?
+   
+   Don't just list facts - provide meaningful comparisons and insights.
 
-    6. FINISHING:
-    - Call finish() with a comprehensive summary that ANSWERS the user's question
-    - For comparisons, include comparative analysis, not just individual descriptions
-    - Highlight key differences and similarities
+7. RESPONSE QUALITY:
+   - Lead with KEY INFORMATION that directly answers the user's question
+   - For conservation queries, highlight IUCN status and CITES listing
+   - For size queries, mention both male and female sizes if available
+   - Always mention that full data is available in artifacts
+   - Be concise but comprehensive
 
-    Always create artifacts when retrieving data from WoRMS.
-    """
+8. FINISHING:
+   - Call finish() with a summary that DIRECTLY ANSWERS the user's question
+   - Include specific facts: conservation status, sizes, locations, etc.
+   - For comparisons, include comparative insights, not just individual descriptions
+   - Highlight key differences and similarities
+   - Keep it concise but informative
+
+EXAMPLES:
+
+Example 1 - Common name query:
+User: "What's the conservation status of killer whales?"
+Process: search_by_common_name("killer whale") → "Orcinus orca" → get_species_attributes("Orcinus orca") → extract IUCN status → finish()
+
+Example 2 - Scientific name query:
+User: "Tell me about Carcharodon carcharias"
+Process: get_taxonomic_record() → get_species_attributes() → get_species_distribution() → finish()
+
+Example 3 - Comparison:
+User: "Compare great white shark and tiger shark"
+Process: search_by_common_name for both → get_species_attributes for both → compare results → finish()
+
+Always create artifacts when retrieving data from WoRMS.
+"""
 
 if __name__ == "__main__":
     agent = WoRMSReActAgent()

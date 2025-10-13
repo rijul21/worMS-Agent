@@ -89,6 +89,16 @@ class AttributesParams(BaseModel):
         examples=[137205, 104625, 137094]
     )
 
+class VernacularSearchParams(BaseModel):
+    """Parameters for searching species by common/vernacular name"""
+    vernacular_name: str = Field(...,
+        description="Common name to search for",
+        examples=["killer whale", "great white shark", "bottlenose dolphin"]
+    )
+    like: Optional[bool] = Field(False,
+        description="Use fuzzy matching for names"
+    )
+
 class NoParams(BaseModel):
     """An empty model for entrypoints that require no parameters."""
     pass
@@ -166,6 +176,18 @@ class WoRMS:
     def build_attributes_url(self, params: AttributesParams) -> str:
         """Build URL for getting species attributes/traits"""
         return f"{self.worms_api_base_url}/AphiaAttributesByAphiaID/{params.aphia_id}"
+    
+    def build_vernacular_search_url(self, params: VernacularSearchParams) -> str:
+        """Build URL for searching species by vernacular/common name"""
+        encoded_name = quote(params.vernacular_name)
+        query_params = {}
+        
+        if params.like is not None:
+            query_params['like'] = str(params.like).lower()
+            
+        query_string = urlencode(query_params) if query_params else ''
+        base_url = f"{self.worms_api_base_url}/AphiaRecordsByVernacular/{encoded_name}"
+        return f"{base_url}?{query_string}" if query_string else base_url
 
     # Execution methods 
     def execute_request(self, url: str) -> Dict:
