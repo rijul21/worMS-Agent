@@ -116,6 +116,8 @@ class WoRMSReActAgent(IChatBioAgent):
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
                     
+                    loop = asyncio.get_event_loop()
+                    
                     # Get synonyms from WoRMS API
                     syn_params = SynonymsParams(aphia_id=aphia_id)
                     api_url = self.worms_logic.build_synonyms_url(syn_params)
@@ -171,6 +173,8 @@ class WoRMSReActAgent(IChatBioAgent):
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
                     
+                    loop = asyncio.get_event_loop()
+                    
                     # Get distribution from WoRMS API
                     from worms_api import DistributionParams
                     dist_params = DistributionParams(aphia_id=aphia_id)
@@ -225,6 +229,8 @@ class WoRMSReActAgent(IChatBioAgent):
                     if not aphia_id:
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    loop = asyncio.get_event_loop()
                                         
                     # Get vernacular names from WoRMS API
                     from worms_api import VernacularParams
@@ -291,6 +297,8 @@ class WoRMSReActAgent(IChatBioAgent):
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
                     
+                    loop = asyncio.get_event_loop()
+                    
                     # Get sources from WoRMS API
                     from worms_api import SourcesParams
                     sources_params = SourcesParams(aphia_id=aphia_id)
@@ -351,6 +359,8 @@ class WoRMSReActAgent(IChatBioAgent):
                     if not aphia_id:
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    loop = asyncio.get_event_loop()
                     
                     # Get record from WoRMS API
                     from worms_api import RecordParams
@@ -414,6 +424,8 @@ class WoRMSReActAgent(IChatBioAgent):
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
                     
+                    loop = asyncio.get_event_loop()
+                    
                     # Get classification from WoRMS API
                     from worms_api import ClassificationParams
                     class_params = ClassificationParams(aphia_id=aphia_id)
@@ -475,6 +487,8 @@ class WoRMSReActAgent(IChatBioAgent):
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
                     
+                    loop = asyncio.get_event_loop()
+                    
                     # Get child taxa from WoRMS API
                     from worms_api import ChildrenParams
                     children_params = ChildrenParams(aphia_id=aphia_id)
@@ -532,6 +546,8 @@ class WoRMSReActAgent(IChatBioAgent):
                     if not aphia_id:
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    loop = asyncio.get_event_loop()
                     
                     # Get external IDs from WoRMS API
                     ext_params = ExternalIDParams(aphia_id=aphia_id)
@@ -592,6 +608,8 @@ class WoRMSReActAgent(IChatBioAgent):
                     if not aphia_id:
                         await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    loop = asyncio.get_event_loop()
                     
                     # Get attributes from WoRMS API
                     attr_params = AttributesParams(aphia_id=aphia_id)
