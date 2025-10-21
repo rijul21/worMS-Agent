@@ -325,9 +325,16 @@ class WoRMSReActAgent(IChatBioAgent):
                         SynonymsParams(aphia_id=aphia_id)
                     )
                     
+                   
+                    await process.log("Creating artifact..")
+
+                    import json
+                    content_bytes = json.dumps(all_synonyms, indent=2).encode('utf-8')
+
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Synonyms for {species_name} (AphiaID: {aphia_id})",
+                        content=content_bytes,  # ← THE ACTUAL DATA!
                         uris=[base_api_url],
                         metadata={
                             "aphia_id": aphia_id,
@@ -506,10 +513,15 @@ class WoRMSReActAgent(IChatBioAgent):
                     
                     # Create artifact
                     await process.log("Creating artifact..")
-                    
+
+                    # Convert data to JSON bytes
+                    import json
+                    content_bytes = json.dumps(all_distributions, indent=2).encode('utf-8')
+
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Distribution for {species_name} (AphiaID: {aphia_id})",
+                        content=content_bytes,  # ← THE ACTUAL DATA!
                         uris=[api_url],
                         metadata={
                             "aphia_id": aphia_id,
