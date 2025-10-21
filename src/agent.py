@@ -11,7 +11,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 import dotenv
 import asyncio
 
-from worms_api import (
+from src.worms_api import (
     WoRMS, 
     SynonymsParams, 
     DistributionParams, 

@@ -1,32 +1,19 @@
+"""
+Pytest configuration file for WoRMS Agent tests.
+"""
 import pytest
-
 from ichatbio.agent_response import ResponseChannel, ResponseContext, ResponseMessage
+from src.agent import WoRMSReActAgent
 
 
 class InMemoryResponseChannel(ResponseChannel):
-    """
-    Useful for interacting with agents locally (e.g., unit tests, command line interfaces) instead of sending responses
-    over the network. The `message_buffer` is populated by running an agent.
-
-    Example:
-
-        messages = list()
-        channel = InMemoryResponseChannel(messages)
-        context = ResponseContext(channel)
-
-        # `messages` starts empty
-        agent = HelloWorldAgent()
-        await agent.run(context, "Hi", "hello", None)
-        # `messages` should now be populated
-
-        assert messages[1].text == "Hello world!"
-    """
-
+    """In-memory response channel for testing"""
+    
     def __init__(self, message_buffer: list):
         self.message_buffer = message_buffer
-
+    
     async def submit(self, message: ResponseMessage, context_id: str):
-        print(f"Submitting message: {type(message).__name__}, Attributes: {vars(message)}")
+        """Store messages in buffer instead of sending"""
         self.message_buffer.append(message)
 
 
@@ -34,15 +21,18 @@ TEST_CONTEXT_ID = "617727d1-4ce8-4902-884c-db786854b51c"
 
 
 @pytest.fixture(scope="function")
+def agent():
+    """Create a fresh WoRMSReActAgent instance for each test"""
+    return WoRMSReActAgent()
+
+
+@pytest.fixture(scope="function")
 def messages() -> list[ResponseMessage]:
-    """During unit tests, the agent's replies to iChatBio will be stored in this list"""
-    return list()
+    """Create an empty message buffer for each test"""
+    return []
 
 
 @pytest.fixture(scope="function")
 def context(messages) -> ResponseContext:
-    """
-    A special test context which gathers agent response messages as they are generated. Messages that do not occur
-    within a process block are assigned the context_id ``"617727d1-4ce8-4902-884c-db786854b51c"``.
-    """
+    """Create a ResponseContext with in-memory channel for each test"""
     return ResponseContext(InMemoryResponseChannel(messages), TEST_CONTEXT_ID)
