@@ -574,18 +574,34 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Fetching vernacular names for {species_name}") as process:
                 try:
-                   # Get AphiaID (cached)
+                    await process.log(f"Request received: {species_name}")
+                    
+                    # Get AphiaID (cached)
+                    await process.log("Retrieving AphiaID from cache or WoRMS")
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
+                    
                     if not aphia_id:
-                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        await process.log(
+                            f"Species not found in WoRMS database",
+                            data={"species_name": species_name}
+                        )
                         return f"Species '{species_name}' not found in WoRMS database."
                     
+                    await process.log(
+                        "AphiaID resolved successfully",
+                        data={"aphia_id": aphia_id, "species": species_name}
+                    )
+                    
                     loop = asyncio.get_event_loop()
-                                        
-                    # Get vernacular names from WoRMS API
-                    from worms_api import VernacularParams
+                    
+                    # Single API call
                     vern_params = VernacularParams(aphia_id=aphia_id)
                     api_url = self.worms_logic.build_vernacular_url(vern_params)
+                    
+                    await process.log(
+                        "Fetching vernacular names data",
+                        data={"url": api_url}
+                    )
                     
                     raw_response = await loop.run_in_executor(
                         None,
@@ -595,42 +611,98 @@ class WoRMSReActAgent(IChatBioAgent):
                     # Normalize response
                     vernaculars = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                     
+                    await process.log(
+                        "Vernacular names retrieval complete",
+                        data={"total_names": len(vernaculars)}
+                    )
+                    
                     if not vernaculars:
-                        await process.log(f"No vernacular names found for {species_name} (AphiaID: {aphia_id})")
+                        await process.log("No vernacular names found for species")
                         return f"No vernacular names found for {species_name}"
                     
-                    await process.log(f"Found {len(vernaculars)} vernacular name records for {species_name} from WoRMS API")
+                    # Analyze vernacular names - extract ALL fields
+                    await process.log("Analyzing vernacular names data")
                     
-                    # Extract sample names with languages
-                    samples = []
-                    languages = set()
-                    for v in vernaculars[:5]:
+                    languages = {}
+                    language_codes = set()
+                    names_by_language = {}
+                    
+                    for v in vernaculars:
                         if isinstance(v, dict):
-                            name = v.get('vernacular', 'Unknown')
-                            lang = v.get('language', 'Unknown')
-                            languages.add(lang)
-                            samples.append(f"{name} ({lang})")
+                            vernacular = v.get('vernacular', 'Unknown')
+                            language = v.get('language', 'Unknown')
+                            language_code = v.get('language_code', 'Unknown')
+                            
+                            # Count by language
+                            languages[language] = languages.get(language, 0) + 1
+                            language_codes.add(language_code)
+                            
+                            # Group names by language
+                            if language not in names_by_language:
+                                names_by_language[language] = []
+                            names_by_language[language].append(vernacular)
                     
-                    # Create artifact
+                    analysis_data = {
+                        "total_names": len(vernaculars),
+                        "unique_languages": len(languages),
+                        "language_breakdown": languages,
+                        "language_codes": list(language_codes)
+                    }
+                    
+                    await process.log(
+                        "Vernacular names analysis complete",
+                        data=analysis_data
+                    )
+                    
+                    # Create artifact with actual data
+                    await process.log("Creating artifact..")
+                    
+                    import json
+                    content_bytes = json.dumps(vernaculars, indent=2).encode('utf-8')
+                    
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Vernacular names for {species_name} (AphiaID: {aphia_id}) - {len(vernaculars)} names",
+                        description=f"Vernacular names for {species_name} (AphiaID: {aphia_id})",
+                        content=content_bytes,
                         uris=[api_url],
                         metadata={
-                            "aphia_id": aphia_id, 
-                            "count": len(vernaculars),
+                            "aphia_id": aphia_id,
                             "species": species_name,
-                            "languages": list(languages)
+                            **analysis_data
                         }
                     )
                     
-                    return f"Found {len(vernaculars)} vernacular names for {species_name} in {len(languages)} languages. Examples: {', '.join(samples)}. Full data available in artifact."
-                        
+                    # Build summary
+                    top_languages = sorted(languages.items(), key=lambda x: x[1], reverse=True)[:3]
+                    language_summary = ", ".join([f"{lang} ({count})" for lang, count in top_languages])
+                    
+                    # Get sample names from top languages
+                    sample_names = []
+                    for lang, _ in top_languages[:2]:
+                        if lang in names_by_language and names_by_language[lang]:
+                            sample_names.append(f"{names_by_language[lang][0]} ({lang})")
+                    
+                    summary = (
+                        f"Found {len(vernaculars)} vernacular names for {species_name} "
+                        f"in {len(languages)} languages. "
+                        f"Top languages: {language_summary}. "
+                        f"Examples: {', '.join(sample_names)}. "
+                        f"Full data available in artifact."
+                    )
+                    
+                    return summary
+                            
                 except Exception as e:
-                    await process.log(f"Error retrieving vernacular names for {species_name}: {type(e).__name__} - {str(e)}")
+                    await process.log(
+                        "Error during vernacular names retrieval",
+                        data={
+                            "error": str(e),
+                            "error_type": type(e).__name__,
+                            "species_name": species_name
+                        }
+                    )
                     return f"Error retrieving vernacular names: {str(e)}"
-                
-        
+
 
         @tool
         async def get_literature_sources(species_name: str) -> str:
@@ -641,18 +713,34 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Fetching literature sources for {species_name}") as process:
                 try:
+                    await process.log(f"Request received: {species_name}")
+                    
                     # Get AphiaID (cached)
+                    await process.log("Retrieving AphiaID from cache or WoRMS")
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
+                    
                     if not aphia_id:
-                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        await process.log(
+                            f"Species not found in WoRMS database",
+                            data={"species_name": species_name}
+                        )
                         return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    await process.log(
+                        "AphiaID resolved successfully",
+                        data={"aphia_id": aphia_id, "species": species_name}
+                    )
                     
                     loop = asyncio.get_event_loop()
                     
-                    # Get sources from WoRMS API
-                    from worms_api import SourcesParams
+                    # Single API call
                     sources_params = SourcesParams(aphia_id=aphia_id)
                     api_url = self.worms_logic.build_sources_url(sources_params)
+                    
+                    await process.log(
+                        "Fetching literature sources data",
+                        data={"url": api_url}
+                    )
                     
                     raw_response = await loop.run_in_executor(
                         None,
@@ -662,37 +750,114 @@ class WoRMSReActAgent(IChatBioAgent):
                     # Normalize response
                     sources = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                     
+                    await process.log(
+                        "Literature sources retrieval complete",
+                        data={"total_sources": len(sources)}
+                    )
+                    
                     if not sources:
-                        await process.log(f"No literature sources found for {species_name} (AphiaID: {aphia_id})")
+                        await process.log("No literature sources found for species")
                         return f"No literature sources found for {species_name}"
                     
-                    await process.log(f"Found {len(sources)} literature source records for {species_name} from WoRMS API")
+                    # Analyze literature sources - extract ALL fields
+                    await process.log("Analyzing literature sources data")
                     
-                    # Extract sample citations
-                    samples = []
-                    for s in sources[:3]:
-                        if isinstance(s, dict):
-                            title = s.get('title', s.get('reference', 'Unknown'))[:50]
-                            samples.append(title + "..." if len(title) == 50 else title)
+                    use_types = {}
+                    sources_with_url = 0
+                    sources_with_doi = 0
+                    sources_with_fulltext = 0
+                    sources_with_link = 0
                     
-                    # Create artifact
+                    for source in sources:
+                        if isinstance(source, dict):
+                            # Count by use type
+                            use = source.get('use', 'Unknown')
+                            use_types[use] = use_types.get(use, 0) + 1
+                            
+                            # Count sources with different link types
+                            if source.get('url'):
+                                sources_with_url += 1
+                            if source.get('doi'):
+                                sources_with_doi += 1
+                            if source.get('fulltext'):
+                                sources_with_fulltext += 1
+                            if source.get('link'):
+                                sources_with_link += 1
+                    
+                    analysis_data = {
+                        "total_sources": len(sources),
+                        "use_types": use_types,
+                        "sources_with_url": sources_with_url,
+                        "sources_with_doi": sources_with_doi,
+                        "sources_with_fulltext": sources_with_fulltext,
+                        "sources_with_link": sources_with_link
+                    }
+                    
+                    await process.log(
+                        "Literature sources analysis complete",
+                        data=analysis_data
+                    )
+                    
+                    # Create artifact with actual data
+                    await process.log("Creating artifact..")
+                    
+                    import json
+                    content_bytes = json.dumps(sources, indent=2).encode('utf-8')
+                    
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Literature sources for {species_name} (AphiaID: {aphia_id}) - {len(sources)} sources",
+                        description=f"Literature sources for {species_name} (AphiaID: {aphia_id})",
+                        content=content_bytes,
                         uris=[api_url],
                         metadata={
-                            "aphia_id": aphia_id, 
-                            "count": len(sources),
-                            "species": species_name
+                            "aphia_id": aphia_id,
+                            "species": species_name,
+                            **analysis_data
                         }
                     )
                     
-                    return f"Found {len(sources)} literature sources for {species_name}. Sample titles: {', '.join(samples)}. Full data available in artifact."
-                        
+                    # Build summary
+                    use_summary = ", ".join([f"{count} {use}" for use, count in use_types.items()])
+                    
+                    # Extract sample references
+                    sample_refs = []
+                    for source in sources[:3]:
+                        if isinstance(source, dict):
+                            ref = source.get('reference', 'Unknown')[:60]
+                            if len(ref) == 60:
+                                ref += "..."
+                            sample_refs.append(ref)
+                    
+                    summary_parts = [
+                        f"Found {len(sources)} literature sources for {species_name}."
+                    ]
+                    
+                    if use_types:
+                        summary_parts.append(f"Types: {use_summary}.")
+                    
+                    if sources_with_doi > 0:
+                        summary_parts.append(f"{sources_with_doi} with DOI.")
+                    
+                    if sources_with_fulltext > 0:
+                        summary_parts.append(f"{sources_with_fulltext} with full text.")
+                    
+                    if sample_refs:
+                        summary_parts.append(f"Sample: {sample_refs[0]}.")
+                    
+                    summary_parts.append("Full data available in artifact.")
+                    
+                    return " ".join(summary_parts)
+                            
                 except Exception as e:
-                    await process.log(f"Error retrieving literature sources for {species_name}: {type(e).__name__} - {str(e)}")
+                    await process.log(
+                        "Error during literature sources retrieval",
+                        data={
+                            "error": str(e),
+                            "error_type": type(e).__name__,
+                            "species_name": species_name
+                        }
+                    )
                     return f"Error retrieving literature sources: {str(e)}"
-                
 
         
         @tool
