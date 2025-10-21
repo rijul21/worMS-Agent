@@ -151,25 +151,23 @@ class WoRMSReActAgent(IChatBioAgent):
                     
                     loop = asyncio.get_event_loop()
                     
-                    # Initialize pagination
+                    # Initialize pagination (offset-based, returns 50 per page)
                     all_synonyms = []
-                    offset = 0
-                    page_size = 50
+                    offset = 1  # WoRMS uses 1-based offset
                     page_num = 1
-                    
+                    page_size = 50  # Fixed by API
                     
                     # Paginated retrieval loop
                     while True:
                         syn_params = SynonymsParams(
                             aphia_id=aphia_id,
-                            offset=offset,
-                            limit=page_size
+                            offset=offset
                         )
                         api_url = self.worms_logic.build_synonyms_url(syn_params)
                         
                         await process.log(
                             f"Fetching page {page_num}",
-                            data={"offset": offset, "limit": page_size, "url": api_url}
+                            data={"offset": offset, "url": api_url}
                         )
                         
                         raw_response = await loop.run_in_executor(
@@ -211,17 +209,114 @@ class WoRMSReActAgent(IChatBioAgent):
                         await process.log("No synonyms found for species")
                         return f"No synonyms found for {species_name}"
                     
-                    # Analyze synonym types
-                    await process.log("Fetching synonym types")
-                    synonym_types = {}
+                    # Analyze ALL fields from synonym data
+                    await process.log("Analyzing synonym data")
+                    
+                    synonym_statuses = {}
+                    taxonomic_ranks = {}
+                    valid_names = set()
+                    kingdoms = set()
+                    phylums = set()
+                    classes = set()
+                    orders = set()
+                    families = set()
+                    genera = set()
+                    
+                    marine_count = 0
+                    brackish_count = 0
+                    freshwater_count = 0
+                    terrestrial_count = 0
+                    extinct_count = 0
+                    
+                    unaccept_reasons = {}
+                    match_types = {}
+                    
                     for syn in all_synonyms:
                         if isinstance(syn, dict):
+                            # Status
                             status = syn.get('status', 'unknown')
-                            synonym_types[status] = synonym_types.get(status, 0) + 1
+                            synonym_statuses[status] = synonym_statuses.get(status, 0) + 1
+                            
+                            # Rank
+                            rank = syn.get('rank', 'unknown')
+                            taxonomic_ranks[rank] = taxonomic_ranks.get(rank, 0) + 1
+                            
+                            # Valid name
+                            valid_name = syn.get('valid_name')
+                            if valid_name:
+                                valid_names.add(valid_name)
+                            
+                            # Taxonomy
+                            kingdom = syn.get('kingdom')
+                            if kingdom:
+                                kingdoms.add(kingdom)
+                            
+                            phylum = syn.get('phylum')
+                            if phylum:
+                                phylums.add(phylum)
+                            
+                            class_name = syn.get('class')
+                            if class_name:
+                                classes.add(class_name)
+                            
+                            order = syn.get('order')
+                            if order:
+                                orders.add(order)
+                            
+                            family = syn.get('family')
+                            if family:
+                                families.add(family)
+                            
+                            genus = syn.get('genus')
+                            if genus:
+                                genera.add(genus)
+                            
+                            # Environment flags
+                            if syn.get('isMarine'):
+                                marine_count += 1
+                            if syn.get('isBrackish'):
+                                brackish_count += 1
+                            if syn.get('isFreshwater'):
+                                freshwater_count += 1
+                            if syn.get('isTerrestrial'):
+                                terrestrial_count += 1
+                            if syn.get('isExtinct'):
+                                extinct_count += 1
+                            
+                            # Unaccept reason
+                            unaccept = syn.get('unacceptreason')
+                            if unaccept:
+                                unaccept_reasons[unaccept] = unaccept_reasons.get(unaccept, 0) + 1
+                            
+                            # Match type
+                            match_type = syn.get('match_type')
+                            if match_type:
+                                match_types[match_type] = match_types.get(match_type, 0) + 1
+                    
+                    analysis_data = {
+                        "synonym_statuses": synonym_statuses,
+                        "taxonomic_ranks": taxonomic_ranks,
+                        "unique_valid_names": len(valid_names),
+                        "kingdoms": list(kingdoms),
+                        "phylums": list(phylums),
+                        "classes": list(classes),
+                        "orders": list(orders),
+                        "families": list(families),
+                        "genera": list(genera),
+                        "environment": {
+                            "marine": marine_count,
+                            "brackish": brackish_count,
+                            "freshwater": freshwater_count,
+                            "terrestrial": terrestrial_count,
+                            "extinct": extinct_count
+                        },
+                        "unaccept_reasons": unaccept_reasons,
+                        "match_types": match_types
+                    }
                     
                     await process.log(
-                        "Synonyms Breakdown",
-                        data={"synonym_breakdown": synonym_types}
+                        "Synonym analysis complete",
+                        data=analysis_data
                     )
                     
                     # Create artifact
@@ -239,23 +334,29 @@ class WoRMSReActAgent(IChatBioAgent):
                             "species": species_name,
                             "total_count": len(all_synonyms),
                             "pages_fetched": page_num,
-                            "synonym_types": synonym_types
+                            **analysis_data
                         }
                     )
                     
                     # Build summary
                     samples = [s.get('scientificname', 'Unknown') for s in all_synonyms[:5] if isinstance(s, dict)]
-                    type_summary = ", ".join([f"{count} {stype}" for stype, count in synonym_types.items()])
+                    status_summary = ", ".join([f"{count} {status}" for status, count in synonym_statuses.items()])
                     
-                    summary = (
-                        f"Found {len(all_synonyms)} synonyms for {species_name} "
-                        f"across {page_num} pages. "
-                        f"Types: {type_summary}. "
-                        f"Examples: {', '.join(samples)}. "
-                        f"Full data available in artifact."
-                    )
+                    summary_parts = [
+                        f"Found {len(all_synonyms)} synonyms for {species_name} across {page_num} pages.",
+                        f"Status: {status_summary}."
+                    ]
                     
-                    return summary
+                    if valid_names:
+                        summary_parts.append(f"Valid names: {len(valid_names)}.")
+                    
+                    if extinct_count > 0:
+                        summary_parts.append(f"{extinct_count} extinct records.")
+                    
+                    summary_parts.append(f"Examples: {', '.join(samples)}.")
+                    summary_parts.append("Full data available in artifact.")
+                    
+                    return " ".join(summary_parts)
                             
                 except Exception as e:
                     await process.log(
@@ -267,7 +368,7 @@ class WoRMSReActAgent(IChatBioAgent):
                         }
                     )
                     return f"Error retrieving synonyms: {str(e)}"
-                
+                        
         @tool
         async def get_species_distribution(species_name: str) -> str:
             """Get geographic distribution data for a marine species.
@@ -1071,11 +1172,22 @@ CRITICAL INSTRUCTIONS:
    - Examples of common names: killer whale, great white, bottlenose dolphin, tiger shark, hammerhead
    - Examples of scientific names: Orcinus orca, Carcharodon carcharias, Tursiops truncatus
 
-2. PLANNING YOUR APPROACH:
-   - For simple queries (e.g., "What's the conservation status?"), call only relevant tools
-   - For comprehensive queries (e.g., "Tell me everything about X"), call multiple tools systematically
-   - For comparison queries, gather the same data points for each species
-   - Typical order: search (if common name) → taxonomy → attributes → distribution → names → sources
+2. UNDERSTANDING THE USER'S REQUEST - READ CAREFULLY:
+   - **SPECIFIC single-topic queries**: Call ONLY the ONE relevant tool
+     * "What is the distribution?" → ONLY get_species_distribution
+     * "What are the synonyms?" → ONLY get_species_synonyms
+     * "What are common names?" → ONLY get_vernacular_names
+     * "What's the conservation status?" → ONLY get_species_attributes
+     * "What's the taxonomy?" → ONLY get_taxonomic_record OR get_taxonomic_classification
+   
+   - **Comprehensive queries**: Call multiple relevant tools
+     * "Tell me everything about X" → call multiple tools
+     * "Give me a full report on X" → call multiple tools
+     * "What can you tell me about X?" → call multiple tools
+   
+   - **Comparison queries**: Call the same tool(s) for each species
+     * "Compare distribution of X and Y" → get_species_distribution for both
+     * "Compare X and Y" → call relevant tools for both species
 
 3. TOOL USAGE GUIDELINES:
    
@@ -1095,6 +1207,7 @@ CRITICAL INSTRUCTIONS:
    
    DISTRIBUTION & NAMES:
    - get_species_distribution: Geographic distribution data (where the species lives)
+     * Use for: distribution, range, geographic locations, invasiveness
    - get_vernacular_names: Common names in different languages for a known species
    - get_species_synonyms: Alternative scientific names (historical names, misspellings)
    
@@ -1111,14 +1224,42 @@ CRITICAL INSTRUCTIONS:
    - Don't repeatedly call the same tool if it returns empty results
    - If a species is not found, clearly inform the user and suggest alternatives
 
-5. EFFICIENCY & AVOIDING LOOPS:
+5. EFFICIENCY & AVOIDING UNNECESSARY CALLS:
+   - **READ THE USER'S QUESTION CAREFULLY** - only call tools that answer their specific question
+   - If user asks ONLY about distribution, do NOT call synonyms, vernacular names, attributes, etc.
+   - If user asks ONLY about synonyms, do NOT call distribution, attributes, etc.
    - Call each tool AT MOST ONCE per species (except search_by_common_name if needed)
-   - Don't retry failed calls - move on to other tools
+   - Don't retry failed calls - move on or inform the user
    - If you get a complete answer, call finish() immediately
-   - Only call tools that are relevant to the user's specific question
-   - If user asks for "everything", call all relevant tools systematically
+   - **DO NOT CALL ALL TOOLS BY DEFAULT** - only call what's needed to answer the question
 
-6. COMPARISON REQUIREMENTS:
+6. EXAMPLES OF CORRECT BEHAVIOR:
+
+   Example 1 - Distribution query:
+   User: "What is the distribution of Carcinus maenas?"
+   Correct: Call ONLY get_species_distribution → finish()
+   Wrong: Call distribution + synonyms + vernacular + attributes + sources...
+   
+   Example 2 - Synonym query:
+   User: "What are the synonyms for Orcinus orca?"
+   Correct: Call ONLY get_species_synonyms → finish()
+   Wrong: Call synonyms + distribution + attributes...
+   
+   Example 3 - Conservation query:
+   User: "What's the conservation status of great white sharks?"
+   Correct: search_by_common_name → get_species_attributes → finish()
+   Wrong: Call all tools
+   
+   Example 4 - Comprehensive query:
+   User: "Tell me everything about Tursiops truncatus"
+   Correct: Call multiple relevant tools (taxonomy, attributes, distribution, names)
+   
+   Example 5 - Comparison query:
+   User: "Compare the distribution of Orcinus orca and Tursiops truncatus"
+   Correct: Call get_species_distribution for both species → finish()
+   Wrong: Call all tools for both species
+
+7. COMPARISON REQUIREMENTS:
    When comparing multiple species, provide comparative analysis:
    - Which has wider distribution?
    - Which has larger body size?
@@ -1128,7 +1269,7 @@ CRITICAL INSTRUCTIONS:
    
    Don't just list facts - provide meaningful comparisons and insights.
 
-7. RESPONSE QUALITY:
+8. RESPONSE QUALITY:
    - Lead with KEY INFORMATION that directly answers the user's question
    - DON'T ask "Would you like me to...?" - just provide the answer
    - For conservation queries, ALWAYS extract and state IUCN status if available
@@ -1136,26 +1277,14 @@ CRITICAL INSTRUCTIONS:
    - Always mention that full data is available in artifacts
    - Be concise but comprehensive
 
-8. FINISHING:
+9. FINISHING:
    - Call finish() with a summary that DIRECTLY ANSWERS the user's question
    - Include specific facts: conservation status, sizes, locations, etc.
    - For comparisons, include comparative insights, not just individual descriptions
    - Highlight key differences and similarities
    - Keep it concise but informative
 
-EXAMPLES:
-
-Example 1 - Common name query:
-User: "What's the conservation status of killer whales?"
-Process: search_by_common_name("killer whale") → "Orcinus orca" → get_species_attributes("Orcinus orca") → extract IUCN status → finish()
-
-Example 2 - Scientific name query:
-User: "Tell me about Carcharodon carcharias"
-Process: get_taxonomic_record() → get_species_attributes() → get_species_distribution() → finish()
-
-Example 3 - Comparison:
-User: "Compare great white shark and tiger shark"
-Process: search_by_common_name for both → get_species_attributes for both → compare results → finish()
+**CRITICAL REMINDER**: The user asked a SPECIFIC question. Answer ONLY what they asked. Do not call unnecessary tools. If they ask about distribution, give them distribution. If they ask about synonyms, give them synonyms. Only call multiple tools if they explicitly ask for comprehensive information.
 
 Always create artifacts when retrieving data from WoRMS.
 """

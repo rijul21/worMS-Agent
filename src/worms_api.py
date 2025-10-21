@@ -37,12 +37,8 @@ class SynonymsParams(BaseModel):
         examples=[137205, 104625, 137094]
     )
     
-    offset: Optional[int] = Field(None,
-        description="Starting record number for pagination"
-    )
-    
-    limit: Optional[int] = Field(None,
-        description="Maximum number of records to return"
+    offset: Optional[int] = Field(1,
+        description="Starting record number (1-based). API returns 50 records per page."
     )
 
 class DistributionParams(BaseModel):
@@ -211,7 +207,8 @@ class WoRMS:
     def build_synonyms_url(self, params: SynonymsParams) -> str:
         """Build URL for getting species synonyms"""
         query_params = {}
-        query_params = self._add_pagination_params(query_params, params.offset, params.limit)
+        if params.offset and params.offset > 1:
+            query_params['offset'] = str(params.offset)
         
         query_string = urlencode(query_params) if query_params else ''
         base_url = f"{self.worms_api_base_url}/AphiaSynonymsByAphiaID/{params.aphia_id}"
