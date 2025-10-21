@@ -6,7 +6,7 @@ from typing import Optional, Dict
 from urllib.parse import urlencode, quote
 import cloudscraper
 
-# Parameter Models - 7 endpoints total
+# Parameter Models - with pagination support
 class SpeciesSearchParams(BaseModel):
     """Parameters for searching marine species in WoRMS"""
     scientific_name: str = Field(..., 
@@ -21,12 +21,28 @@ class SpeciesSearchParams(BaseModel):
     marine_only: Optional[bool] = Field(True,
         description="Return only marine species"
     )
+    
+    offset: Optional[int] = Field(None,
+        description="Starting record number for pagination"
+    )
+    
+    limit: Optional[int] = Field(None,
+        description="Maximum number of records to return"
+    )
 
 class SynonymsParams(BaseModel):
     """Parameters for getting synonyms of a species"""
     aphia_id: int = Field(...,
         description="The AphiaID of the species to get synonyms for",
         examples=[137205, 104625, 137094]
+    )
+    
+    offset: Optional[int] = Field(None,
+        description="Starting record number for pagination"
+    )
+    
+    limit: Optional[int] = Field(None,
+        description="Maximum number of records to return"
     )
 
 class DistributionParams(BaseModel):
@@ -35,6 +51,14 @@ class DistributionParams(BaseModel):
         description="The AphiaID of the species to get distribution for",
         examples=[137205, 104625, 137094]
     )
+    
+    offset: Optional[int] = Field(None,
+        description="Starting record number for pagination"
+    )
+    
+    limit: Optional[int] = Field(None,
+        description="Maximum number of records to return"
+    )
 
 class VernacularParams(BaseModel):
     """Parameters for getting vernacular/common names of a species"""
@@ -42,12 +66,28 @@ class VernacularParams(BaseModel):
         description="The AphiaID of the species to get vernacular names for",
         examples=[137205, 104625, 137094]
     )
+    
+    offset: Optional[int] = Field(None,
+        description="Starting record number for pagination"
+    )
+    
+    limit: Optional[int] = Field(None,
+        description="Maximum number of records to return"
+    )
 
 class SourcesParams(BaseModel):
     """Parameters for getting literature sources/references of a species"""
     aphia_id: int = Field(...,
         description="The AphiaID of the species to get sources for",
         examples=[137205, 104625, 137094]
+    )
+    
+    offset: Optional[int] = Field(None,
+        description="Starting record number for pagination"
+    )
+    
+    limit: Optional[int] = Field(None,
+        description="Maximum number of records to return"
     )
 
 class RecordParams(BaseModel):
@@ -69,6 +109,18 @@ class ChildrenParams(BaseModel):
     aphia_id: int = Field(...,
         description="The AphiaID of the species to get child taxa for",
         examples=[137205, 104625, 137094]
+    )
+    
+    offset: Optional[int] = Field(None,
+        description="Starting record number for pagination"
+    )
+    
+    limit: Optional[int] = Field(None,
+        description="Maximum number of records to return"
+    )
+    
+    marine_only: Optional[bool] = Field(None,
+        description="Return only marine species"
     )
 
 class ExternalIDParams(BaseModel):
@@ -98,6 +150,14 @@ class VernacularSearchParams(BaseModel):
     like: Optional[bool] = Field(False,
         description="Use fuzzy matching for names"
     )
+    
+    offset: Optional[int] = Field(None,
+        description="Starting record number for pagination"
+    )
+    
+    limit: Optional[int] = Field(None,
+        description="Maximum number of records to return"
+    )
 
 class NoParams(BaseModel):
     """An empty model for entrypoints that require no parameters."""
@@ -123,7 +183,15 @@ class WoRMS:
                 value = config.get(key, default)
         return value if value is not None else default
 
-    # URL Building Methods - 5 core endpoints + search
+    def _add_pagination_params(self, query_params: dict, offset: Optional[int], limit: Optional[int]) -> dict:
+        """Helper to add pagination parameters to query dict"""
+        if offset is not None:
+            query_params['offset'] = str(offset)
+        if limit is not None:
+            query_params['limit'] = str(limit)
+        return query_params
+
+    # URL Building Methods
     def build_species_search_url(self, params: SpeciesSearchParams) -> str:
         """Build URL for searching species by name"""
         encoded_name = quote(params.scientific_name)
@@ -133,6 +201,8 @@ class WoRMS:
             query_params['like'] = str(params.like).lower()
         if params.marine_only is not None:
             query_params['marine_only'] = str(params.marine_only).lower()
+        
+        query_params = self._add_pagination_params(query_params, params.offset, params.limit)
             
         query_string = urlencode(query_params) if query_params else ''
         base_url = f"{self.worms_api_base_url}/AphiaRecordsByName/{encoded_name}"
@@ -140,19 +210,39 @@ class WoRMS:
 
     def build_synonyms_url(self, params: SynonymsParams) -> str:
         """Build URL for getting species synonyms"""
-        return f"{self.worms_api_base_url}/AphiaSynonymsByAphiaID/{params.aphia_id}"
+        query_params = {}
+        query_params = self._add_pagination_params(query_params, params.offset, params.limit)
+        
+        query_string = urlencode(query_params) if query_params else ''
+        base_url = f"{self.worms_api_base_url}/AphiaSynonymsByAphiaID/{params.aphia_id}"
+        return f"{base_url}?{query_string}" if query_string else base_url
 
     def build_distribution_url(self, params: DistributionParams) -> str:
         """Build URL for getting species distribution"""
-        return f"{self.worms_api_base_url}/AphiaDistributionsByAphiaID/{params.aphia_id}"
+        query_params = {}
+        query_params = self._add_pagination_params(query_params, params.offset, params.limit)
+        
+        query_string = urlencode(query_params) if query_params else ''
+        base_url = f"{self.worms_api_base_url}/AphiaDistributionsByAphiaID/{params.aphia_id}"
+        return f"{base_url}?{query_string}" if query_string else base_url
 
     def build_vernacular_url(self, params: VernacularParams) -> str:
         """Build URL for getting species vernacular/common names"""
-        return f"{self.worms_api_base_url}/AphiaVernacularsByAphiaID/{params.aphia_id}"
+        query_params = {}
+        query_params = self._add_pagination_params(query_params, params.offset, params.limit)
+        
+        query_string = urlencode(query_params) if query_params else ''
+        base_url = f"{self.worms_api_base_url}/AphiaVernacularsByAphiaID/{params.aphia_id}"
+        return f"{base_url}?{query_string}" if query_string else base_url
 
     def build_sources_url(self, params: SourcesParams) -> str:
         """Build URL for getting species literature sources/references"""
-        return f"{self.worms_api_base_url}/AphiaSourcesByAphiaID/{params.aphia_id}"
+        query_params = {}
+        query_params = self._add_pagination_params(query_params, params.offset, params.limit)
+        
+        query_string = urlencode(query_params) if query_params else ''
+        base_url = f"{self.worms_api_base_url}/AphiaSourcesByAphiaID/{params.aphia_id}"
+        return f"{base_url}?{query_string}" if query_string else base_url
 
     def build_record_url(self, params: RecordParams) -> str:
         """Build URL for getting basic species taxonomic record"""
@@ -164,7 +254,16 @@ class WoRMS:
 
     def build_children_url(self, params: ChildrenParams) -> str:
         """Build URL for getting species child taxa"""
-        return f"{self.worms_api_base_url}/AphiaChildrenByAphiaID/{params.aphia_id}"
+        query_params = {}
+        
+        if params.marine_only is not None:
+            query_params['marine_only'] = str(params.marine_only).lower()
+        
+        query_params = self._add_pagination_params(query_params, params.offset, params.limit)
+        
+        query_string = urlencode(query_params) if query_params else ''
+        base_url = f"{self.worms_api_base_url}/AphiaChildrenByAphiaID/{params.aphia_id}"
+        return f"{base_url}?{query_string}" if query_string else base_url
     
     def build_external_id_url(self, params: ExternalIDParams) -> str:
         """Build URL for getting external database IDs"""
@@ -184,6 +283,8 @@ class WoRMS:
         
         if params.like is not None:
             query_params['like'] = str(params.like).lower()
+        
+        query_params = self._add_pagination_params(query_params, params.offset, params.limit)
             
         query_string = urlencode(query_params) if query_params else ''
         base_url = f"{self.worms_api_base_url}/AphiaRecordsByVernacular/{encoded_name}"

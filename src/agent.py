@@ -277,53 +277,217 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Fetching distribution for {species_name}") as process:
                 try:
+                    await process.log(f"Request received: {species_name}")
+                    
                     # Get AphiaID (cached)
+                    await process.log("Retrieving AphiaID from cache or WoRMS")
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
 
                     if not aphia_id:
-                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        await process.log(
+                            f"Species not found in WoRMS database",
+                            data={"species_name": species_name}
+                        )
                         return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    await process.log(
+                        "AphiaID resolved successfully",
+                        data={"aphia_id": aphia_id, "species": species_name}
+                    )
                     
                     loop = asyncio.get_event_loop()
                     
-                    # Get distribution from WoRMS API
-                    from worms_api import DistributionParams
-                    dist_params = DistributionParams(aphia_id=aphia_id)
-                    api_url = self.worms_logic.build_distribution_url(dist_params)
+                    # Initialize pagination
+                    all_distributions = []
+                    offset = 0
+                    page_size = 50
+                    page_num = 1
                     
-                    raw_response = await loop.run_in_executor(
-                        None,
-                        lambda: self.worms_logic.execute_request(api_url)
-                    )
+                    # Paginated retrieval loop
+                    while True:
+                        dist_params = DistributionParams(
+                            aphia_id=aphia_id,
+                            offset=offset,
+                            limit=page_size
+                        )
+                        api_url = self.worms_logic.build_distribution_url(dist_params)
+                        
+                        await process.log(
+                            f"Fetching page {page_num}",
+                            data={"offset": offset, "limit": page_size, "url": api_url}
+                        )
+                        
+                        raw_response = await loop.run_in_executor(
+                            None,
+                            lambda url=api_url: self.worms_logic.execute_request(url)
+                        )
+                        
+                        page_distributions = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                        
+                        if not page_distributions:
+                            await process.log(f"Page {page_num} returned 0 results, pagination complete")
+                            break
+                        
+                        await process.log(
+                            f"Page {page_num} retrieved successfully",
+                            data={
+                                "records_retrieved": len(page_distributions),
+                                "total_so_far": len(all_distributions) + len(page_distributions)
+                            }
+                        )
+                        
+                        all_distributions.extend(page_distributions)
+                        
+                        if len(page_distributions) < page_size:
+                            break
+                        
+                        offset += page_size
+                        page_num += 1
                     
-                    # Normalize response
-                    distributions = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
-                    
-                    if not distributions:
-                        await process.log(f"No distribution data found for {species_name} (AphiaID: {aphia_id})")
-                        return f"No distribution data found for {species_name}"
-                    
-                    await process.log(f"Found {len(distributions)} distribution records for {species_name} from WoRMS API")
-                    
-                    # Extract location info
-                    locations = [d.get('locality', d.get('location', 'Unknown')) for d in distributions[:5] if isinstance(d, dict)]
-                    
-                    # Create artifact
-                    await process.create_artifact(
-                        mimetype="application/json",
-                        description=f"Distribution for {species_name} (AphiaID: {aphia_id}) - {len(distributions)} locations",
-                        uris=[api_url],
-                        metadata={
-                            "aphia_id": aphia_id, 
-                            "count": len(distributions),
-                            "species": species_name
+                    await process.log(
+                        "Distribution retrieval complete",
+                        data={
+                            "total_distributions": len(all_distributions),
+                            "pages_fetched": page_num
                         }
                     )
                     
-                    return f"Found {len(distributions)} distribution records for {species_name}. Sample locations: {', '.join(locations)}. Full data available in artifact."
-                        
+                    if not all_distributions:
+                        await process.log("No distribution data found for species")
+                        return f"No distribution data found for {species_name}"
+                    
+                    # Analyze distribution data - extract ALL fields from API
+                    await process.log("Analyzing distribution data")
+                    
+                    localities = set()
+                    higher_geographies = set()
+                    record_statuses = {}
+                    establishment_means = {}
+                    invasiveness_records = {}
+                    occurrence_records = {}
+                    quality_statuses = {}
+                    
+                    # Track coordinates
+                    coordinates_count = 0
+                    lat_range = {"min": None, "max": None}
+                    lon_range = {"min": None, "max": None}
+                    
+                    for dist in all_distributions:
+                        if isinstance(dist, dict):
+                            # Locality and geography
+                            locality = dist.get('locality')
+                            if locality:
+                                localities.add(locality)
+                            
+                            higher_geo = dist.get('higherGeography')
+                            if higher_geo:
+                                higher_geographies.add(higher_geo)
+                            
+                            # Status fields
+                            record_status = dist.get('recordStatus')
+                            if record_status:
+                                record_statuses[record_status] = record_statuses.get(record_status, 0) + 1
+                            
+                            est_means = dist.get('establishmentMeans')
+                            if est_means:
+                                establishment_means[est_means] = establishment_means.get(est_means, 0) + 1
+                            
+                            invasive = dist.get('invasiveness')
+                            if invasive:
+                                invasiveness_records[invasive] = invasiveness_records.get(invasive, 0) + 1
+                            
+                            occurrence = dist.get('occurrence')
+                            if occurrence:
+                                occurrence_records[occurrence] = occurrence_records.get(occurrence, 0) + 1
+                            
+                            quality = dist.get('qualityStatus')
+                            if quality:
+                                quality_statuses[quality] = quality_statuses.get(quality, 0) + 1
+                            
+                            # Coordinates
+                            lat = dist.get('decimalLatitude')
+                            lon = dist.get('decimalLongitude')
+                            if lat is not None and lon is not None and lat != 0 and lon != 0:
+                                coordinates_count += 1
+                                if lat_range["min"] is None or lat < lat_range["min"]:
+                                    lat_range["min"] = lat
+                                if lat_range["max"] is None or lat > lat_range["max"]:
+                                    lat_range["max"] = lat
+                                if lon_range["min"] is None or lon < lon_range["min"]:
+                                    lon_range["min"] = lon
+                                if lon_range["max"] is None or lon > lon_range["max"]:
+                                    lon_range["max"] = lon
+                    
+                    analysis_data = {
+                        "unique_localities": len(localities),
+                        "unique_higher_geographies": len(higher_geographies),
+                        "record_statuses": record_statuses,
+                        "establishment_means": establishment_means,
+                        "invasiveness_records": invasiveness_records,
+                        "occurrence_records": occurrence_records,
+                        "quality_statuses": quality_statuses,
+                        "records_with_coordinates": coordinates_count,
+                        "latitude_range": lat_range if coordinates_count > 0 else None,
+                        "longitude_range": lon_range if coordinates_count > 0 else None
+                    }
+                    
+                    await process.log(
+                        "Distribution analysis complete",
+                        data=analysis_data
+                    )
+                    
+                    # Create artifact
+                    await process.log("Creating artifact..")
+                    base_api_url = self.worms_logic.build_distribution_url(
+                        DistributionParams(aphia_id=aphia_id)
+                    )
+                    
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Distribution for {species_name} (AphiaID: {aphia_id})",
+                        uris=[base_api_url],
+                        metadata={
+                            "aphia_id": aphia_id,
+                            "species": species_name,
+                            "total_count": len(all_distributions),
+                            "pages_fetched": page_num,
+                            **analysis_data
+                        }
+                    )
+                    
+                    # Build summary with key insights
+                    summary_parts = [
+                        f"Found {len(all_distributions)} distribution records for {species_name} across {page_num} pages."
+                    ]
+                    
+                    if localities:
+                        sample_localities = list(localities)[:3]
+                        summary_parts.append(f"Localities: {len(localities)} unique ({', '.join(sample_localities)}).")
+                    
+                    if establishment_means:
+                        est_summary = ", ".join([f"{count} {means}" for means, count in establishment_means.items()])
+                        summary_parts.append(f"Establishment: {est_summary}.")
+                    
+                    if invasiveness_records:
+                        inv_summary = ", ".join([f"{count} {inv}" for inv, count in invasiveness_records.items()])
+                        summary_parts.append(f"Invasiveness: {inv_summary}.")
+                    
+                    if coordinates_count > 0:
+                        summary_parts.append(f"{coordinates_count} records with coordinates.")
+                    
+                    summary_parts.append("Full data available in artifact.")
+                    
+                    return " ".join(summary_parts)
+                            
                 except Exception as e:
-                    await process.log(f"Error retrieving distribution for {species_name}: {type(e).__name__} - {str(e)}")
+                    await process.log(
+                        "Error during distribution retrieval",
+                        data={
+                            "error": str(e),
+                            "error_type": type(e).__name__,
+                            "species_name": species_name
+                        }
+                    )
                     return f"Error retrieving distribution: {str(e)}"
                 
         @tool
