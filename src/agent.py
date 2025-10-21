@@ -297,59 +297,26 @@ class WoRMSReActAgent(IChatBioAgent):
                     
                     loop = asyncio.get_event_loop()
                     
-                    # Initialize pagination
-                    all_distributions = []
-                    offset = 0
-                    page_size = 50
-                    page_num = 1
+                    # Single API call - no pagination
+                    dist_params = DistributionParams(aphia_id=aphia_id)
+                    api_url = self.worms_logic.build_distribution_url(dist_params)
                     
-                    # Paginated retrieval loop
-                    while True:
-                        dist_params = DistributionParams(
-                            aphia_id=aphia_id,
-                            offset=offset,
-                            limit=page_size
-                        )
-                        api_url = self.worms_logic.build_distribution_url(dist_params)
-                        
-                        await process.log(
-                            f"Fetching page {page_num}",
-                            data={"offset": offset, "limit": page_size, "url": api_url}
-                        )
-                        
-                        raw_response = await loop.run_in_executor(
-                            None,
-                            lambda url=api_url: self.worms_logic.execute_request(url)
-                        )
-                        
-                        page_distributions = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
-                        
-                        if not page_distributions:
-                            await process.log(f"Page {page_num} returned 0 results, pagination complete")
-                            break
-                        
-                        await process.log(
-                            f"Page {page_num} retrieved successfully",
-                            data={
-                                "records_retrieved": len(page_distributions),
-                                "total_so_far": len(all_distributions) + len(page_distributions)
-                            }
-                        )
-                        
-                        all_distributions.extend(page_distributions)
-                        
-                        if len(page_distributions) < page_size:
-                            break
-                        
-                        offset += page_size
-                        page_num += 1
+                    await process.log(
+                        "Fetching distribution data",
+                        data={"url": api_url}
+                    )
+                    
+                    raw_response = await loop.run_in_executor(
+                        None,
+                        lambda: self.worms_logic.execute_request(api_url)
+                    )
+                    
+                    # Normalize response
+                    all_distributions = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                     
                     await process.log(
                         "Distribution retrieval complete",
-                        data={
-                            "total_distributions": len(all_distributions),
-                            "pages_fetched": page_num
-                        }
+                        data={"total_distributions": len(all_distributions)}
                     )
                     
                     if not all_distributions:
@@ -438,26 +405,22 @@ class WoRMSReActAgent(IChatBioAgent):
                     
                     # Create artifact
                     await process.log("Creating artifact..")
-                    base_api_url = self.worms_logic.build_distribution_url(
-                        DistributionParams(aphia_id=aphia_id)
-                    )
                     
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Distribution for {species_name} (AphiaID: {aphia_id})",
-                        uris=[base_api_url],
+                        uris=[api_url],
                         metadata={
                             "aphia_id": aphia_id,
                             "species": species_name,
                             "total_count": len(all_distributions),
-                            "pages_fetched": page_num,
                             **analysis_data
                         }
                     )
                     
                     # Build summary with key insights
                     summary_parts = [
-                        f"Found {len(all_distributions)} distribution records for {species_name} across {page_num} pages."
+                        f"Found {len(all_distributions)} distribution records for {species_name}."
                     ]
                     
                     if localities:
@@ -489,7 +452,6 @@ class WoRMSReActAgent(IChatBioAgent):
                         }
                     )
                     return f"Error retrieving distribution: {str(e)}"
-                
         @tool
         async def get_vernacular_names(species_name: str) -> str:
             """Get common/vernacular names for a marine species in different languages.
