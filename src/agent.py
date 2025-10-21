@@ -131,52 +131,149 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Fetching synonyms for {species_name}") as process:
                 try:
+                    await process.log(f"Request received: {species_name}")
+                    
                     # Get AphiaID (cached)
+                    await process.log("Retrieving AphiaID from cache or WoRMS")
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
 
                     if not aphia_id:
-                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        await process.log(
+                            f"Species not found in WoRMS database",
+                            data={"species_name": species_name}
+                        )
                         return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    await process.log(
+                        "AphiaID resolved successfully",
+                        data={"aphia_id": aphia_id, "species": species_name}
+                    )
                     
                     loop = asyncio.get_event_loop()
                     
-                    # Get synonyms from WoRMS API
-                    syn_params = SynonymsParams(aphia_id=aphia_id)
-                    api_url = self.worms_logic.build_synonyms_url(syn_params)
+                    # Initialize pagination
+                    all_synonyms = []
+                    offset = 0
+                    page_size = 50
+                    page_num = 1
                     
-                    raw_response = await loop.run_in_executor(
-                        None,
-                        lambda: self.worms_logic.execute_request(api_url)
+                    await process.log(
+                        "Starting paginated synonym retrieval",
+                        data={"page_size": page_size, "aphia_id": aphia_id}
                     )
                     
-                    # Normalize response
-                    synonyms = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                    # Paginated retrieval loop
+                    while True:
+                        syn_params = SynonymsParams(
+                            aphia_id=aphia_id,
+                            offset=offset,
+                            limit=page_size
+                        )
+                        api_url = self.worms_logic.build_synonyms_url(syn_params)
+                        
+                        await process.log(
+                            f"Fetching page {page_num}",
+                            data={"offset": offset, "limit": page_size, "url": api_url}
+                        )
+                        
+                        raw_response = await loop.run_in_executor(
+                            None,
+                            lambda url=api_url: self.worms_logic.execute_request(url)
+                        )
+                        
+                        page_synonyms = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                        
+                        if not page_synonyms:
+                            await process.log(f"Page {page_num} returned 0 results, pagination complete")
+                            break
+                        
+                        await process.log(
+                            f"Page {page_num} retrieved successfully",
+                            data={
+                                "records_retrieved": len(page_synonyms),
+                                "total_so_far": len(all_synonyms) + len(page_synonyms)
+                            }
+                        )
+                        
+                        all_synonyms.extend(page_synonyms)
+                        
+                        if len(page_synonyms) < page_size:
+                            await process.log(
+                                "Last page reached",
+                                data={"records_on_last_page": len(page_synonyms)}
+                            )
+                            break
+                        
+                        offset += page_size
+                        page_num += 1
                     
-                    if not synonyms:
-                        await process.log(f"No synonyms found for {species_name} (AphiaID: {aphia_id})")
+                    await process.log(
+                        "Synonym retrieval complete",
+                        data={
+                            "total_synonyms": len(all_synonyms),
+                            "pages_fetched": page_num
+                        }
+                    )
+                    
+                    if not all_synonyms:
+                        await process.log("No synonyms found for species")
                         return f"No synonyms found for {species_name}"
                     
-                    await process.log(f"Found {len(synonyms)} synonym records for {species_name} from WoRMS API")
+                    # Analyze synonym types
+                    await process.log("Analyzing synonym types")
+                    synonym_types = {}
+                    for syn in all_synonyms:
+                        if isinstance(syn, dict):
+                            status = syn.get('status', 'unknown')
+                            synonym_types[status] = synonym_types.get(status, 0) + 1
+                    
+                    await process.log(
+                        "Synonym analysis complete",
+                        data={"synonym_breakdown": synonym_types}
+                    )
                     
                     # Create artifact
+                    await process.log("Creating artifact with synonym data")
+                    base_api_url = self.worms_logic.build_synonyms_url(
+                        SynonymsParams(aphia_id=aphia_id)
+                    )
+                    
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Synonyms for {species_name} (AphiaID: {aphia_id}) - {len(synonyms)} total",
-                        uris=[api_url],
+                        description=f"Synonyms for {species_name} (AphiaID: {aphia_id})",
+                        uris=[base_api_url],
                         metadata={
-                            "aphia_id": aphia_id, 
-                            "count": len(synonyms),
-                            "species": species_name
+                            "aphia_id": aphia_id,
+                            "species": species_name,
+                            "total_count": len(all_synonyms),
+                            "pages_fetched": page_num,
+                            "synonym_types": synonym_types
                         }
                     )
                     
                     # Build summary
-                    samples = [s.get('scientificname', 'Unknown') for s in synonyms[:3] if isinstance(s, dict)]
+                    samples = [s.get('scientificname', 'Unknown') for s in all_synonyms[:5] if isinstance(s, dict)]
+                    type_summary = ", ".join([f"{count} {stype}" for stype, count in synonym_types.items()])
                     
-                    return f"Found {len(synonyms)} synonyms for {species_name}. Examples: {', '.join(samples)}. Full data available in artifact."
-                        
+                    summary = (
+                        f"Found {len(all_synonyms)} synonyms for {species_name} "
+                        f"across {page_num} pages. "
+                        f"Types: {type_summary}. "
+                        f"Examples: {', '.join(samples)}. "
+                        f"Full data available in artifact."
+                    )
+                    
+                    return summary
+                            
                 except Exception as e:
-                    await process.log(f"Error retrieving synonyms for {species_name}: {type(e).__name__} - {str(e)}")
+                    await process.log(
+                        "Error during synonym retrieval",
+                        data={
+                            "error": str(e),
+                            "error_type": type(e).__name__,
+                            "species_name": species_name
+                        }
+                    )
                     return f"Error retrieving synonyms: {str(e)}"
                 
         @tool
