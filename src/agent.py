@@ -157,10 +157,6 @@ class WoRMSReActAgent(IChatBioAgent):
                     page_size = 50
                     page_num = 1
                     
-                    await process.log(
-                        "Starting paginated synonym retrieval",
-                        data={"page_size": page_size, "aphia_id": aphia_id}
-                    )
                     
                     # Paginated retrieval loop
                     while True:
@@ -198,10 +194,6 @@ class WoRMSReActAgent(IChatBioAgent):
                         all_synonyms.extend(page_synonyms)
                         
                         if len(page_synonyms) < page_size:
-                            await process.log(
-                                "Last page reached",
-                                data={"records_on_last_page": len(page_synonyms)}
-                            )
                             break
                         
                         offset += page_size
@@ -220,7 +212,7 @@ class WoRMSReActAgent(IChatBioAgent):
                         return f"No synonyms found for {species_name}"
                     
                     # Analyze synonym types
-                    await process.log("Analyzing synonym types")
+                    await process.log("Fetching synonym types")
                     synonym_types = {}
                     for syn in all_synonyms:
                         if isinstance(syn, dict):
@@ -228,12 +220,12 @@ class WoRMSReActAgent(IChatBioAgent):
                             synonym_types[status] = synonym_types.get(status, 0) + 1
                     
                     await process.log(
-                        "Synonym analysis complete",
+                        "Synonyms Breakdown",
                         data={"synonym_breakdown": synonym_types}
                     )
                     
                     # Create artifact
-                    await process.log("Creating artifact with synonym data")
+                    await process.log("Creating artifact..")
                     base_api_url = self.worms_logic.build_synonyms_url(
                         SynonymsParams(aphia_id=aphia_id)
                     )
