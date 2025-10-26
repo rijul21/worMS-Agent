@@ -105,7 +105,7 @@ class WoRMSReActAgent(IChatBioAgent):
         """Main entry point - builds and executes the ReAct agent loop"""
 
         if params.species_names:
-            async with context.begin_process("Resolving species identifiers") as process:
+            async with context.begin_process("Resolving species identifiers from WoRMS") as process:
                 for species_name in params.species_names:
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
                     if not aphia_id:
@@ -129,7 +129,7 @@ class WoRMSReActAgent(IChatBioAgent):
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Fetching synonyms for {species_name}") as process:
+            async with context.begin_process(f"Searching WoRMS for synonyms of {species_name}") as process:
                 try:
                     # Get AphiaID (cached)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
@@ -186,7 +186,7 @@ class WoRMSReActAgent(IChatBioAgent):
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Fetching distribution for {species_name}") as process:
+            async with context.begin_process(f"Searching WoRMS for distribution of {species_name}") as process:
                 try:
                     # Get AphiaID (cached)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
@@ -244,7 +244,7 @@ class WoRMSReActAgent(IChatBioAgent):
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Fetching vernacular names for {species_name}") as process:
+            async with context.begin_process(f"Searching WoRMS for vernacular names of {species_name}") as process:
                 try:
                    # Get AphiaID (cached)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
@@ -311,7 +311,7 @@ class WoRMSReActAgent(IChatBioAgent):
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Fetching literature sources for {species_name}") as process:
+            async with context.begin_process(f"Searching WoRMS for literature sources of {species_name}") as process:
                 try:
                     # Get AphiaID (cached)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
@@ -374,7 +374,7 @@ class WoRMSReActAgent(IChatBioAgent):
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Fetching taxonomic record for {species_name}") as process:
+            async with context.begin_process(f"Searching WoRMS for taxonomic record of {species_name}") as process:
                 try:
                     # Get AphiaID (cached)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
@@ -438,7 +438,7 @@ class WoRMSReActAgent(IChatBioAgent):
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Fetching taxonomic classification for {species_name}") as process:
+            async with context.begin_process(f"Searching WoRMS for taxonomic classification of {species_name}") as process:
                 try:
                     # Get AphiaID (cached)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
@@ -501,7 +501,7 @@ class WoRMSReActAgent(IChatBioAgent):
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Fetching child taxa for {species_name}") as process:
+            async with context.begin_process(f"Searching WoRMS for child taxa of {species_name}") as process:
                 try:
                     # Get AphiaID (cached)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
@@ -561,7 +561,7 @@ class WoRMSReActAgent(IChatBioAgent):
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Fetching external database IDs for {species_name}") as process:
+            async with context.begin_process(f"Searching WoRMS for external database IDs of {species_name}") as process:
                 try:
                     # Get AphiaID (cached)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
@@ -623,7 +623,7 @@ class WoRMSReActAgent(IChatBioAgent):
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Fetching attributes for {species_name}") as process:
+            async with context.begin_process(f"Searching WoRMS for attributes of {species_name}") as process:
                 try:
                     # Get AphiaID (cached)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
@@ -742,7 +742,7 @@ class WoRMSReActAgent(IChatBioAgent):
             Args:
                 common_name: Common name to search for (e.g., "killer whale", "bottlenose dolphin")
             """
-            async with context.begin_process(f"Searching for species with common name '{common_name}'") as process:
+            async with context.begin_process(f"Searching WoRMS for species with common name '{common_name}'") as process:
                 try:
                     loop = asyncio.get_event_loop()
                     
@@ -819,7 +819,7 @@ class WoRMSReActAgent(IChatBioAgent):
     ]
             
         # Execute agent
-        async with context.begin_process("Processing your request") as process:
+        async with context.begin_process("Processing your request using WoRMS database") as process:
             await process.log(f"Initializing agent for query: '{request}' with {len(tools)} available tools")
         
             
