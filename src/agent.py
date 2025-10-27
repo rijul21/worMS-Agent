@@ -229,9 +229,25 @@ class WoRMSReActAgent(IChatBioAgent):
                     await process.log(f"Artifact created successfully")
                     
                     # Build summary
+                    # NEW FORMAT - Very different structure
                     samples = [s.get('scientificname', 'Unknown') for s in all_synonyms[:3] if isinstance(s, dict)]
-                    more_text = f" and {len(all_synonyms) - 3} more" if len(all_synonyms) > 3 else ""
-                    
+
+                    return f"""
+                    SYNONYM SEARCH RESULTS:
+                    ━━━━━━━━━━━━━━━━━━━━
+                    Species Query: {species_name}
+                    WoRMS ID: {aphia_id}
+                    Total Synonyms Found: {len(all_synonyms)}
+                    Data Size: {data_size_kb} KB
+
+                    TOP 3 SYNONYMS:
+                    1. {samples[0] if len(samples) > 0 else 'N/A'}
+                    2. {samples[1] if len(samples) > 1 else 'N/A'}
+                    3. {samples[2] if len(samples) > 2 else 'N/A'}
+
+                    ⚠️ Note: {len(all_synonyms) - 3} additional synonyms available in the artifact.
+                    📊 Complete dataset has been packaged for download.
+                    """                    
                     return f"Found {len(all_synonyms)} synonyms for {species_name}. Examples: {', '.join(samples)}{more_text}. Full data ({data_size_kb} KB) available in artifact."
                         
                 except Exception as e:
