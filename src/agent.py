@@ -201,8 +201,8 @@ class WoRMSReActAgent(IChatBioAgent):
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Synonyms for {species_name} (AphiaID: {aphia_id}) - {len(all_synonyms)} total records",
-                        content=json.dumps(result_data, indent=2),  # Send the actual JSON data
-                        uris=[base_api_url],  # Reference to API source
+                        content=json.dumps(result_data, indent=2).encode('utf-8'),  # Convert to bytes
+                        uris=[base_api_url],
                         metadata={
                             "aphia_id": aphia_id, 
                             "count": len(all_synonyms),
@@ -210,8 +210,7 @@ class WoRMSReActAgent(IChatBioAgent):
                             "data_type": "synonyms"
                         }
                     )
-                    
-                    # Build human-readable summary
+                                        
                     samples = [s.get('scientificname', 'Unknown') for s in all_synonyms[:3] if isinstance(s, dict)]
                     more_text = f" and {len(all_synonyms) - 3} more" if len(all_synonyms) > 3 else ""
                     
