@@ -121,7 +121,7 @@ class WoRMSReActAgent(IChatBioAgent):
         async def finish(summary: str):
             """Call when request is successfully completed."""
             await context.reply(summary)
-
+            
         @tool
         async def get_species_synonyms(species_name: str) -> str:
             """Get synonyms and alternative scientific names for a marine species.
@@ -140,45 +140,85 @@ class WoRMSReActAgent(IChatBioAgent):
                     
                     loop = asyncio.get_event_loop()
                     
-                    # Get synonyms from WoRMS API
-                    syn_params = SynonymsParams(aphia_id=aphia_id)
-                    api_url = self.worms_logic.build_synonyms_url(syn_params)
+                    # Fetch all synonyms with pagination (50 records per request)
+                    all_synonyms = []
+                    offset = 1
                     
-                    raw_response = await loop.run_in_executor(
-                        None,
-                        lambda: self.worms_logic.execute_request(api_url)
-                    )
+                    await process.log(f"Fetching synonyms for {species_name} (AphiaID: {aphia_id})")
                     
-                    # Normalize response
-                    synonyms = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                    while True:
+                        # Build URL with offset for pagination
+                        syn_params = SynonymsParams(aphia_id=aphia_id)
+                        api_url = self.worms_logic.build_synonyms_url(syn_params)
+                        
+                        # Add offset parameter if not first request
+                        if offset > 1:
+                            separator = '&' if '?' in api_url else '?'
+                            api_url = f"{api_url}{separator}offset={offset}"
+                        
+                        # Execute request
+                        raw_response = await loop.run_in_executor(
+                            None,
+                            lambda url=api_url: self.worms_logic.execute_request(url)
+                        )
+                        
+                        # Normalize response
+                        synonyms_batch = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                        
+                        # Break if no more results
+                        if not synonyms_batch:
+                            break
+                        
+                        all_synonyms.extend(synonyms_batch)
+                        
+                        await process.log(f"Retrieved {len(synonyms_batch)} synonyms (batch {offset//50 + 1})")
+                        
+                        # If we got less than 50, we've reached the end
+                        if len(synonyms_batch) < 50:
+                            break
+                        
+                        # Move to next batch
+                        offset += 50
                     
-                    if not synonyms:
+                    if not all_synonyms:
                         await process.log(f"No synonyms found for {species_name} (AphiaID: {aphia_id})")
                         return f"No synonyms found for {species_name}"
                     
-                    await process.log(f"Found {len(synonyms)} synonym records for {species_name} from WoRMS API")
+                    await process.log(f"Found {len(all_synonyms)} total synonym records for {species_name}")
                     
-                    # Create artifact
+                    # Prepare the data structure
+                    result_data = {
+                        "species_name": species_name,
+                        "aphia_id": aphia_id,
+                        "total_synonyms": len(all_synonyms),
+                        "synonyms": all_synonyms
+                    }
+                    
+                    # Create artifact with the actual data
+                    base_api_url = self.worms_logic.build_synonyms_url(syn_params)
+                    
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Synonyms for {species_name} (AphiaID: {aphia_id}) - {len(synonyms)} total",
-                        uris=[api_url],
+                        description=f"Synonyms for {species_name} (AphiaID: {aphia_id}) - {len(all_synonyms)} total records",
+                        content=json.dumps(result_data, indent=2),  # Send the actual JSON data
+                        uris=[base_api_url],  # Reference to API source
                         metadata={
                             "aphia_id": aphia_id, 
-                            "count": len(synonyms),
-                            "species": species_name
+                            "count": len(all_synonyms),
+                            "species": species_name,
+                            "data_type": "synonyms"
                         }
                     )
                     
-                    # Build summary
-                    samples = [s.get('scientificname', 'Unknown') for s in synonyms[:3] if isinstance(s, dict)]
+                    # Build human-readable summary
+                    samples = [s.get('scientificname', 'Unknown') for s in all_synonyms[:3] if isinstance(s, dict)]
+                    more_text = f" and {len(all_synonyms) - 3} more" if len(all_synonyms) > 3 else ""
                     
-                    return f"Found {len(synonyms)} synonyms for {species_name}. Examples: {', '.join(samples)}. Full data available in artifact."
+                    return f"Found {len(all_synonyms)} synonyms for {species_name}. Examples: {', '.join(samples)}{more_text}. Full data available in artifact."
                         
                 except Exception as e:
                     await process.log(f"Error retrieving synonyms for {species_name}: {type(e).__name__} - {str(e)}")
                     return f"Error retrieving synonyms: {str(e)}"
-                
         @tool
         async def get_species_distribution(species_name: str) -> str:
             """Get geographic distribution data for a marine species.
