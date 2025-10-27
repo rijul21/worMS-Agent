@@ -142,12 +142,22 @@ class WoRMSReActAgent(IChatBioAgent):
                     loop = asyncio.get_event_loop()
                     all_synonyms = []
                     offset = 1
+                    batch_count = 0
                     
-                    await process.log(f"Fetching synonyms from WoRMS API...", data={"aphia_id": aphia_id})
+                    await process.log(
+                        f"Starting data retrieval from WoRMS API",
+                        data={"species": species_name, "aphia_id": aphia_id}
+                    )
                     
                     while True:
+                        batch_count += 1
                         syn_params = SynonymsParams(aphia_id=aphia_id, offset=offset)
                         api_url = self.worms_logic.build_synonyms_url(syn_params)
+                        
+                        await process.log(
+                            f"API request batch {batch_count}",
+                            data={"url": api_url, "offset": offset}
+                        )
                         
                         raw_response = await loop.run_in_executor(
                             None,
@@ -157,11 +167,21 @@ class WoRMSReActAgent(IChatBioAgent):
                         synonyms_batch = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                         
                         if not synonyms_batch:
+                            await process.log(f"No more records available, pagination complete")
                             break
                         
                         all_synonyms.extend(synonyms_batch)
                         
+                        await process.log(
+                            f"Batch {batch_count} retrieved",
+                            data={
+                                "records_in_batch": len(synonyms_batch),
+                                "total_so_far": len(all_synonyms)
+                            }
+                        )
+                        
                         if len(synonyms_batch) < 50:
+                            await process.log(f"Retrieved final batch, pagination complete")
                             break
                         
                         offset += 50
@@ -169,11 +189,6 @@ class WoRMSReActAgent(IChatBioAgent):
                     if not all_synonyms:
                         await process.log(f"No synonyms found for {species_name}")
                         return f"No synonyms found for {species_name}"
-                    
-                    await process.log(
-                        f"Retrieved {len(all_synonyms)} synonym records",
-                        data={"total_records": len(all_synonyms)}
-                    )
                     
                     # Prepare the data structure
                     result_data = {
@@ -186,11 +201,16 @@ class WoRMSReActAgent(IChatBioAgent):
                     content_bytes = json.dumps(result_data, indent=2).encode('utf-8')
                     data_size_kb = round(len(content_bytes) / 1024, 2)
                     
-                    await process.log(f"Creating artifact ({data_size_kb} KB)")
+                    await process.log(
+                        f"Data retrieval complete",
+                        data={
+                            "total_records": len(all_synonyms),
+                            "total_batches": batch_count,
+                            "data_size_kb": data_size_kb
+                        }
+                    )
                     
-                    # Create artifact
-                    base_api_url = self.worms_logic.build_synonyms_url(SynonymsParams(aphia_id=aphia_id))
-                    
+                    # Create artifact WITHOUT uris parameter
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Synonyms for {species_name} (AphiaID: {aphia_id}) - {len(all_synonyms)} records",
@@ -203,14 +223,19 @@ class WoRMSReActAgent(IChatBioAgent):
                         }
                     )
                     
+                    await process.log(f"Artifact created successfully")
+                    
                     # Build summary
                     samples = [s.get('scientificname', 'Unknown') for s in all_synonyms[:3] if isinstance(s, dict)]
                     more_text = f" and {len(all_synonyms) - 3} more" if len(all_synonyms) > 3 else ""
                     
-                    return f"Found {len(all_synonyms)} synonyms for {species_name}. Examples: {', '.join(samples)}{more_text}. Full data available in artifact."
+                    return f"Found {len(all_synonyms)} synonyms for {species_name}. Examples: {', '.join(samples)}{more_text}. Full data ({data_size_kb} KB) available in artifact."
                         
                 except Exception as e:
-                    await process.log(f"Error: {type(e).__name__} - {str(e)}")
+                    await process.log(
+                        f"Error during retrieval",
+                        data={"error_type": type(e).__name__, "error": str(e)}
+                    )
                     return f"Error retrieving synonyms: {str(e)}"
         @tool
         async def get_species_distribution(species_name: str) -> str:
