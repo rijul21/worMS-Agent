@@ -149,6 +149,10 @@ class WoRMSReActAgent(IChatBioAgent):
                         data={"species": species_name, "aphia_id": aphia_id}
                     )
                     
+                    # Build base API URL for artifact reference
+                    base_syn_params = SynonymsParams(aphia_id=aphia_id, offset=1)
+                    base_api_url = self.worms_logic.build_synonyms_url(base_syn_params)
+                    
                     while True:
                         batch_count += 1
                         syn_params = SynonymsParams(aphia_id=aphia_id, offset=offset)
@@ -190,14 +194,13 @@ class WoRMSReActAgent(IChatBioAgent):
                         await process.log(f"No synonyms found for {species_name}")
                         return f"No synonyms found for {species_name}"
                     
-                    # Prepare the data structure
+                    # Calculate data size
                     result_data = {
                         "species_name": species_name,
                         "aphia_id": aphia_id,
                         "total_synonyms": len(all_synonyms),
                         "synonyms": all_synonyms
                     }
-                    
                     content_bytes = json.dumps(result_data, indent=2).encode('utf-8')
                     data_size_kb = round(len(content_bytes) / 1024, 2)
                     
@@ -210,11 +213,11 @@ class WoRMSReActAgent(IChatBioAgent):
                         }
                     )
                     
-                    # Create artifact with content (this will be hosted by ichatbio)
+                    # Create artifact pointing to the WoRMS API endpoint
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"synonyms_{species_name.replace(' ', '_')}_{aphia_id}.json",
-                        content=content_bytes,
+                        description=f"Synonyms for {species_name} (AphiaID: {aphia_id}) - {len(all_synonyms)} records",
+                        uris=[base_api_url],
                         metadata={
                             "aphia_id": aphia_id, 
                             "count": len(all_synonyms),
