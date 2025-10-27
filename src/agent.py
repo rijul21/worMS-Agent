@@ -210,10 +210,10 @@ class WoRMSReActAgent(IChatBioAgent):
                         }
                     )
                     
-                    # Create artifact WITHOUT uris parameter
+                    # Create artifact with content (this will be hosted by ichatbio)
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Synonyms for {species_name} (AphiaID: {aphia_id}) - {len(all_synonyms)} records",
+                        description=f"synonyms_{species_name.replace(' ', '_')}_{aphia_id}.json",
                         content=content_bytes,
                         metadata={
                             "aphia_id": aphia_id, 
