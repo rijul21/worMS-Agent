@@ -10,6 +10,7 @@ from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage, HumanMessage
 import dotenv
 import asyncio
+import json
 
 from worms_api import (
     WoRMS, 
@@ -121,7 +122,7 @@ class WoRMSReActAgent(IChatBioAgent):
         async def finish(summary: str):
             """Call when request is successfully completed."""
             await context.reply(summary)
-            
+
         @tool
         async def get_species_synonyms(species_name: str) -> str:
             """Get synonyms and alternative scientific names for a marine species.
