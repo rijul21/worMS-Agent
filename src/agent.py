@@ -279,6 +279,8 @@ class WoRMSReActAgent(IChatBioAgent):
                     dist_params = DistributionParams(aphia_id=aphia_id)
                     api_url = self.worms_logic.build_distribution_url(dist_params)
                     
+                    await process.log(f"Requesting distribution data from WoRMS API", data={"url": api_url})
+                    
                     raw_response = await loop.run_in_executor(
                         None,
                         lambda: self.worms_logic.execute_request(api_url)
@@ -291,10 +293,34 @@ class WoRMSReActAgent(IChatBioAgent):
                         await process.log(f"No distribution data found for {species_name} (AphiaID: {aphia_id})")
                         return f"No distribution data found for {species_name}"
                     
-                    await process.log(f"Found {len(distributions)} distribution records for {species_name} from WoRMS API")
+                    await process.log(f"Retrieved {len(distributions)} distribution records", data={"count": len(distributions)})
                     
-                    # Extract location info
-                    locations = [d.get('locality', d.get('location', 'Unknown')) for d in distributions[:5] if isinstance(d, dict)]
+                    # Analyze distribution by status and regions
+                    statuses = {}
+                    regions = []
+                    
+                    for d in distributions:
+                        if isinstance(d, dict):
+                            # Count by status
+                            status = d.get('establishmentMeans', d.get('status', 'Unknown'))
+                            statuses[status] = statuses.get(status, 0) + 1
+                            
+                            # Collect regions
+                            locality = d.get('locality', d.get('locationID', 'Unknown'))
+                            if locality != 'Unknown':
+                                regions.append(locality)
+                    
+                    # Get top regions (up to 8)
+                    top_regions = regions[:8]
+                    
+                    # Build status summary
+                    status_summary = ", ".join([f"{count} {status}" for status, count in statuses.items()])
+                    
+                    await process.log(f"Distribution analysis complete", data={
+                        "total_locations": len(distributions),
+                        "status_breakdown": statuses,
+                        "sample_regions": top_regions[:3]
+                    })
                     
                     # Create artifact
                     await process.create_artifact(
@@ -304,16 +330,17 @@ class WoRMSReActAgent(IChatBioAgent):
                         metadata={
                             "aphia_id": aphia_id, 
                             "count": len(distributions),
-                            "species": species_name
+                            "species": species_name,
+                            "data_source": "WoRMS"
                         }
                     )
                     
-                    return f"Found {len(distributions)} distribution records for {species_name}. Sample locations: {', '.join(locations)}. Full data available in artifact."
+                    # NEW RETURN FORMAT - More analytical
+                    return f"{species_name} has been documented in {len(distributions)} geographic locations worldwide. Distribution breakdown: {status_summary}. Key regions include: {', '.join(top_regions)}. The species shows {'widespread global distribution' if len(distributions) > 20 else 'limited regional distribution'}. Detailed location data with establishment status available in the artifact."
                         
                 except Exception as e:
-                    await process.log(f"Error retrieving distribution for {species_name}: {type(e).__name__} - {str(e)}")
+                    await process.log(f"Error retrieving distribution", data={"error": str(e), "species": species_name})
                     return f"Error retrieving distribution: {str(e)}"
-                
         @tool
         async def get_vernacular_names(species_name: str) -> str:
             """Get common/vernacular names for a marine species in different languages.
