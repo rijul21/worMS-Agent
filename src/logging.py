@@ -36,32 +36,6 @@ async def log(
 
 # Convenience functions for common logging patterns
 
-async def log_cache_hit(process, species_name: str, aphia_id: int):
-    """Log cache hit"""
-    await log(
-        process,
-        f"Using cached AphiaID {aphia_id} for {species_name}",
-        LogCategory.CACHE
-    )
-
-
-async def log_cache_miss(process, species_name: str):
-    """Log cache miss"""
-    await log(
-        process,
-        f"Fetching AphiaID for {species_name} (not in cache)",
-        LogCategory.CACHE
-    )
-
-
-async def log_cache_store(process, species_name: str, aphia_id: int):
-    """Log storing in cache"""
-    await log(
-        process,
-        f"Cached AphiaID {aphia_id} for {species_name}",
-        LogCategory.CACHE
-    )
-
 
 async def log_api_call(process, tool_name: str, species_name: str, aphia_id: int, url: str):
     """Log API call"""
