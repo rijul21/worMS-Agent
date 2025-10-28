@@ -234,58 +234,21 @@ class WoRMSReActAgent(IChatBioAgent):
     ):
         """Main entry point with planning and parallel resolution"""
 
-        # Import logging functions
-        from src.logging import (
-            log_plan_created,
-            log_species_identified,
-            log_tool_planned,
-            log_name_resolution_start,
-            log_name_resolved,
-            log_name_resolution_failed
-        )
-
         # ============================================================
         # PHASE 1: PLANNING
         # ============================================================
         
         async with context.begin_process("Creating research plan") as process:
             
-            # Create plan
             plan = await self._create_plan(request, params.species_names)
             
-            # Log plan creation
-            await log_plan_created(
-                process,
-                query_type=plan.query_type,
-                species_count=len(plan.species_mentioned),
-                tools_count=len(plan.tools_planned)
-            )
+            # Single concise log
+            species_str = ", ".join(plan.species_mentioned)
+            await process.log(f"{plan.query_type.replace('_', ' ').title()} query: {species_str}")
             
-            # Log each identified species
-            for species_name, is_common in zip(plan.species_mentioned, plan.are_common_names):
-                await log_species_identified(process, species_name, is_common)
-            
-            # Log each planned tool
-            for tool in plan.tools_planned:
-                await log_tool_planned(process, tool.tool_name, tool.priority, tool.reason)
-            
-            # Show plan to user
-            species_display = []
-            for name, is_common in zip(plan.species_mentioned, plan.are_common_names):
-                name_type = "common name" if is_common else "scientific name"
-                species_display.append(f"{name} ({name_type})")
-            
+            # User message
             must_call_tools = [t.tool_name for t in plan.tools_planned if t.priority == "must_call"]
-            
-            await context.reply(f"""Research Plan
-
-Type: {plan.query_type.replace('_', ' ').title()}
-Species: {', '.join(species_display)}
-Strategy: {plan.reasoning}
-Key tools: {', '.join(must_call_tools)}
-
-Executing...
-""")
+            await context.reply(f"Researching {len(plan.species_mentioned)} species using {len(must_call_tools)} tools...")
 
         # ============================================================
         # PHASE 2: PARALLEL NAME RESOLUTION
@@ -302,20 +265,13 @@ Executing...
         if common_names:
             async with context.begin_process("Resolving species names") as process:
                 
-                # Log start of resolution
-                await log_name_resolution_start(process, common_names)
+                await process.log(f"Resolving {len(common_names)} common name(s) in parallel")
                 
                 # Resolve in parallel using the method
                 resolved = await self._resolve_common_names_parallel(common_names, context)
                 
-                # Log results
-                for common_name, scientific_name in resolved.items():
-                    await log_name_resolved(process, common_name, scientific_name)
-                
-                # Log failed resolutions
-                for common_name in common_names:
-                    if common_name not in resolved:
-                        await log_name_resolution_failed(process, common_name)
+                # Single summary log
+                await process.log(f"Resolved {len(resolved)}/{len(common_names)} species")
                 
                 resolved_names = resolved
         

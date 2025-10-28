@@ -11,7 +11,7 @@ class LogCategory(Enum):
     CACHE = "CACHE"
     TOOL = "TOOL"
     AGENT = "AGENT"
-    PLANNING = "PLANNING"  # NEW
+    PLANNING = "PLANNING"
 
 
 async def log(
@@ -39,10 +39,10 @@ async def log(
 
 
 async def log_api_call(process, tool_name: str, species_name: str, aphia_id: int, url: str):
-    """Log API call"""
+    """Log API call - KEEP data (useful for debugging)"""
     await log(
         process,
-        f"Calling WoRMS API for {tool_name}",
+        f"{tool_name}: {species_name}",
         LogCategory.TOOL,
         data={
             "species": species_name,
@@ -53,21 +53,16 @@ async def log_api_call(process, tool_name: str, species_name: str, aphia_id: int
 
 
 async def log_data_fetched(process, tool_name: str, species_name: str, count: int):
-    """Log data fetched"""
+    """Log data fetched - SIMPLIFIED (count visible in message)"""
     await log(
         process,
-        f"Found {count} records for {species_name}",
-        LogCategory.TOOL,
-        data={
-            "tool": tool_name,
-            "species": species_name,
-            "record_count": count
-        }
+        f"Found {count} record(s) for {species_name}",
+        LogCategory.TOOL
     )
 
 
 async def log_no_data(process, tool_name: str, species_name: str, aphia_id: int):
-    """Log no data found"""
+    """Log no data found - KEEP data (useful for debugging)"""
     await log(
         process,
         f"No data found for {species_name}",
@@ -81,19 +76,19 @@ async def log_no_data(process, tool_name: str, species_name: str, aphia_id: int)
 
 
 async def log_species_not_found(process, species_name: str):
-    """Log species not found"""
+    """Log species not found - SIMPLIFIED"""
     await log(
         process,
-        f"Species '{species_name}' not found in WoRMS database",
+        f"Species '{species_name}' not found in WoRMS",
         LogCategory.TOOL
     )
 
 
 async def log_tool_error(process, tool_name: str, species_name: str, error: Exception):
-    """Log tool error"""
+    """Log tool error - KEEP data (important for debugging)"""
     await log(
         process,
-        f"Error in {tool_name}",
+        f"Error in {tool_name} for {species_name}",
         LogCategory.TOOL,
         data={
             "species": species_name,
@@ -104,33 +99,22 @@ async def log_tool_error(process, tool_name: str, species_name: str, error: Exce
 
 
 async def log_artifact_created(process, tool_name: str, species_name: str):
-    """Log artifact creation"""
-    await log(
-        process,
-        f"Artifact created for {species_name}",
-        LogCategory.TOOL,
-        data={
-            "tool": tool_name,
-            "species": species_name
-        }
-    )
+    """Log artifact creation - DISABLED (visible in UI)"""
+    # Artifacts are visible in UI, no need to log
+    pass
 
 
 async def log_agent_init(process, request: str, tool_count: int):
-    """Log agent initialization"""
+    """Log agent initialization - SIMPLIFIED"""
     await log(
         process,
         f"Initializing agent with {tool_count} tools",
-        LogCategory.AGENT,
-        data={
-            "request": request,
-            "tool_count": tool_count
-        }
+        LogCategory.AGENT
     )
 
 
 async def log_agent_error(process, error: Exception):
-    """Log agent execution error"""
+    """Log agent execution error - KEEP data (important for debugging)"""
     await log(
         process,
         f"Agent execution failed",
@@ -138,88 +122,5 @@ async def log_agent_error(process, error: Exception):
         data={
             "error_type": type(error).__name__,
             "error": str(error)
-        }
-    )
-
-
-# NEW: Planning-specific logging functions
-
-
-async def log_plan_created(process, query_type: str, species_count: int, tools_count: int):
-    """Log plan creation"""
-    await log(
-        process,
-        f"Research plan created",
-        LogCategory.PLANNING,
-        data={
-            "query_type": query_type,
-            "species_count": species_count,
-            "tools_planned": tools_count
-        }
-    )
-
-
-async def log_species_identified(process, species_name: str, is_common_name: bool):
-    """Log species identification"""
-    name_type = "common name" if is_common_name else "scientific name"
-    await log(
-        process,
-        f"Identified species: {species_name} ({name_type})",
-        LogCategory.PLANNING,
-        data={
-            "species": species_name,
-            "name_type": name_type
-        }
-    )
-
-
-async def log_tool_planned(process, tool_name: str, priority: str, reason: str):
-    """Log planned tool"""
-    await log(
-        process,
-        f"Tool planned: {tool_name} [{priority}]",
-        LogCategory.PLANNING,
-        data={
-            "tool": tool_name,
-            "priority": priority,
-            "reason": reason
-        }
-    )
-
-
-async def log_name_resolution_start(process, common_names: list[str]):
-    """Log start of parallel name resolution"""
-    await log(
-        process,
-        f"Resolving {len(common_names)} common name(s) in parallel",
-        LogCategory.PLANNING,
-        data={
-            "common_names": common_names,
-            "count": len(common_names)
-        }
-    )
-
-
-async def log_name_resolved(process, common_name: str, scientific_name: str):
-    """Log successful name resolution"""
-    await log(
-        process,
-        f"Resolved: {common_name} -> {scientific_name}",
-        LogCategory.PLANNING,
-        data={
-            "common_name": common_name,
-            "scientific_name": scientific_name
-        }
-    )
-
-
-async def log_name_resolution_failed(process, common_name: str):
-    """Log failed name resolution"""
-    await log(
-        process,
-        f"Failed to resolve: {common_name}",
-        LogCategory.PLANNING,
-        data={
-            "common_name": common_name
         }
     )
