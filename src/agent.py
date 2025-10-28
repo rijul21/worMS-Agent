@@ -211,35 +211,27 @@ class WoRMSReActAgent(IChatBioAgent):
                     # Log data fetched
                     await log_data_fetched(process, "get_species_synonyms", species_name, len(all_synonyms))
                     
-                    # Prepare the data structure
-                    result_data = {
-                        "species_name": species_name,
-                        "aphia_id": aphia_id,
-                        "total_synonyms": len(all_synonyms),
-                        "synonyms": all_synonyms
-                    }
+                    # Extract sample synonym names
+                    samples = [s.get('scientificname', 'Unknown') for s in all_synonyms[:5] if isinstance(s, dict)]
                     
-                    # Create artifact with the actual data
+                    # Create artifact (matching other tools - just uris, no content)
                     base_api_url = self.worms_logic.build_synonyms_url(syn_params)
                     
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Synonyms for {species_name} (AphiaID: {aphia_id}) - {len(all_synonyms)} total records",
-                        content=json.dumps(result_data, indent=2).encode('utf-8'),
+                        description=f"Synonyms for {species_name} (AphiaID: {aphia_id}) - {len(all_synonyms)} records",
                         uris=[base_api_url],
                         metadata={
                             "aphia_id": aphia_id, 
                             "count": len(all_synonyms),
-                            "species": species_name,
-                            "data_type": "synonyms"
+                            "species": species_name
                         }
                     )
                     
                     # Log artifact created
                     await log_artifact_created(process, "get_species_synonyms", species_name)
                                         
-                    samples = [s.get('scientificname', 'Unknown') for s in all_synonyms[:3] if isinstance(s, dict)]
-                    more_text = f" and {len(all_synonyms) - 3} more" if len(all_synonyms) > 3 else ""
+                    more_text = f" and {len(all_synonyms) - 5} more" if len(all_synonyms) > 5 else ""
                     
                     return f"Found {len(all_synonyms)} synonyms for {species_name}. Examples: {', '.join(samples)}{more_text}. Full data available in artifact."
                         
