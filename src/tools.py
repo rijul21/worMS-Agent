@@ -65,7 +65,7 @@ def create_worms_tools(
         async with context.begin_process(f"Searching WoRMS for synonyms of {species_name}") as process:
             try:
                 # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
-                aphia_id = await self._get_cached_aphia_id(species_name, process)
+                aphia_id = await get_cached_aphia_id_func(species_name, process)
 
                 if not aphia_id:
                     await log_species_not_found(process, species_name)
@@ -80,7 +80,7 @@ def create_worms_tools(
                 while True:
                     # Build URL with offset for pagination
                     syn_params = SynonymsParams(aphia_id=aphia_id)
-                    api_url = self.worms_logic.build_synonyms_url(syn_params)
+                    api_url = worms_logic.build_synonyms_url(syn_params)
                     
                     # Add offset parameter if not first request
                     if offset > 1:
@@ -93,7 +93,7 @@ def create_worms_tools(
                     # Execute request
                     raw_response = await loop.run_in_executor(
                         None,
-                        lambda url=api_url: self.worms_logic.execute_request(url)
+                        lambda url=api_url: worms_logic.execute_request(url)
                     )
                     
                     # Normalize response
@@ -123,7 +123,7 @@ def create_worms_tools(
                 samples = [s.get('scientificname', 'Unknown') for s in all_synonyms[:5] if isinstance(s, dict)]
                 
                 # Create artifact (matching other tools - just uris, no content)
-                base_api_url = self.worms_logic.build_synonyms_url(syn_params)
+                base_api_url = worms_logic.build_synonyms_url(syn_params)
                 
                 await process.create_artifact(
                     mimetype="application/json",
@@ -158,7 +158,7 @@ def create_worms_tools(
         async with context.begin_process(f"Searching WoRMS for distribution of {species_name}") as process:
             try:
                 # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
-                aphia_id = await self._get_cached_aphia_id(species_name, process)
+                aphia_id = await get_cached_aphia_id_func(species_name, process)
 
                 if not aphia_id:
                     await log_species_not_found(process, species_name)
@@ -168,14 +168,14 @@ def create_worms_tools(
                 
                 # Get distribution from WoRMS API
                 dist_params = DistributionParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_distribution_url(dist_params)
+                api_url = worms_logic.build_distribution_url(dist_params)
                 
                 # Log API call
                 await log_api_call(process, "get_species_distribution", species_name, aphia_id, api_url)
                 
                 raw_response = await loop.run_in_executor(
                     None,
-                    lambda: self.worms_logic.execute_request(api_url)
+                    lambda: worms_logic.execute_request(api_url)
                 )
                 
                 # Normalize response
@@ -223,7 +223,7 @@ def create_worms_tools(
         async with context.begin_process(f"Searching WoRMS for vernacular names of {species_name}") as process:
             try:
                 # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
-                aphia_id = await self._get_cached_aphia_id(species_name, process)
+                aphia_id = await get_cached_aphia_id_func(species_name, process)
                 
                 if not aphia_id:
                     await log_species_not_found(process, species_name)
@@ -233,14 +233,14 @@ def create_worms_tools(
                                     
                 # Get vernacular names from WoRMS API
                 vern_params = VernacularParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_vernacular_url(vern_params)
+                api_url = worms_logic.build_vernacular_url(vern_params)
                 
                 # Log API call
                 await log_api_call(process, "get_vernacular_names", species_name, aphia_id, api_url)
                 
                 raw_response = await loop.run_in_executor(
                     None,
-                    lambda: self.worms_logic.execute_request(api_url)
+                    lambda: worms_logic.execute_request(api_url)
                 )
                 
                 # Normalize response
@@ -296,7 +296,7 @@ def create_worms_tools(
         async with context.begin_process(f"Searching WoRMS for literature sources of {species_name}") as process:
             try:
                 # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
-                aphia_id = await self._get_cached_aphia_id(species_name, process)
+                aphia_id = await get_cached_aphia_id_func(species_name, process)
                 
                 if not aphia_id:
                     await log_species_not_found(process, species_name)
@@ -306,14 +306,14 @@ def create_worms_tools(
                 
                 # Get sources from WoRMS API
                 sources_params = SourcesParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_sources_url(sources_params)
+                api_url = worms_logic.build_sources_url(sources_params)
                 
                 # Log API call
                 await log_api_call(process, "get_literature_sources", species_name, aphia_id, api_url)
                 
                 raw_response = await loop.run_in_executor(
                     None,
-                    lambda: self.worms_logic.execute_request(api_url)
+                    lambda: worms_logic.execute_request(api_url)
                 )
                 
                 # Normalize response
@@ -366,7 +366,7 @@ def create_worms_tools(
         async with context.begin_process(f"Searching WoRMS for taxonomic record of {species_name}") as process:
             try:
                 # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
-                aphia_id = await self._get_cached_aphia_id(species_name, process)
+                aphia_id = await get_cached_aphia_id_func(species_name, process)
                 
                 if not aphia_id:
                     await log_species_not_found(process, species_name)
@@ -376,14 +376,14 @@ def create_worms_tools(
                 
                 # Get record from WoRMS API
                 record_params = RecordParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_record_url(record_params)
+                api_url = worms_logic.build_record_url(record_params)
                 
                 # Log API call
                 await log_api_call(process, "get_taxonomic_record", species_name, aphia_id, api_url)
                 
                 raw_response = await loop.run_in_executor(
                     None,
-                    lambda: self.worms_logic.execute_request(api_url)
+                    lambda: worms_logic.execute_request(api_url)
                 )
                 
                 if not isinstance(raw_response, dict):
@@ -435,7 +435,7 @@ def create_worms_tools(
         async with context.begin_process(f"Searching WoRMS for taxonomic classification of {species_name}") as process:
             try:
                 # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
-                aphia_id = await self._get_cached_aphia_id(species_name, process)
+                aphia_id = await get_cached_aphia_id_func(species_name, process)
                 
                 if not aphia_id:
                     await log_species_not_found(process, species_name)
@@ -445,14 +445,14 @@ def create_worms_tools(
                 
                 # Get classification from WoRMS API
                 class_params = ClassificationParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_classification_url(class_params)
+                api_url = worms_logic.build_classification_url(class_params)
                 
                 # Log API call
                 await log_api_call(process, "get_taxonomic_classification", species_name, aphia_id, api_url)
                 
                 raw_response = await loop.run_in_executor(
                     None,
-                    lambda: self.worms_logic.execute_request(api_url)
+                    lambda: worms_logic.execute_request(api_url)
                 )
                 
                 # Normalize response
@@ -505,7 +505,7 @@ def create_worms_tools(
         async with context.begin_process(f"Searching WoRMS for child taxa of {species_name}") as process:
             try:
                 # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
-                aphia_id = await self._get_cached_aphia_id(species_name, process)
+                aphia_id = await get_cached_aphia_id_func(species_name, process)
                 
                 if not aphia_id:
                     await log_species_not_found(process, species_name)
@@ -515,14 +515,14 @@ def create_worms_tools(
                 
                 # Get child taxa from WoRMS API
                 children_params = ChildrenParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_children_url(children_params)
+                api_url = worms_logic.build_children_url(children_params)
                 
                 # Log API call
                 await log_api_call(process, "get_child_taxa", species_name, aphia_id, api_url)
                 
                 raw_response = await loop.run_in_executor(
                     None,
-                    lambda: self.worms_logic.execute_request(api_url)
+                    lambda: worms_logic.execute_request(api_url)
                 )
                 
                 # Normalize response
@@ -575,7 +575,7 @@ def create_worms_tools(
         async with context.begin_process(f"Searching WoRMS for external IDs of {species_name}") as process:
             try:
                 # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
-                aphia_id = await self._get_cached_aphia_id(species_name, process)
+                aphia_id = await get_cached_aphia_id_func(species_name, process)
                 
                 if not aphia_id:
                     await log_species_not_found(process, species_name)
@@ -585,14 +585,14 @@ def create_worms_tools(
                 
                 # Get external IDs from WoRMS API
                 ext_params = ExternalIDParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_external_id_url(ext_params)
+                api_url = worms_logic.build_external_id_url(ext_params)
                 
                 # Log API call
                 await log_api_call(process, "get_external_ids", species_name, aphia_id, api_url)
                 
                 raw_response = await loop.run_in_executor(
                     None,
-                    lambda: self.worms_logic.execute_request(api_url)
+                    lambda: worms_logic.execute_request(api_url)
                 )
                 
                 # Normalize response
@@ -644,7 +644,7 @@ def create_worms_tools(
         async with context.begin_process(f"Searching WoRMS for attributes of {species_name}") as process:
             try:
                 # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
-                aphia_id = await self._get_cached_aphia_id(species_name, process)
+                aphia_id = await get_cached_aphia_id_func(species_name, process)
                 
                 if not aphia_id:
                     await log_species_not_found(process, species_name)
@@ -654,14 +654,14 @@ def create_worms_tools(
 
                 # Get attributes from WoRMS API
                 attr_params = AttributesParams(aphia_id=aphia_id)
-                api_url = self.worms_logic.build_attributes_url(attr_params)
+                api_url = worms_logic.build_attributes_url(attr_params)
                 
                 # Log API call
                 await log_api_call(process, "get_species_attributes", species_name, aphia_id, api_url)
                 
                 raw_response = await loop.run_in_executor(
                     None,
-                    lambda: self.worms_logic.execute_request(api_url)
+                    lambda: worms_logic.execute_request(api_url)
                 )
                 
                 # Normalize response
@@ -770,11 +770,11 @@ def create_worms_tools(
                 
                 # Search by vernacular name
                 search_params = VernacularSearchParams(vernacular_name=common_name, like=True)
-                api_url = self.worms_logic.build_vernacular_search_url(search_params)
+                api_url = worms_logic.build_vernacular_search_url(search_params)
                 
                 raw_response = await loop.run_in_executor(
                     None,
-                    lambda: self.worms_logic.execute_request(api_url)
+                    lambda: worms_logic.execute_request(api_url)
                 )
                 
                 # Normalize response
