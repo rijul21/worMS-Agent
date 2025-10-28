@@ -455,7 +455,7 @@ class WoRMSReActAgent(IChatBioAgent):
                     return f"Error retrieving literature sources: {str(e)}"
                 
 
-        
+
         @tool
         async def get_taxonomic_record(species_name: str) -> str:
             """Get basic taxonomic record and classification for a marine species.
@@ -465,18 +465,21 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Searching WoRMS for taxonomic record of {species_name}") as process:
                 try:
-                    # Get AphiaID (cached)
+                    # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
+                    
                     if not aphia_id:
-                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        await log_species_not_found(process, species_name)
                         return f"Species '{species_name}' not found in WoRMS database."
                     
                     loop = asyncio.get_event_loop()
                     
                     # Get record from WoRMS API
-                    from worms_api import RecordParams
                     record_params = RecordParams(aphia_id=aphia_id)
                     api_url = self.worms_logic.build_record_url(record_params)
+                    
+                    # Log API call
+                    await log_api_call(process, "get_taxonomic_record", species_name, aphia_id, api_url)
                     
                     raw_response = await loop.run_in_executor(
                         None,
@@ -484,10 +487,11 @@ class WoRMSReActAgent(IChatBioAgent):
                     )
                     
                     if not isinstance(raw_response, dict):
-                        await process.log(f"Invalid record format for {species_name}")
+                        await log_no_data(process, "get_taxonomic_record", species_name, aphia_id)
                         return f"Could not retrieve taxonomic record for {species_name}"
                     
-                    await process.log(f"Retrieved taxonomic record for {species_name} from WoRMS API")
+                    # Log data fetched
+                    await log_data_fetched(process, "get_taxonomic_record", species_name, 1)
                     
                     # Extract key taxonomic info
                     rank = raw_response.get('rank', 'Unknown')
@@ -511,14 +515,15 @@ class WoRMSReActAgent(IChatBioAgent):
                         }
                     )
                     
+                    # Log artifact created
+                    await log_artifact_created(process, "get_taxonomic_record", species_name)
+                    
                     return f"Taxonomic record for {species_name}: Rank={rank}, Status={status}, Kingdom={kingdom}, Phylum={phylum}, Class={class_name}, Order={order}, Family={family}. Full data available in artifact."
                         
                 except Exception as e:
-                    await process.log(f"Error retrieving taxonomic record for {species_name}: {type(e).__name__} - {str(e)}")
+                    await log_tool_error(process, "get_taxonomic_record", species_name, e)
                     return f"Error retrieving taxonomic record: {str(e)}"
-                
 
-        
 
         @tool
         async def get_taxonomic_classification(species_name: str) -> str:
@@ -529,18 +534,21 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Searching WoRMS for taxonomic classification of {species_name}") as process:
                 try:
-                    # Get AphiaID (cached)
+                    # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
+                    
                     if not aphia_id:
-                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        await log_species_not_found(process, species_name)
                         return f"Species '{species_name}' not found in WoRMS database."
                     
                     loop = asyncio.get_event_loop()
                     
                     # Get classification from WoRMS API
-                    from worms_api import ClassificationParams
                     class_params = ClassificationParams(aphia_id=aphia_id)
                     api_url = self.worms_logic.build_classification_url(class_params)
+                    
+                    # Log API call
+                    await log_api_call(process, "get_taxonomic_classification", species_name, aphia_id, api_url)
                     
                     raw_response = await loop.run_in_executor(
                         None,
@@ -551,10 +559,11 @@ class WoRMSReActAgent(IChatBioAgent):
                     classification = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                     
                     if not classification:
-                        await process.log(f"No classification data found for {species_name} (AphiaID: {aphia_id})")
+                        await log_no_data(process, "get_taxonomic_classification", species_name, aphia_id)
                         return f"No classification data found for {species_name}"
                     
-                    await process.log(f"Found {len(classification)} taxonomic levels for {species_name} from WoRMS API")
+                    # Log data fetched
+                    await log_data_fetched(process, "get_taxonomic_classification", species_name, len(classification))
                     
                     # Extract taxonomic hierarchy
                     hierarchy = []
@@ -576,12 +585,15 @@ class WoRMSReActAgent(IChatBioAgent):
                         }
                     )
                     
+                    # Log artifact created
+                    await log_artifact_created(process, "get_taxonomic_classification", species_name)
+                    
                     return f"Found {len(classification)}-level taxonomic classification for {species_name}. Hierarchy: {' > '.join(hierarchy)}. Full data available in artifact."
                         
                 except Exception as e:
-                    await process.log(f"Error retrieving classification for {species_name}: {type(e).__name__} - {str(e)}")
+                    await log_tool_error(process, "get_taxonomic_classification", species_name, e)
                     return f"Error retrieving classification: {str(e)}"
-                
+
 
         @tool
         async def get_child_taxa(species_name: str) -> str:
@@ -592,18 +604,21 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Searching WoRMS for child taxa of {species_name}") as process:
                 try:
-                    # Get AphiaID (cached)
+                    # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
+                    
                     if not aphia_id:
-                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        await log_species_not_found(process, species_name)
                         return f"Species '{species_name}' not found in WoRMS database."
                     
                     loop = asyncio.get_event_loop()
                     
                     # Get child taxa from WoRMS API
-                    from worms_api import ChildrenParams
                     children_params = ChildrenParams(aphia_id=aphia_id)
                     api_url = self.worms_logic.build_children_url(children_params)
+                    
+                    # Log API call
+                    await log_api_call(process, "get_child_taxa", species_name, aphia_id, api_url)
                     
                     raw_response = await loop.run_in_executor(
                         None,
@@ -614,18 +629,24 @@ class WoRMSReActAgent(IChatBioAgent):
                     children = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                     
                     if not children:
-                        await process.log(f"No child taxa found for {species_name} (AphiaID: {aphia_id})")
-                        return f"No child taxa found for {species_name}. This may be a terminal taxonomic unit."
+                        await log_no_data(process, "get_child_taxa", species_name, aphia_id)
+                        return f"No child taxa found for {species_name} (this is normal for species without subspecies)"
                     
-                    await process.log(f"Found {len(children)} child taxa for {species_name} from WoRMS API")
+                    # Log data fetched
+                    await log_data_fetched(process, "get_child_taxa", species_name, len(children))
                     
-                    # Extract sample child names
-                    samples = [c.get('scientificname', 'Unknown') for c in children[:3] if isinstance(c, dict)]
+                    # Extract child names and ranks
+                    child_info = []
+                    for child in children[:5]:
+                        if isinstance(child, dict):
+                            child_name = child.get('scientificname', 'Unknown')
+                            child_rank = child.get('rank', 'Unknown')
+                            child_info.append(f"{child_name} ({child_rank})")
                     
                     # Create artifact
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Child taxa for {species_name} (AphiaID: {aphia_id}) - {len(children)} children",
+                        description=f"Child taxa for {species_name} (AphiaID: {aphia_id}) - {len(children)} taxa",
                         uris=[api_url],
                         metadata={
                             "aphia_id": aphia_id, 
@@ -634,28 +655,30 @@ class WoRMSReActAgent(IChatBioAgent):
                         }
                     )
                     
-                    return f"Found {len(children)} child taxa for {species_name}. Examples: {', '.join(samples)}. Full data available in artifact."
+                    # Log artifact created
+                    await log_artifact_created(process, "get_child_taxa", species_name)
+                    
+                    return f"Found {len(children)} child taxa for {species_name}. Examples: {', '.join(child_info)}. Full data available in artifact."
                         
                 except Exception as e:
-                    await process.log(f"Error retrieving child taxa for {species_name}: {type(e).__name__} - {str(e)}")
+                    await log_tool_error(process, "get_child_taxa", species_name, e)
                     return f"Error retrieving child taxa: {str(e)}"
-                
 
 
         @tool
         async def get_external_ids(species_name: str) -> str:
-            """Get external database identifiers (FishBase, GBIF, NCBI, ITIS, etc.) for a marine species.
-            Useful for linking to other databases.
+            """Get external database identifiers for a marine species (e.g., FishBase, NCBI, ITIS).
             
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Searching WoRMS for external database IDs of {species_name}") as process:
+            async with context.begin_process(f"Searching WoRMS for external IDs of {species_name}") as process:
                 try:
-                    # Get AphiaID (cached)
+                    # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
+                    
                     if not aphia_id:
-                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        await log_species_not_found(process, species_name)
                         return f"Species '{species_name}' not found in WoRMS database."
                     
                     loop = asyncio.get_event_loop()
@@ -664,22 +687,26 @@ class WoRMSReActAgent(IChatBioAgent):
                     ext_params = ExternalIDParams(aphia_id=aphia_id)
                     api_url = self.worms_logic.build_external_id_url(ext_params)
                     
+                    # Log API call
+                    await log_api_call(process, "get_external_ids", species_name, aphia_id, api_url)
+                    
                     raw_response = await loop.run_in_executor(
                         None,
                         lambda: self.worms_logic.execute_request(api_url)
                     )
                     
-                    # Normalize response - it's usually just a list of ID strings
+                    # Normalize response
                     if isinstance(raw_response, list):
                         external_ids = raw_response
                     else:
                         external_ids = [raw_response] if raw_response else []
 
                     if not external_ids:
-                        await process.log(f"No external database IDs found for {species_name} (AphiaID: {aphia_id})")
+                        await log_no_data(process, "get_external_ids", species_name, aphia_id)
                         return f"No external database IDs found for {species_name}"
 
-                    await process.log(f"Found {len(external_ids)} external database ID(s) for {species_name} from WoRMS API")
+                    # Log data fetched
+                    await log_data_fetched(process, "get_external_ids", species_name, len(external_ids))
 
                     # Format the IDs for display
                     ids_display = ", ".join([str(id_val) for id_val in external_ids])
@@ -696,12 +723,14 @@ class WoRMSReActAgent(IChatBioAgent):
                         }
                     )
 
+                    # Log artifact created
+                    await log_artifact_created(process, "get_external_ids", species_name)
+
                     return f"External database IDs for {species_name}: {ids_display}. Full data in artifact."
                                 
                 except Exception as e:
-                    await process.log(f"Error retrieving external IDs for {species_name}: {type(e).__name__} - {str(e)}")
+                    await log_tool_error(process, "get_external_ids", species_name, e)
                     return f"Error retrieving external IDs: {str(e)}"
-                
 
 
         @tool
@@ -714,10 +743,11 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Searching WoRMS for attributes of {species_name}") as process:
                 try:
-                    # Get AphiaID (cached)
+                    # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
+                    
                     if not aphia_id:
-                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        await log_species_not_found(process, species_name)
                         return f"Species '{species_name}' not found in WoRMS database."
                     
                     loop = asyncio.get_event_loop()
@@ -725,6 +755,9 @@ class WoRMSReActAgent(IChatBioAgent):
                     # Get attributes from WoRMS API
                     attr_params = AttributesParams(aphia_id=aphia_id)
                     api_url = self.worms_logic.build_attributes_url(attr_params)
+                    
+                    # Log API call
+                    await log_api_call(process, "get_species_attributes", species_name, aphia_id, api_url)
                     
                     raw_response = await loop.run_in_executor(
                         None,
@@ -735,10 +768,11 @@ class WoRMSReActAgent(IChatBioAgent):
                     attributes = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                     
                     if not attributes:
-                        await process.log(f"No attributes found for {species_name} (AphiaID: {aphia_id})")
+                        await log_no_data(process, "get_species_attributes", species_name, aphia_id)
                         return f"No ecological attributes found for {species_name}"
                     
-                    await process.log(f"Found {len(attributes)} attribute records for {species_name} from WoRMS API")
+                    # Log data fetched
+                    await log_data_fetched(process, "get_species_attributes", species_name, len(attributes))
                     
                     # Extract and flatten attributes with children
                     attr_summary = []
@@ -792,8 +826,6 @@ class WoRMSReActAgent(IChatBioAgent):
                                 elif child_type == 'CITES Annex':
                                     important_attrs.append(f"CITES: Annex {child_value}")
 
-                    await process.log(f"Extracted {len(attr_summary)} attribute details for {species_name}")
-
                     # Create artifact
                     await process.create_artifact(
                         mimetype="application/json",
@@ -807,6 +839,9 @@ class WoRMSReActAgent(IChatBioAgent):
                         }
                     )
 
+                    # Log artifact created
+                    await log_artifact_created(process, "get_species_attributes", species_name)
+
                     # Build response
                     if important_attrs:
                         key_info = "; ".join(important_attrs[:5])
@@ -816,10 +851,8 @@ class WoRMSReActAgent(IChatBioAgent):
                         return f"{species_name} has {len(attributes)} ecological attributes including: {summary_preview}. Full data in artifact."
                             
                 except Exception as e:
-                    await process.log(f"Error retrieving attributes for {species_name}: {type(e).__name__} - {str(e)}")
+                    await log_tool_error(process, "get_species_attributes", species_name, e)
                     return f"Error retrieving attributes: {str(e)}"
-
-
 
 
 
