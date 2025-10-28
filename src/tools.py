@@ -19,9 +19,6 @@ from worms_api import (
     VernacularSearchParams
 )
 from src.logging import (
-    log_cache_hit,
-    log_cache_miss,
-    log_cache_store,
     log_species_not_found,
     log_api_call,
     log_data_fetched,
