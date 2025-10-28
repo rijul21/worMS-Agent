@@ -250,7 +250,7 @@ class WoRMSReActAgent(IChatBioAgent):
             must_call_tools = [t.tool_name for t in plan.tools_planned if t.priority == "must_call"]
             should_call_tools = [t.tool_name for t in plan.tools_planned if t.priority == "should_call"]
             
-            plan_details = f"📋 Execution Plan: {len(must_call_tools)} required tools"
+            plan_details = f"Execution Plan: {len(must_call_tools)} required tools"
             if should_call_tools:
                 plan_details += f", {len(should_call_tools)} recommended tools"
             
