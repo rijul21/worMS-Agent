@@ -85,7 +85,7 @@ class WoRMSReActAgent(IChatBioAgent):
 
 
     async def _get_cached_aphia_id(self, species_name: str, process) -> Optional[int]:
-        """Get AphiaID with caching and auto-redirect to accepted names"""
+        """Get AphiaID with caching, fuzzy fallback, and auto-redirect to accepted names"""
         
         # Check cache first 
         if species_name in self.aphia_id_cache:
@@ -108,10 +108,54 @@ class WoRMSReActAgent(IChatBioAgent):
             # Not in cache, fetch it
             await log_cache_miss(process, species_name)
             loop = asyncio.get_event_loop()
+            
+            # Try exact match first
             aphia_id = await loop.run_in_executor(
                 None, 
                 lambda: self.worms_logic.get_species_aphia_id(species_name)
             )
+            
+            # NEW: If exact match fails, try fuzzy search
+            if not aphia_id:
+                await log(
+                    process,
+                    f"Exact match failed for '{species_name}', trying fuzzy search",
+                    LogCategory.CACHE
+                )
+                
+                # Try fuzzy matching
+                search_params = SpeciesSearchParams(
+                    scientific_name=species_name,
+                    like=True,  # Enable fuzzy matching
+                    marine_only=True
+                )
+                api_url = self.worms_logic.build_species_search_url(search_params)
+                
+                raw_response = await loop.run_in_executor(
+                    None,
+                    lambda: self.worms_logic.execute_request(api_url)
+                )
+                
+                # Get results
+                results = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                
+                if results and isinstance(results[0], dict):
+                    aphia_id = results[0].get('AphiaID')
+                    corrected_name = results[0].get('scientificname', species_name)
+                    
+                    if aphia_id:
+                        await log(
+                            process,
+                            f"Fuzzy search found: '{corrected_name}' for '{species_name}'",
+                            LogCategory.CACHE,
+                            data={
+                                "original": species_name,
+                                "corrected": corrected_name,
+                                "aphia_id": aphia_id
+                            }
+                        )
+                        # Update species_name to the corrected one
+                        species_name = corrected_name
             
             if not aphia_id:
                 return None
