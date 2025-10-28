@@ -130,117 +130,94 @@ class WoRMSReActAgent(IChatBioAgent):
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Retrieving synonyms for {species_name}") as process:
+            async with context.begin_process(f"Searching WoRMS for synonyms of {species_name}") as process:
                 try:
-                    # Get AphiaID with single consolidated log
+                    # Get AphiaID (cached)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
-                    
+
                     if not aphia_id:
-                        await process.log(
-                            "Species resolution failed",
-                            data={"species": species_name, "status": "not_found"}
-                        )
+                        await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
                     
-                    await process.log(
-                        "Species identifier resolved",
-                        data={"species": species_name, "aphia_id": aphia_id, "source": "cache" if species_name in self.aphia_cache else "api"}
-                    )
-                    
                     loop = asyncio.get_event_loop()
+                    
+                    # Fetch all synonyms with pagination (50 records per request)
                     all_synonyms = []
                     offset = 1
-                    batch_count = 0
                     
-                    # Pagination loop
+                    await process.log(f"Fetching synonyms for {species_name} (AphiaID: {aphia_id})")
+                    
                     while True:
-                        batch_count += 1
-                        syn_params = SynonymsParams(aphia_id=aphia_id, offset=offset)
+                        # Build URL with offset for pagination
+                        syn_params = SynonymsParams(aphia_id=aphia_id)
                         api_url = self.worms_logic.build_synonyms_url(syn_params)
                         
-                        await process.log(
-                            f"API request batch {batch_count}",
-                            data={"url": api_url, "offset": offset, "expected_max_records": 50}
-                        )
+                        # Add offset parameter if not first request
+                        if offset > 1:
+                            separator = '&' if '?' in api_url else '?'
+                            api_url = f"{api_url}{separator}offset={offset}"
                         
+                        # Execute request
                         raw_response = await loop.run_in_executor(
                             None,
                             lambda url=api_url: self.worms_logic.execute_request(url)
                         )
                         
+                        # Normalize response
                         synonyms_batch = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                         
+                        # Break if no more results
                         if not synonyms_batch:
-                            await process.log("Pagination complete - no more records")
                             break
                         
                         all_synonyms.extend(synonyms_batch)
                         
-                        await process.log(
-                            f"Batch {batch_count} received",
-                            data={
-                                "records_in_batch": len(synonyms_batch),
-                                "cumulative_total": len(all_synonyms),
-                                "pagination_continues": len(synonyms_batch) == 50
-                            }
-                        )
+                        await process.log(f"Retrieved {len(synonyms_batch)} synonyms (batch {offset//50 + 1})")
                         
+                        # If we got less than 50, we've reached the end
                         if len(synonyms_batch) < 50:
                             break
                         
+                        # Move to next batch
                         offset += 50
                     
                     if not all_synonyms:
-                        await process.log("No synonym records found", data={"aphia_id": aphia_id})
+                        await process.log(f"No synonyms found for {species_name} (AphiaID: {aphia_id})")
                         return f"No synonyms found for {species_name}"
                     
-                    # Calculate data metrics
+                    await process.log(f"Found {len(all_synonyms)} total synonym records for {species_name}")
+                    
+                    # Prepare the data structure
                     result_data = {
                         "species_name": species_name,
                         "aphia_id": aphia_id,
                         "total_synonyms": len(all_synonyms),
                         "synonyms": all_synonyms
                     }
-                    content_bytes = json.dumps(result_data, indent=2).encode('utf-8')
-                    data_size_bytes = len(content_bytes)
-                    data_size_kb = round(data_size_bytes / 1024, 2)
                     
-                    await process.log(
-                        "Data retrieval complete",
-                        data={
-                            "total_records": len(all_synonyms),
-                            "total_batches": batch_count,
-                            "data_size_bytes": data_size_bytes,
-                            "data_size_kb": data_size_kb
-                        }
-                    )
-                    
-                    # Create artifact
-                    base_syn_params = SynonymsParams(aphia_id=aphia_id, offset=1)
-                    base_api_url = self.worms_logic.build_synonyms_url(base_syn_params)
+                    # Create artifact with the actual data
+                    base_api_url = self.worms_logic.build_synonyms_url(syn_params)
                     
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Synonyms for {species_name} (AphiaID: {aphia_id}) - {len(all_synonyms)} records",
+                        description=f"Synonyms for {species_name} (AphiaID: {aphia_id}) - {len(all_synonyms)} total records",
+                        content=json.dumps(result_data, indent=2).encode('utf-8'),  # Convert to bytes
                         uris=[base_api_url],
                         metadata={
                             "aphia_id": aphia_id, 
                             "count": len(all_synonyms),
                             "species": species_name,
-                            "data_source": "WoRMS"
+                            "data_type": "synonyms"
                         }
                     )
-                    
-                    # Build summary with sample data
+                                        
                     samples = [s.get('scientificname', 'Unknown') for s in all_synonyms[:3] if isinstance(s, dict)]
+                    more_text = f" and {len(all_synonyms) - 3} more" if len(all_synonyms) > 3 else ""
                     
-                    return f"{species_name} has {len(all_synonyms)} synonym records in WoRMS. Sample synonyms: {', '.join(samples)}. Complete dataset ({data_size_kb} KB) available in artifact."
+                    return f"Found {len(all_synonyms)} synonyms for {species_name}. Examples: {', '.join(samples)}{more_text}. Full data available in artifact."
                         
                 except Exception as e:
-                    await process.log(
-                        "Error during synonym retrieval",
-                        data={"error_type": type(e).__name__, "error_message": str(e), "species": species_name}
-                    )
+                    await process.log(f"Error retrieving synonyms for {species_name}: {type(e).__name__} - {str(e)}")
                     return f"Error retrieving synonyms: {str(e)}"
         @tool
         async def get_species_distribution(species_name: str) -> str:
@@ -249,34 +226,21 @@ class WoRMSReActAgent(IChatBioAgent):
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Retrieving distribution for {species_name}") as process:
+            async with context.begin_process(f"Searching WoRMS for distribution of {species_name}") as process:
                 try:
-                    # Get AphiaID with single consolidated log
+                    # Get AphiaID (cached)
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
-                    
+
                     if not aphia_id:
-                        await process.log(
-                            "Species resolution failed",
-                            data={"species": species_name, "status": "not_found"}
-                        )
+                        await process.log(f"Species '{species_name}' not found in WoRMS database")
                         return f"Species '{species_name}' not found in WoRMS database."
-                    
-                    await process.log(
-                        "Species identifier resolved",
-                        data={"species": species_name, "aphia_id": aphia_id, "source": "cache" if species_name in self.aphia_cache else "api"}
-                    )
                     
                     loop = asyncio.get_event_loop()
                     
-                    # Build and execute API request
+                    # Get distribution from WoRMS API
                     from worms_api import DistributionParams
                     dist_params = DistributionParams(aphia_id=aphia_id)
                     api_url = self.worms_logic.build_distribution_url(dist_params)
-                    
-                    await process.log(
-                        "API request initiated",
-                        data={"url": api_url, "endpoint": "AphiaDistributionsByAphiaID"}
-                    )
                     
                     raw_response = await loop.run_in_executor(
                         None,
@@ -287,70 +251,32 @@ class WoRMSReActAgent(IChatBioAgent):
                     distributions = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                     
                     if not distributions:
-                        await process.log("No distribution records found", data={"aphia_id": aphia_id})
+                        await process.log(f"No distribution data found for {species_name} (AphiaID: {aphia_id})")
                         return f"No distribution data found for {species_name}"
                     
-                    # Analyze distribution data
-                    statuses = {}
-                    regions = []
+                    await process.log(f"Found {len(distributions)} distribution records for {species_name} from WoRMS API")
                     
-                    for d in distributions:
-                        if isinstance(d, dict):
-                            status = d.get('establishmentMeans', 'Unknown')
-                            statuses[status] = statuses.get(status, 0) + 1
-                            
-                            locality = d.get('locality', d.get('locationID', 'Unknown'))
-                            if locality != 'Unknown':
-                                regions.append(locality)
-                    
-                    # Calculate data metrics
-                    result_data = {
-                        "species_name": species_name,
-                        "aphia_id": aphia_id,
-                        "total_distributions": len(distributions),
-                        "distributions": distributions
-                    }
-                    content_bytes = json.dumps(result_data, indent=2).encode('utf-8')
-                    data_size_bytes = len(content_bytes)
-                    data_size_kb = round(data_size_bytes / 1024, 2)
-                    
-                    await process.log(
-                        "Data retrieval complete",
-                        data={
-                            "total_records": len(distributions),
-                            "unique_regions": len(regions),
-                            "status_breakdown": statuses,
-                            "data_size_bytes": data_size_bytes,
-                            "data_size_kb": data_size_kb
-                        }
-                    )
+                    # Extract location info
+                    locations = [d.get('locality', d.get('location', 'Unknown')) for d in distributions[:5] if isinstance(d, dict)]
                     
                     # Create artifact
                     await process.create_artifact(
                         mimetype="application/json",
-                        description=f"Distribution for {species_name} (AphiaID: {aphia_id}) - {len(distributions)} locations",
+                        description=f"Distribution for {spežies_name} (AphiaID: {aphia_id}) - {len(distributions)} locations",
                         uris=[api_url],
                         metadata={
                             "aphia_id": aphia_id, 
                             "count": len(distributions),
-                            "species": species_name,
-                            "data_source": "WoRMS"
+                            "species": species_name
                         }
                     )
                     
-                    # Build summary
-                    top_regions = regions[:8]
-                    status_summary = ", ".join([f"{count} {status}" for status, count in statuses.items()])
-                    distribution_scope = "widespread global distribution" if len(distributions) > 20 else "limited regional distribution"
-                    
-                    return f"{species_name} has been documented in {len(distributions)} geographic locations. Distribution breakdown: {status_summary}. Key regions: {', '.join(top_regions)}. The species shows {distribution_scope}. Complete dataset ({data_size_kb} KB) available in artifact."
+                    return f"Found {len(distributions)} distribution records for {species_name}. Sample locations: {', '.join(locations)}. Full data available in artifact."
                         
                 except Exception as e:
-                    await process.log(
-                        "Error during distribution retrieval",
-                        data={"error_type": type(e).__name__, "error_message": str(e), "species": species_name}
-                    )
+                    await process.log(f"Error retrieving distribution for {species_name}: {type(e).__name__} - {str(e)}")
                     return f"Error retrieving distribution: {str(e)}"
+                
         @tool
         async def get_vernacular_names(species_name: str) -> str:
             """Get common/vernacular names for a marine species in different languages.
