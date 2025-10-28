@@ -82,40 +82,40 @@ class WoRMSReActAgent(IChatBioAgent):
     
 
 
-async def _get_cached_aphia_id(self, species_name: str, process) -> Optional[int]:
-    """Get AphiaID with caching to avoid redundant API calls"""
-    
-    # Check cache first 
-    if species_name in self.aphia_id_cache:
-        aphia_id = self.aphia_id_cache[species_name]
-        await log_cache_hit(process, species_name, aphia_id)
-        return aphia_id
-    
-    # Get or create lock for this species
-    if species_name not in self.cache_locks:
-        self.cache_locks[species_name] = asyncio.Lock()
-    
-    # Acquire lock to prevent duplicate fetches
-    async with self.cache_locks[species_name]:
-        # Double-check cache (another task might have fetched while we waited for lock)
+    async def _get_cached_aphia_id(self, species_name: str, process) -> Optional[int]:
+        """Get AphiaID with caching to avoid redundant API calls"""
+        
+        # Check cache first 
         if species_name in self.aphia_id_cache:
             aphia_id = self.aphia_id_cache[species_name]
             await log_cache_hit(process, species_name, aphia_id)
             return aphia_id
         
-        # Not in cache, fetch it
-        await log_cache_miss(process, species_name)
-        loop = asyncio.get_event_loop()
-        aphia_id = await loop.run_in_executor(
-            None, 
-            lambda: self.worms_logic.get_species_aphia_id(species_name)
-        )
+        # Get or create lock for this species
+        if species_name not in self.cache_locks:
+            self.cache_locks[species_name] = asyncio.Lock()
         
-        if aphia_id:
-            self.aphia_id_cache[species_name] = aphia_id
-            await log_cache_store(process, species_name, aphia_id)
-        
-        return aphia_id
+        # Acquire lock to prevent duplicate fetches
+        async with self.cache_locks[species_name]:
+            # Double-check cache (another task might have fetched while we waited for lock)
+            if species_name in self.aphia_id_cache:
+                aphia_id = self.aphia_id_cache[species_name]
+                await log_cache_hit(process, species_name, aphia_id)
+                return aphia_id
+            
+            # Not in cache, fetch it
+            await log_cache_miss(process, species_name)
+            loop = asyncio.get_event_loop()
+            aphia_id = await loop.run_in_executor(
+                None, 
+                lambda: self.worms_logic.get_species_aphia_id(species_name)
+            )
+            
+            if aphia_id:
+                self.aphia_id_cache[species_name] = aphia_id
+                await log_cache_store(process, species_name, aphia_id)
+            
+            return aphia_id
     
     @override
     async def run(
