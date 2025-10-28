@@ -1116,8 +1116,29 @@ class WoRMSReActAgent(IChatBioAgent):
             abort,
             finish
         ]
+            
+        # Execute agent
+        async with context.begin_process("Processing your request using WoRMS database") as process:
+            await process.log(f"Initializing agent for query: '{request}' with {len(tools)} available tools")
+        
+            
+            llm = ChatOpenAI(model="gpt-4o-mini")
+            system_prompt = self._make_system_prompt(params.species_names, request)
+            agent = create_react_agent(llm, tools)
+            
+            try:
+                await agent.ainvoke({
+                    "messages": [
+                        SystemMessage(content=system_prompt),
+                        HumanMessage(content=request)
+                    ]
+                })
                 
-
+            except Exception as e:
+                await process.log(f"Agent execution failed: {type(e).__name__} - {str(e)}")
+                await context.reply(f"An error occurred: {str(e)}")
+                
+    
    
 
     def _make_system_prompt(self, species_names: list[str], user_request: str) -> str:
