@@ -10,6 +10,8 @@ from langchain_core.messages import SystemMessage, HumanMessage
 import dotenv
 import asyncio
 from functools import lru_cache  
+import json
+from typing import Literal
 
 from worms_api import WoRMS
 from tools import create_worms_tools
@@ -17,6 +19,17 @@ from src.logging import log_species_not_found
 
 dotenv.load_dotenv()
 
+class ToolPlan(BaseModel):
+    tool_name: str
+    priority: Literal["must_call", "should_call", "optional"]
+    reason: str
+
+class ResearchPlan(BaseModel):
+    query_type: Literal["single_species", "comparison", "conservation", "distribution", "taxonomy"]
+    species_mentioned: list[str]
+    are_common_names: list[bool]
+    tools_planned: list[ToolPlan]
+    reasoning: str
 
 class MarineResearchParams(BaseModel):
     """Parameters for marine species research requests"""
@@ -33,10 +46,10 @@ AGENT_DESCRIPTION = "Marine species research assistant using WoRMS database"
 class WoRMSReActAgent(IChatBioAgent):
     def __init__(self):
         self.worms_logic = WoRMS()
-        # Automatic caching with LRU cache (stores up to 256 species)
+        # Stores up to 256 species
         self._cached_lookup = lru_cache(maxsize=256)(
             self.worms_logic.get_species_aphia_id
-    )
+        )
         
     @override
     def get_agent_card(self) -> AgentCard:
@@ -53,6 +66,104 @@ class WoRMSReActAgent(IChatBioAgent):
                 )
             ]
         )
+    
+    async def _create_plan(self, request: str, species_names: list[str]) -> ResearchPlan:
+        """Create execution plan using LLM"""
+        
+        prompt = f"""Analyze this marine species query and create a research plan.
+
+Query: "{request}"
+Species mentioned: {species_names if species_names else "unknown"}
+
+Available tools:
+- search_by_common_name: Convert common names to scientific (USE FIRST if common name)
+- get_species_attributes: Conservation status, body size, IUCN, CITES
+- get_taxonomic_record: Basic taxonomy (family, order, class)
+- get_species_distribution: Geographic range
+- get_vernacular_names: Common names in languages
+- get_taxonomic_classification: Full taxonomy tree
+
+Classify the query type:
+- "single_species": Info about one species
+- "comparison": Compare multiple species
+- "conservation": Specifically about conservation/IUCN status
+- "distribution": Specifically about where species lives
+- "taxonomy": About classification
+
+For each species, determine if it's a COMMON name (like "killer whale") or SCIENTIFIC name (like "Orcinus orca").
+
+For each tool, mark priority:
+- "must_call": Required to answer the query
+- "should_call": Recommended for complete answer
+- "optional": Only if user specifically asks
+
+Return JSON:
+{{
+  "query_type": "conservation",
+  "species_mentioned": ["killer whale"],
+  "are_common_names": [true],
+  "tools_planned": [
+    {{
+      "tool_name": "search_by_common_name",
+      "priority": "must_call",
+      "reason": "Need to resolve common name first"
+    }},
+    {{
+      "tool_name": "get_species_attributes",
+      "priority": "must_call",
+      "reason": "Query asks about conservation status"
+    }}
+  ],
+  "reasoning": "User asks about conservation, need to resolve name then get attributes"
+}}"""
+
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        response = await llm.ainvoke([HumanMessage(content=prompt)])
+        
+        plan_dict = json.loads(response.content)
+        return ResearchPlan(**plan_dict)
+
+    async def _resolve_common_names_parallel(
+        self, 
+        names: list[str], 
+        context: ResponseContext
+    ) -> dict[str, str]:
+        """Resolve multiple common names to scientific names in parallel"""
+        
+        from tools import search_by_common_name
+        
+        async with context.begin_process(f"Resolving {len(names)} species names in parallel") as process:
+            
+            async def resolve_one(common_name: str) -> tuple[str, Optional[str]]:
+                """Resolve single common name"""
+                try:
+                    # Call search tool
+                    result = await search_by_common_name(common_name)
+                    
+                    # Parse result to extract scientific name
+                    if "refers to" in result:
+                        scientific_name = result.split("refers to ")[1].split(" ")[0:2]
+                        scientific_name = " ".join(scientific_name).strip("()")
+                        return (common_name, scientific_name)
+                    return (common_name, None)
+                except Exception as e:
+                    await process.log(f"Error resolving {common_name}: {e}")
+                    return (common_name, None)
+            
+            # Execute all resolutions in parallel
+            tasks = [resolve_one(name) for name in names]
+            results = await asyncio.gather(*tasks)
+            
+            # Build mapping
+            resolved = {}
+            for common_name, scientific_name in results:
+                if scientific_name:
+                    resolved[common_name] = scientific_name
+                    await process.log(f"Resolved {common_name} -> {scientific_name}")
+                else:
+                    await process.log(f"Failed to resolve {common_name}")
+            
+            return resolved
 
     async def _get_cached_aphia_id(self, species_name: str, process) -> Optional[int]:
         """Get AphiaID with automatic caching"""
@@ -64,7 +175,7 @@ class WoRMSReActAgent(IChatBioAgent):
         )
         
         if aphia_id:
-            await process.log(f"Resolved {species_name} → AphiaID {aphia_id}")
+            await process.log(f"Resolved {species_name} -> AphiaID {aphia_id}")
         else:
             await log_species_not_found(process, species_name)
         
@@ -78,26 +189,120 @@ class WoRMSReActAgent(IChatBioAgent):
         entrypoint: str,
         params: MarineResearchParams,
     ):
-        """Main entry point - builds and executes the ReAct agent loop"""
+        """Main entry point with planning and parallel resolution"""
 
-        # Pre-resolve species names if provided
-        if params.species_names:
-            async with context.begin_process("Resolving species identifiers from WoRMS") as process:
-                for species_name in params.species_names:
+        # Import logging functions
+        from src.logging import (
+            log_plan_created,
+            log_species_identified,
+            log_tool_planned,
+            log_name_resolution_start,
+            log_name_resolved,
+            log_name_resolution_failed
+        )
+
+        # ============================================================
+        # PHASE 1: PLANNING
+        # ============================================================
+        
+        async with context.begin_process("Creating research plan") as process:
+            
+            # Create plan
+            plan = await self._create_plan(request, params.species_names)
+            
+            # Log plan creation
+            await log_plan_created(
+                process,
+                query_type=plan.query_type,
+                species_count=len(plan.species_mentioned),
+                tools_count=len(plan.tools_planned)
+            )
+            
+            # Log each identified species
+            for species_name, is_common in zip(plan.species_mentioned, plan.are_common_names):
+                await log_species_identified(process, species_name, is_common)
+            
+            # Log each planned tool
+            for tool in plan.tools_planned:
+                await log_tool_planned(process, tool.tool_name, tool.priority, tool.reason)
+            
+            # Show plan to user
+            species_display = []
+            for name, is_common in zip(plan.species_mentioned, plan.are_common_names):
+                name_type = "common name" if is_common else "scientific name"
+                species_display.append(f"{name} ({name_type})")
+            
+            must_call_tools = [t.tool_name for t in plan.tools_planned if t.priority == "must_call"]
+            
+            await context.reply(f"""Research Plan
+
+Type: {plan.query_type.replace('_', ' ').title()}
+Species: {', '.join(species_display)}
+Strategy: {plan.reasoning}
+Key tools: {', '.join(must_call_tools)}
+
+Executing...
+""")
+
+        # ============================================================
+        # PHASE 2: PARALLEL NAME RESOLUTION
+        # ============================================================
+        
+        resolved_names = {}
+        
+        # Get common names that need resolution
+        common_names = [
+            name for name, is_common in zip(plan.species_mentioned, plan.are_common_names)
+            if is_common
+        ]
+        
+        if common_names:
+            async with context.begin_process("Resolving species names") as process:
+                
+                # Log start of resolution
+                await log_name_resolution_start(process, common_names)
+                
+                # Resolve in parallel using the method
+                resolved = await self._resolve_common_names_parallel(common_names, context)
+                
+                # Log results
+                for common_name, scientific_name in resolved.items():
+                    await log_name_resolved(process, common_name, scientific_name)
+                
+                # Log failed resolutions
+                for common_name in common_names:
+                    if common_name not in resolved:
+                        await log_name_resolution_failed(process, common_name)
+                
+                resolved_names = resolved
+        
+        # Pre-resolve scientific names (for caching)
+        scientific_names = [
+            name for name, is_common in zip(plan.species_mentioned, plan.are_common_names)
+            if not is_common
+        ]
+        
+        if scientific_names:
+            async with context.begin_process("Validating scientific names") as process:
+                for species_name in scientific_names:
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
                     if not aphia_id:
-                        await process.log(f"Warning: Could not resolve {species_name}")
+                        await process.log(f"Warning: Could not validate {species_name}")
 
-        # Create all tools using factory function
+        # ============================================================
+        # PHASE 3: GUIDED EXECUTION
+        # ============================================================
+        
+        # Create tools
         tools = create_worms_tools(
             worms_logic=self.worms_logic,
             context=context,
             get_cached_aphia_id_func=self._get_cached_aphia_id
         )
         
-        # Execute agent
+        # Create agent with plan-enhanced prompt
         llm = ChatOpenAI(model="gpt-4o-mini")
-        system_prompt = self._make_system_prompt(params.species_names, request)
+        system_prompt = self._make_system_prompt_with_plan(request, plan, resolved_names)
         agent = create_react_agent(llm, tools)
         
         try:
@@ -108,110 +313,72 @@ class WoRMSReActAgent(IChatBioAgent):
                 ]
             })
         except Exception as e:
-            await context.reply(f"An error occurred while processing your request: {str(e)}")
+            await context.reply(f"An error occurred: {str(e)}")
     
-    def _make_system_prompt(self, species_names: list[str], user_request: str) -> str:
-        """Generate system prompt for the WoRMS agent"""
-        species_context = f"\n\nSpecies to research: {', '.join(species_names)}" if species_names else ""
+    def _make_system_prompt_with_plan(
+        self, 
+        request: str, 
+        plan: ResearchPlan,
+        resolved_names: dict[str, str]
+    ) -> str:
+        """Generate system prompt that includes the plan"""
+        
+        # Build species context
+        species_context = "\n\nSPECIES INFORMATION:\n"
+        for species, is_common in zip(plan.species_mentioned, plan.are_common_names):
+            if is_common and species in resolved_names:
+                species_context += f"  • {species} (common name) -> {resolved_names[species]} (scientific name)\n"
+            else:
+                species_context += f"  • {species} (scientific name)\n"
+        
+        # Build tool plan
+        must_call = [t for t in plan.tools_planned if t.priority == "must_call"]
+        should_call = [t for t in plan.tools_planned if t.priority == "should_call"]
+        
+        tool_context = "\n\nEXECUTION PLAN:\n"
+        tool_context += "MUST CALL (required to answer query):\n"
+        for tool in must_call:
+            tool_context += f"  • {tool.tool_name} - {tool.reason}\n"
+        
+        if should_call:
+            tool_context += "\nSHOULD CALL (for complete answer):\n"
+            for tool in should_call:
+                tool_context += f"  • {tool.tool_name} - {tool.reason}\n"
+        
+        return f"""You are a marine biology research assistant with access to the WoRMS database.
 
-        return f"""\
-You are a marine biology research assistant with access to the WoRMS (World Register of Marine Species) database.
+USER REQUEST: "{request}"
 
-Request: "{user_request}"{species_context}
+QUERY TYPE: {plan.query_type}
+STRATEGY: {plan.reasoning}
+{species_context}{tool_context}
 
 CRITICAL INSTRUCTIONS:
 
-1. HANDLING COMMON NAMES:
-   - If the user provides a COMMON NAME (e.g., "killer whale", "great white shark"), ALWAYS call search_by_common_name FIRST
-   - Once you get the scientific name, use it for all subsequent tool calls
-   - Examples of common names: killer whale, great white, bottlenose dolphin, tiger shark, hammerhead
-   - Examples of scientific names: Orcinus orca, Carcharodon carcharias, Tursiops truncatus
+1. FOLLOW THE EXECUTION PLAN ABOVE:
+   - Call all "MUST CALL" tools (required for this query)
+   - Call "SHOULD CALL" tools if they help provide a complete answer
+   - Skip tools not listed in the plan
+   - Call each tool AT MOST ONCE per species
 
-2. PLANNING YOUR APPROACH:
-   - For simple queries (e.g., "What's the conservation status?"), call only relevant tools
-   - For comprehensive queries (e.g., "Tell me everything about X"), call multiple tools systematically
-   - For comparison queries, gather the same data points for each species
-   - Typical order: search (if common name) → taxonomy → attributes → distribution → names → sources
+2. USE RESOLVED NAMES:
+   - Common names have already been resolved to scientific names (see above)
+   - Always use the scientific names shown above for tool calls
+   - Do NOT call search_by_common_name again - names are already resolved
 
-3. TOOL USAGE GUIDELINES:
-   
-   SEARCH & IDENTIFICATION:
-   - search_by_common_name: Convert common names to scientific names (e.g., "killer whale" → "Orcinus orca")
-     * USE THIS FIRST if user provides common/vernacular names
-     * Returns scientific name and AphiaID
-   
-   TAXONOMY:
-   - get_taxonomic_record: Basic taxonomy (rank, status, kingdom, phylum, class, order, family)
-   - get_taxonomic_classification: Full taxonomic hierarchy (use for detailed taxonomy)
-   
-   ECOLOGY & CONSERVATION:
-   - get_species_attributes: Ecological traits, conservation status, body size, IUCN Red List status, CITES
-     * Use for: conservation status, body size, ecological traits, habitat preferences
-     * Returns nested data including IUCN status, CITES Annex, size measurements
-   
-   DISTRIBUTION & NAMES:
-   - get_species_distribution: Geographic distribution data (where the species lives)
-   - get_vernacular_names: Common names in different languages for a known species
-   - get_species_synonyms: Alternative scientific names (historical names, misspellings)
-   
-   REFERENCES & DATABASES:
-   - get_literature_sources: Scientific references and publications (only if explicitly needed)
-   - get_external_ids: External database identifiers (FishBase, NCBI, ITIS, BOLD)
-   
-   OTHER:
-   - get_child_taxa: Subspecies/varieties (may return empty for terminal species - this is NORMAL)
+3. FOR COMPARISON QUERIES:
+   - Collect the SAME data points for all species
+   - After collecting, provide comparative analysis with specific facts
 
-4. ERROR HANDLING:
-   - If search_by_common_name returns no results, ask user for clarification or try scientific name
-   - If get_child_taxa returns empty or error, this is NORMAL for terminal species - don't retry
-   - Don't repeatedly call the same tool if it returns empty results
-   - If a species is not found, clearly inform the user and suggest alternatives
+4. EFFICIENCY:
+   - If you have enough data to answer the query, call finish() immediately
+   - Don't call unnecessary tools
+   - Don't retry failed calls
 
-5. EFFICIENCY & AVOIDING LOOPS:
-   - Call each tool AT MOST ONCE per species (except search_by_common_name if needed)
-   - Don't retry failed calls - move on to other tools
-   - If you get a complete answer, call finish() immediately
-   - Only call tools that are relevant to the user's specific question
-   - If user asks for "everything", call all relevant tools systematically
-
-6. COMPARISON REQUIREMENTS:
-   When comparing multiple species, provide comparative analysis:
-   - Which has wider distribution?
-   - Which has larger body size?
-   - Conservation status differences (IUCN Red List categories)
-   - Taxonomic relationships (same family/order?)
-   - Which is more studied (literature count)?
-   
-   Don't just list facts - provide meaningful comparisons and insights.
-
-7. RESPONSE QUALITY:
-   - Lead with KEY INFORMATION that directly answers the user's question
-   - DON'T ask "Would you like me to...?" - just provide the answer
-   - For conservation queries, ALWAYS extract and state IUCN status if available
-   - For size queries, mention both male and female sizes if available
-   - Always mention that full data is available in artifacts
-   - Be concise but comprehensive
-
-8. FINISHING:
-   - Call finish() with a summary that DIRECTLY ANSWERS the user's question
-   - Include specific facts: conservation status, sizes, locations, etc.
-   - For comparisons, include comparative insights, not just individual descriptions
-   - Highlight key differences and similarities
-   - Keep it concise but informative
-
-EXAMPLES:
-
-Example 1 - Common name query:
-User: "What's the conservation status of killer whales?"
-Process: search_by_common_name("killer whale") → "Orcinus orca" → get_species_attributes("Orcinus orca") → extract IUCN status → finish()
-
-Example 2 - Scientific name query:
-User: "Tell me about Carcharodon carcharias"
-Process: get_taxonomic_record() → get_species_attributes() → get_species_distribution() → finish()
-
-Example 3 - Comparison:
-User: "Compare great white shark and tiger shark"
-Process: search_by_common_name for both → get_species_attributes for both → compare results → finish()
+5. RESPONSE QUALITY:
+   - Lead with direct answer to user's question
+   - Include specific facts (IUCN status, sizes, locations)
+   - Mention that full data is in artifacts
 
 Always create artifacts when retrieving data from WoRMS.
 """
@@ -223,6 +390,6 @@ if __name__ == "__main__":
     print("WoRMS Agent Server")
     print("=" * 60)
     print(f"URL: http://localhost:9999")
-    print(f"Status: Ready with {10} tools")
+    print(f"Status: Ready with planning capabilities")
     print("=" * 60)
     run_agent_server(agent, host="0.0.0.0", port=9999)
