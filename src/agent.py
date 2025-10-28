@@ -132,27 +132,27 @@ class WoRMSReActAgent(IChatBioAgent):
             """
             async with context.begin_process(f"Retrieving synonyms for {species_name}") as process:
                 try:
-                    # Get AphiaID (cached)
+                    # Get AphiaID with single consolidated log
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
-
+                    
                     if not aphia_id:
-                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        await process.log(
+                            "Species resolution failed",
+                            data={"species": species_name, "status": "not_found"}
+                        )
                         return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    await process.log(
+                        "Species identifier resolved",
+                        data={"species": species_name, "aphia_id": aphia_id, "source": "cache" if species_name in self.aphia_cache else "api"}
+                    )
                     
                     loop = asyncio.get_event_loop()
                     all_synonyms = []
                     offset = 1
                     batch_count = 0
                     
-                    await process.log(
-                        f"Starting data retrieval from WoRMS API",
-                        data={"species": species_name, "aphia_id": aphia_id}
-                    )
-                    
-                    # Build base API URL for artifact reference
-                    base_syn_params = SynonymsParams(aphia_id=aphia_id, offset=1)
-                    base_api_url = self.worms_logic.build_synonyms_url(base_syn_params)
-                    
+                    # Pagination loop
                     while True:
                         batch_count += 1
                         syn_params = SynonymsParams(aphia_id=aphia_id, offset=offset)
@@ -160,7 +160,7 @@ class WoRMSReActAgent(IChatBioAgent):
                         
                         await process.log(
                             f"API request batch {batch_count}",
-                            data={"url": api_url, "offset": offset}
+                            data={"url": api_url, "offset": offset, "expected_max_records": 50}
                         )
                         
                         raw_response = await loop.run_in_executor(
@@ -171,30 +171,30 @@ class WoRMSReActAgent(IChatBioAgent):
                         synonyms_batch = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                         
                         if not synonyms_batch:
-                            await process.log(f"No more records available, pagination complete")
+                            await process.log("Pagination complete - no more records")
                             break
                         
                         all_synonyms.extend(synonyms_batch)
                         
                         await process.log(
-                            f"Batch {batch_count} retrieved",
+                            f"Batch {batch_count} received",
                             data={
                                 "records_in_batch": len(synonyms_batch),
-                                "total_so_far": len(all_synonyms)
+                                "cumulative_total": len(all_synonyms),
+                                "pagination_continues": len(synonyms_batch) == 50
                             }
                         )
                         
                         if len(synonyms_batch) < 50:
-                            await process.log(f"Retrieved final batch, pagination complete")
                             break
                         
                         offset += 50
                     
                     if not all_synonyms:
-                        await process.log(f"No synonyms found for {species_name}")
+                        await process.log("No synonym records found", data={"aphia_id": aphia_id})
                         return f"No synonyms found for {species_name}"
                     
-                    # Calculate data size
+                    # Calculate data metrics
                     result_data = {
                         "species_name": species_name,
                         "aphia_id": aphia_id,
@@ -202,18 +202,23 @@ class WoRMSReActAgent(IChatBioAgent):
                         "synonyms": all_synonyms
                     }
                     content_bytes = json.dumps(result_data, indent=2).encode('utf-8')
-                    data_size_kb = round(len(content_bytes) / 1024, 2)
+                    data_size_bytes = len(content_bytes)
+                    data_size_kb = round(data_size_bytes / 1024, 2)
                     
                     await process.log(
-                        f"Data retrieval complete",
+                        "Data retrieval complete",
                         data={
                             "total_records": len(all_synonyms),
                             "total_batches": batch_count,
+                            "data_size_bytes": data_size_bytes,
                             "data_size_kb": data_size_kb
                         }
                     )
                     
-                    # Create artifact pointing to the WoRMS API endpoint
+                    # Create artifact
+                    base_syn_params = SynonymsParams(aphia_id=aphia_id, offset=1)
+                    base_api_url = self.worms_logic.build_synonyms_url(base_syn_params)
+                    
                     await process.create_artifact(
                         mimetype="application/json",
                         description=f"Synonyms for {species_name} (AphiaID: {aphia_id}) - {len(all_synonyms)} records",
@@ -226,34 +231,15 @@ class WoRMSReActAgent(IChatBioAgent):
                         }
                     )
                     
-                    await process.log(f"Artifact created successfully")
-                    
-                    # Build summary
-                    # NEW FORMAT - Very different structure
+                    # Build summary with sample data
                     samples = [s.get('scientificname', 'Unknown') for s in all_synonyms[:3] if isinstance(s, dict)]
-
-                    return f"""
-                    SYNONYM SEARCH RESULTS:
-                    ━━━━━━━━━━━━━━━━━━━━
-                    Species Query: {species_name}
-                    WoRMS ID: {aphia_id}
-                    Total Synonyms Found: {len(all_synonyms)}
-                    Data Size: {data_size_kb} KB
-
-                    TOP 3 SYNONYMS:
-                    1. {samples[0] if len(samples) > 0 else 'N/A'}
-                    2. {samples[1] if len(samples) > 1 else 'N/A'}
-                    3. {samples[2] if len(samples) > 2 else 'N/A'}
-
-                    ⚠️ Note: {len(all_synonyms) - 3} additional synonyms available in the artifact.
-                    📊 Complete dataset has been packaged for download.
-                    """                    
-                    return f"Found {len(all_synonyms)} synonyms for {species_name}. Examples: {', '.join(samples)}{more_text}. Full data ({data_size_kb} KB) available in artifact."
+                    
+                    return f"{species_name} has {len(all_synonyms)} synonym records in WoRMS. Sample synonyms: {', '.join(samples)}. Complete dataset ({data_size_kb} KB) available in artifact."
                         
                 except Exception as e:
                     await process.log(
-                        f"Error during retrieval",
-                        data={"error_type": type(e).__name__, "error": str(e)}
+                        "Error during synonym retrieval",
+                        data={"error_type": type(e).__name__, "error_message": str(e), "species": species_name}
                     )
                     return f"Error retrieving synonyms: {str(e)}"
         @tool
@@ -263,23 +249,34 @@ class WoRMSReActAgent(IChatBioAgent):
             Args:
                 species_name: Scientific name (e.g., "Orcinus orca")
             """
-            async with context.begin_process(f"Searching WoRMS for distribution of {species_name}") as process:
+            async with context.begin_process(f"Retrieving distribution for {species_name}") as process:
                 try:
-                    # Get AphiaID (cached)
+                    # Get AphiaID with single consolidated log
                     aphia_id = await self._get_cached_aphia_id(species_name, process)
-
+                    
                     if not aphia_id:
-                        await process.log(f"Species '{species_name}' not found in WoRMS database")
+                        await process.log(
+                            "Species resolution failed",
+                            data={"species": species_name, "status": "not_found"}
+                        )
                         return f"Species '{species_name}' not found in WoRMS database."
+                    
+                    await process.log(
+                        "Species identifier resolved",
+                        data={"species": species_name, "aphia_id": aphia_id, "source": "cache" if species_name in self.aphia_cache else "api"}
+                    )
                     
                     loop = asyncio.get_event_loop()
                     
-                    # Get distribution from WoRMS API
+                    # Build and execute API request
                     from worms_api import DistributionParams
                     dist_params = DistributionParams(aphia_id=aphia_id)
                     api_url = self.worms_logic.build_distribution_url(dist_params)
                     
-                    await process.log(f"Requesting distribution data from WoRMS API", data={"url": api_url})
+                    await process.log(
+                        "API request initiated",
+                        data={"url": api_url, "endpoint": "AphiaDistributionsByAphiaID"}
+                    )
                     
                     raw_response = await loop.run_in_executor(
                         None,
@@ -290,37 +287,43 @@ class WoRMSReActAgent(IChatBioAgent):
                     distributions = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                     
                     if not distributions:
-                        await process.log(f"No distribution data found for {species_name} (AphiaID: {aphia_id})")
+                        await process.log("No distribution records found", data={"aphia_id": aphia_id})
                         return f"No distribution data found for {species_name}"
                     
-                    await process.log(f"Retrieved {len(distributions)} distribution records", data={"count": len(distributions)})
-                    
-                    # Analyze distribution by status and regions
+                    # Analyze distribution data
                     statuses = {}
                     regions = []
                     
                     for d in distributions:
                         if isinstance(d, dict):
-                            # Count by status
-                            status = d.get('establishmentMeans', d.get('status', 'Unknown'))
+                            status = d.get('establishmentMeans', 'Unknown')
                             statuses[status] = statuses.get(status, 0) + 1
                             
-                            # Collect regions
                             locality = d.get('locality', d.get('locationID', 'Unknown'))
                             if locality != 'Unknown':
                                 regions.append(locality)
                     
-                    # Get top regions (up to 8)
-                    top_regions = regions[:8]
+                    # Calculate data metrics
+                    result_data = {
+                        "species_name": species_name,
+                        "aphia_id": aphia_id,
+                        "total_distributions": len(distributions),
+                        "distributions": distributions
+                    }
+                    content_bytes = json.dumps(result_data, indent=2).encode('utf-8')
+                    data_size_bytes = len(content_bytes)
+                    data_size_kb = round(data_size_bytes / 1024, 2)
                     
-                    # Build status summary
-                    status_summary = ", ".join([f"{count} {status}" for status, count in statuses.items()])
-                    
-                    await process.log(f"Distribution analysis complete", data={
-                        "total_locations": len(distributions),
-                        "status_breakdown": statuses,
-                        "sample_regions": top_regions[:3]
-                    })
+                    await process.log(
+                        "Data retrieval complete",
+                        data={
+                            "total_records": len(distributions),
+                            "unique_regions": len(regions),
+                            "status_breakdown": statuses,
+                            "data_size_bytes": data_size_bytes,
+                            "data_size_kb": data_size_kb
+                        }
+                    )
                     
                     # Create artifact
                     await process.create_artifact(
@@ -335,11 +338,18 @@ class WoRMSReActAgent(IChatBioAgent):
                         }
                     )
                     
-                    # NEW RETURN FORMAT - More analytical
-                    return f"{species_name} has been documented in {len(distributions)} geographic locations worldwide. Distribution breakdown: {status_summary}. Key regions include: {', '.join(top_regions)}. The species shows {'widespread global distribution' if len(distributions) > 20 else 'limited regional distribution'}. Detailed location data with establishment status available in the artifact."
+                    # Build summary
+                    top_regions = regions[:8]
+                    status_summary = ", ".join([f"{count} {status}" for status, count in statuses.items()])
+                    distribution_scope = "widespread global distribution" if len(distributions) > 20 else "limited regional distribution"
+                    
+                    return f"{species_name} has been documented in {len(distributions)} geographic locations. Distribution breakdown: {status_summary}. Key regions: {', '.join(top_regions)}. The species shows {distribution_scope}. Complete dataset ({data_size_kb} KB) available in artifact."
                         
                 except Exception as e:
-                    await process.log(f"Error retrieving distribution", data={"error": str(e), "species": species_name})
+                    await process.log(
+                        "Error during distribution retrieval",
+                        data={"error_type": type(e).__name__, "error_message": str(e), "species": species_name}
+                    )
                     return f"Error retrieving distribution: {str(e)}"
         @tool
         async def get_vernacular_names(species_name: str) -> str:
