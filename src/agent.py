@@ -41,7 +41,9 @@ from logging_utils import (
     log_tool_error,
     log_artifact_created,
     log_agent_init,
-    log_agent_error
+    log_agent_error,
+    log,             
+    LogCategory       
 )
 
 
@@ -83,7 +85,7 @@ class WoRMSReActAgent(IChatBioAgent):
 
 
     async def _get_cached_aphia_id(self, species_name: str, process) -> Optional[int]:
-        """Get AphiaID with caching to avoid redundant API calls"""
+        """Get AphiaID with caching and auto-redirect to accepted names"""
         
         # Check cache first 
         if species_name in self.aphia_id_cache:
@@ -111,11 +113,111 @@ class WoRMSReActAgent(IChatBioAgent):
                 lambda: self.worms_logic.get_species_aphia_id(species_name)
             )
             
-            if aphia_id:
-                self.aphia_id_cache[species_name] = aphia_id
-                await log_cache_store(process, species_name, aphia_id)
+            if not aphia_id:
+                return None
             
-            return aphia_id
+            # Check if this is an accepted name, if not resolve to accepted
+            accepted_name, accepted_aphia_id = await self._resolve_to_accepted_name(
+                species_name, 
+                aphia_id, 
+                process
+            )
+            
+            # Cache both the original name and the accepted name
+            self.aphia_id_cache[species_name] = accepted_aphia_id
+            await log_cache_store(process, species_name, accepted_aphia_id)
+            
+            # If the accepted name is different, also cache it
+            if accepted_name != species_name:
+                self.aphia_id_cache[accepted_name] = accepted_aphia_id
+                await log_cache_store(process, accepted_name, accepted_aphia_id)
+            
+            return accepted_aphia_id
+
+    async def _resolve_to_accepted_name(self, species_name: str, aphia_id: int, process) -> tuple[str, int]:
+        """
+        Check if a species name is accepted, and if not, resolve to the accepted name.
+        
+        Args:
+            species_name: The scientific name to check
+            aphia_id: The AphiaID of the species
+            process: The process context for logging
+        
+        Returns:
+            tuple: (accepted_species_name, accepted_aphia_id)
+        """
+        try:
+            loop = asyncio.get_event_loop()
+            
+            # Get the full record to check status
+            record_params = RecordParams(aphia_id=aphia_id)
+            api_url = self.worms_logic.build_record_url(record_params)
+            
+            await log(
+                process,
+                f"Checking taxonomic status of {species_name}",
+                LogCategory.TOOL,
+                data={"aphia_id": aphia_id}
+            )
+            
+            record = await loop.run_in_executor(
+                None,
+                lambda: self.worms_logic.execute_request(api_url)
+            )
+            
+            if not isinstance(record, dict):
+                # Can't check status, return original
+                return species_name, aphia_id
+            
+            status = record.get('status', '').lower()
+            
+            # If accepted, return as-is
+            if status == 'accepted':
+                await log(
+                    process,
+                    f"{species_name} is an accepted name",
+                    LogCategory.TOOL,
+                    data={"aphia_id": aphia_id, "status": "accepted"}
+                )
+                return species_name, aphia_id
+            
+            # If unaccepted, get the valid/accepted name
+            valid_aphia_id = record.get('valid_AphiaID')
+            valid_name = record.get('valid_name')
+            
+            if valid_aphia_id and valid_name:
+                await log(
+                    process,
+                    f"Redirecting from unaccepted name '{species_name}' to accepted name '{valid_name}'",
+                    LogCategory.TOOL,
+                    data={
+                        "original_name": species_name,
+                        "original_aphia_id": aphia_id,
+                        "original_status": status,
+                        "accepted_name": valid_name,
+                        "accepted_aphia_id": valid_aphia_id
+                    }
+                )
+                return valid_name, valid_aphia_id
+            else:
+                # No valid name found, return original
+                await log(
+                    process,
+                    f"{species_name} is {status} but no accepted name found",
+                    LogCategory.TOOL,
+                    data={"aphia_id": aphia_id, "status": status}
+                )
+                return species_name, aphia_id
+                
+        except Exception as e:
+            await log(
+                process,
+                f"Error checking taxonomic status: {str(e)}",
+                LogCategory.TOOL,
+                data={"error": str(e)}
+            )
+            # On error, return original
+            return species_name, aphia_id
     
     @override
     async def run(
@@ -916,148 +1018,268 @@ class WoRMSReActAgent(IChatBioAgent):
                 except Exception as e:
                     await process.log(f"Error searching for common name '{common_name}': {type(e).__name__} - {str(e)}")
                     return f"Error searching for common name: {str(e)}"
+                
+
+        @tool
+        async def search_species_fuzzy(scientific_name: str) -> str:
+            """Search for marine species with fuzzy/near matching for typos and spelling variations.
+            Use this when the user might have misspelled a scientific name or when exact match fails.
+            
+            Args:
+                scientific_name: Scientific name to search for (can have typos, e.g., "Orcinus orka")
+            """
+            async with context.begin_process(f"Searching WoRMS with fuzzy matching for '{scientific_name}'") as process:
+                try:
+                    loop = asyncio.get_event_loop()
+                    
+                    # Use fuzzy matching (like=True)
+                    search_params = SpeciesSearchParams(
+                        scientific_name=scientific_name,
+                        like=True,  # Enable fuzzy matching
+                        marine_only=True
+                    )
+                    api_url = self.worms_logic.build_species_search_url(search_params)
+                    
+                    # Log API call
+                    await log_api_call(process, "search_species_fuzzy", scientific_name, 0, api_url)
+                    
+                    raw_response = await loop.run_in_executor(
+                        None,
+                        lambda: self.worms_logic.execute_request(api_url)
+                    )
+                    
+                    # Normalize response
+                    results = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                    
+                    if not results:
+                        await log_no_data(process, "search_species_fuzzy", scientific_name, 0)
+                        return f"No species found matching '{scientific_name}'. Try checking the spelling or use a common name."
+                    
+                    # Log data fetched
+                    await log_data_fetched(process, "search_species_fuzzy", scientific_name, len(results))
+                    
+                    # Extract species info
+                    species_list = []
+                    for result in results[:10]:  # Top 10 matches
+                        if isinstance(result, dict):
+                            sci_name = result.get('scientificname', 'Unknown')
+                            aphia_id = result.get('AphiaID', 'Unknown')
+                            status = result.get('status', 'Unknown')
+                            authority = result.get('authority', '')
+                            
+                            species_info = f"{sci_name} (AphiaID: {aphia_id}, Status: {status})"
+                            if authority:
+                                species_info += f" - {authority}"
+                            species_list.append(species_info)
+                    
+                    # Create artifact
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Fuzzy search results for '{scientific_name}' - {len(results)} matches found",
+                        uris=[api_url],
+                        metadata={
+                            "search_term": scientific_name,
+                            "count": len(results),
+                            "fuzzy_match": True,
+                            "top_result": results[0].get('scientificname', '') if results else ''
+                        }
+                    )
+                    
+                    # Log artifact created
+                    await log_artifact_created(process, "search_species_fuzzy", scientific_name)
+                    
+                    # Build response
+                    if len(results) == 1:
+                        sci_name = results[0].get('scientificname', 'Unknown')
+                        aphia_id = results[0].get('AphiaID', 'Unknown')
+                        return f"Found match: {sci_name} (AphiaID: {aphia_id}). Did you mean this species?"
+                    else:
+                        top_5 = "\n".join(species_list[:5])
+                        return f"Found {len(results)} possible matches for '{scientific_name}':\n{top_5}\n\nFull list in artifact. Which one did you mean?"
+                            
+                except Exception as e:
+                    await log_tool_error(process, "search_species_fuzzy", scientific_name, e)
+                    return f"Error during fuzzy search: {str(e)}"
 
         tools = [
-        get_species_synonyms,
-        get_species_distribution,
-        get_vernacular_names,
-        get_literature_sources,
-        get_taxonomic_record,
-        get_taxonomic_classification,
-        get_child_taxa,
-        get_external_ids,
-        get_species_attributes,
-        search_by_common_name,  
-        abort,
-        finish
-    ]
-            
-        # Execute agent
-        async with context.begin_process("Processing your request using WoRMS database") as process:
-            await process.log(f"Initializing agent for query: '{request}' with {len(tools)} available tools")
-        
-            
-            llm = ChatOpenAI(model="gpt-4o-mini")
-            system_prompt = self._make_system_prompt(params.species_names, request)
-            agent = create_react_agent(llm, tools)
-            
-            try:
-                await agent.ainvoke({
-                    "messages": [
-                        SystemMessage(content=system_prompt),
-                        HumanMessage(content=request)
-                    ]
-                })
+            get_species_synonyms,
+            get_species_distribution,
+            get_vernacular_names,
+            get_literature_sources,
+            get_taxonomic_record,
+            get_taxonomic_classification,
+            get_child_taxa,
+            get_external_ids,
+            get_species_attributes,
+            search_by_common_name,
+            search_species_fuzzy,  
+            abort,
+            finish
+        ]
                 
-            except Exception as e:
-                await process.log(f"Agent execution failed: {type(e).__name__} - {str(e)}")
-                await context.reply(f"An error occurred: {str(e)}")
-                
-    
+
+   
+
     def _make_system_prompt(self, species_names: list[str], user_request: str) -> str:
         species_context = f"\n\nSpecies to research: {', '.join(species_names)}" if species_names else ""
 
         return f"""\
-You are a marine biology research assistant with access to the WoRMS (World Register of Marine Species) database.
+    You are a marine biology research assistant with access to the WoRMS (World Register of Marine Species) database.
 
-Request: "{user_request}"{species_context}
+    Request: "{user_request}"{species_context}
 
-CRITICAL INSTRUCTIONS:
+    CRITICAL INSTRUCTIONS:
 
-1. HANDLING COMMON NAMES:
-   - If the user provides a COMMON NAME (e.g., "killer whale", "great white shark"), ALWAYS call search_by_common_name FIRST
-   - Once you get the scientific name, use it for all subsequent tool calls
-   - Examples of common names: killer whale, great white, bottlenose dolphin, tiger shark, hammerhead
-   - Examples of scientific names: Orcinus orca, Carcharodon carcharias, Tursiops truncatus
+    1. EFFICIENCY - ONLY CALL TOOLS THAT ANSWER THE USER'S SPECIFIC QUESTION:
+    - If user asks ONLY about distribution → call ONLY get_species_distribution
+    - If user asks ONLY about attributes → call ONLY get_species_attributes
+    - If user asks ONLY about common names → call ONLY get_vernacular_names
+    - If user asks ONLY about synonyms → call ONLY get_species_synonyms
+    - DO NOT call multiple tools unless the user explicitly asks for multiple things
+    - Read the user's question carefully and call ONLY the relevant tool(s)
 
-2. PLANNING YOUR APPROACH:
-   - For simple queries (e.g., "What's the conservation status?"), call only relevant tools
-   - For comprehensive queries (e.g., "Tell me everything about X"), call multiple tools systematically
-   - For comparison queries, gather the same data points for each species
-   - Typical order: search (if common name) → taxonomy → attributes → distribution → names → sources
+    2. HANDLING NAMES:
+    A. COMMON NAMES (e.g., "killer whale", "great white shark"):
+        - ALWAYS call search_by_common_name FIRST
+        - Once you get the scientific name, use it for subsequent tool calls
+        - Examples: killer whale, great white, bottlenose dolphin, tiger shark
+    
+    B. SCIENTIFIC NAMES WITH TYPOS (e.g., "Orcinus orka", "Delfinus"):
+        - If exact search fails, try search_species_fuzzy
+        - This handles spelling mistakes and variations
+        - Examples: "Orcinus orka" → "Orcinus orca", "Delfinus" → "Delphinus"
+    
+    C. CORRECT SCIENTIFIC NAMES (e.g., "Orcinus orca"):
+        - Proceed directly to the relevant tool
+        - Auto-redirect handles synonyms automatically (you don't need to do anything)
 
-3. TOOL USAGE GUIDELINES:
-   
-   SEARCH & IDENTIFICATION:
-   - search_by_common_name: Convert common names to scientific names (e.g., "killer whale" → "Orcinus orca")
-     * USE THIS FIRST if user provides common/vernacular names
-     * Returns scientific name and AphiaID
-   
-   TAXONOMY:
-   - get_taxonomic_record: Basic taxonomy (rank, status, kingdom, phylum, class, order, family)
-   - get_taxonomic_classification: Full taxonomic hierarchy (use for detailed taxonomy)
-   
-   ECOLOGY & CONSERVATION:
-   - get_species_attributes: Ecological traits, conservation status, body size, IUCN Red List status, CITES
-     * Use for: conservation status, body size, ecological traits, habitat preferences
-     * Returns nested data including IUCN status, CITES Annex, size measurements
-   
-   DISTRIBUTION & NAMES:
-   - get_species_distribution: Geographic distribution data (where the species lives)
-   - get_vernacular_names: Common names in different languages for a known species
-   - get_species_synonyms: Alternative scientific names (historical names, misspellings)
-   
-   REFERENCES & DATABASES:
-   - get_literature_sources: Scientific references and publications (only if explicitly needed)
-   - get_external_ids: External database identifiers (FishBase, NCBI, ITIS, BOLD)
-   
-   OTHER:
-   - get_child_taxa: Subspecies/varieties (may return empty for terminal species - this is NORMAL)
+    3. TOOL SELECTION GUIDE - BE SPECIFIC:
 
-4. ERROR HANDLING:
-   - If search_by_common_name returns no results, ask user for clarification or try scientific name
-   - If get_child_taxa returns empty or error, this is NORMAL for terminal species - don't retry
-   - Don't repeatedly call the same tool if it returns empty results
-   - If a species is not found, clearly inform the user and suggest alternatives
+    SEARCH & IDENTIFICATION:
+    - search_by_common_name: Convert common names to scientific names
+        * Examples: "killer whale" → "Orcinus orca", "great white" → "Carcharodon carcharias"
+    
+    - search_species_fuzzy: Fix typos in scientific names
+        * Examples: "Orcinus orka" → "Orcinus orca", "Carcharodon carcarias" → "Carcharodon carcharias"
+    
+    TAXONOMY (use only when user asks about taxonomy/classification):
+    - get_taxonomic_record: Basic taxonomy info (rank, status, kingdom, phylum, class, order, family)
+        * When to use: "What's the classification?", "What family is X in?", "Is this species accepted?"
+    
+    - get_taxonomic_classification: Full hierarchical taxonomy tree
+        * When to use: "Show me the complete taxonomy", "Full classification hierarchy"
+    
+    ECOLOGY & TRAITS (use only when user asks about these specific things):
+    - get_species_attributes: Ecological traits, conservation status, body size, IUCN, CITES
+        * When to use: "conservation status", "body size", "IUCN status", "ecological traits", "CITES"
+        * DO NOT use for general "tell me about" queries
+    
+    GEOGRAPHY (use only when user asks about distribution/location):
+    - get_species_distribution: Where the species lives geographically
+        * When to use: "Where does X live?", "distribution", "geographic range", "habitat locations"
+        * DO NOT use unless user explicitly asks about location/distribution
+    
+    NAMES (use only when user asks about names):
+    - get_vernacular_names: Common names in different languages
+        * When to use: "What are the common names?", "names in other languages"
+    
+    - get_species_synonyms: Historical/alternative scientific names
+        * When to use: "What are the synonyms?", "other scientific names", "historical names"
+    
+    REFERENCES (use only when user explicitly asks):
+    - get_literature_sources: Scientific papers and publications
+        * When to use: "Show me references", "scientific literature", "publications"
+        * DO NOT call unless explicitly requested
+    
+    OTHER:
+    - get_child_taxa: Subspecies/varieties (may be empty - this is normal)
+        * When to use: "Does this have subspecies?", "child taxa", "varieties"
+    
+    - get_external_ids: Database IDs (FishBase, NCBI, ITIS, BOLD)
+        * When to use: "What's the FishBase ID?", "external database IDs"
 
-5. EFFICIENCY & AVOIDING LOOPS:
-   - Call each tool AT MOST ONCE per species (except search_by_common_name if needed)
-   - Don't retry failed calls - move on to other tools
-   - If you get a complete answer, call finish() immediately
-   - Only call tools that are relevant to the user's specific question
-   - If user asks for "everything", call all relevant tools systematically
+    4. QUERY TYPE EXAMPLES - LEARN FROM THESE:
 
-6. COMPARISON REQUIREMENTS:
-   When comparing multiple species, provide comparative analysis:
-   - Which has wider distribution?
-   - Which has larger body size?
-   - Conservation status differences (IUCN Red List categories)
-   - Taxonomic relationships (same family/order?)
-   - Which is more studied (literature count)?
-   
-   Don't just list facts - provide meaningful comparisons and insights.
+    A. SPECIFIC QUERIES (call only 1-2 tools):
+    
+    "What's the conservation status of killer whales?"
+    → search_by_common_name("killer whale") → get_species_attributes() → finish()
+    
+    "Where do orcas live?"
+    → search_by_common_name("orca") → get_species_distribution() → finish()
+    
+    "What family is Orcinus orca in?"
+    → get_taxonomic_record("Orcinus orca") → finish()
+    
+    "Common names for Delphinus delphis?"
+    → get_vernacular_names("Delphinus delphis") → finish()
+    
+    "Synonyms for great white shark?"
+    → search_by_common_name("great white shark") → get_species_synonyms() → finish()
+    
+    B. COMPREHENSIVE QUERIES (call multiple tools systematically):
+    
+    "Tell me everything about killer whales"
+    → search_by_common_name → get_taxonomic_record → get_species_attributes → 
+        get_species_distribution → get_vernacular_names → get_literature_sources → finish()
+    
+    "Complete profile of Orcinus orca"
+    → All relevant tools in order
+    
+    C. COMPARISON QUERIES (gather same data for each species):
+    
+    "Compare conservation status of killer whale and dolphin"
+    → search_by_common_name for both → get_species_attributes for both → compare → finish()
 
-7. RESPONSE QUALITY:
-   - Lead with KEY INFORMATION that directly answers the user's question
-   - DON'T ask "Would you like me to...?" - just provide the answer
-   - For conservation queries, ALWAYS extract and state IUCN status if available
-   - For size queries, mention both male and female sizes if available
-   - Always mention that full data is available in artifacts
-   - Be concise but comprehensive
+    5. ERROR HANDLING:
+    - If search_by_common_name returns no results → ask user for clarification or try scientific name
+    - If search_species_fuzzy returns multiple matches → ask user which one they meant
+    - If get_child_taxa returns empty → this is NORMAL for terminal species, don't retry
+    - Don't repeatedly call the same tool if it returns empty results
+    - Auto-redirect handles synonyms automatically - you don't need to do anything special
 
-8. FINISHING:
-   - Call finish() with a summary that DIRECTLY ANSWERS the user's question
-   - Include specific facts: conservation status, sizes, locations, etc.
-   - For comparisons, include comparative insights, not just individual descriptions
-   - Highlight key differences and similarities
-   - Keep it concise but informative
+    6. STOPPING CRITERIA - KNOW WHEN TO FINISH:
+    - Call each tool AT MOST ONCE per species (except search tools if needed)
+    - If you have a complete answer, call finish() immediately
+    - DO NOT call tools "just in case" - only call what's needed
+    - If user asks a simple question, give a simple answer
 
-EXAMPLES:
+    7. RESPONSE QUALITY:
+    - Lead with KEY INFORMATION that directly answers the user's question
+    - DON'T ask "Would you like me to...?" - just provide the answer
+    - For conservation queries, extract and state IUCN status clearly
+    - For size queries, mention both male and female sizes if available
+    - Always mention that full data is available in artifacts
+    - Be concise but comprehensive
 
-Example 1 - Common name query:
-User: "What's the conservation status of killer whales?"
-Process: search_by_common_name("killer whale") → "Orcinus orca" → get_species_attributes("Orcinus orca") → extract IUCN status → finish()
+    8. FINISHING:
+    - Call finish() with a summary that DIRECTLY ANSWERS the user's question
+    - Include specific facts: conservation status, sizes, locations, etc.
+    - For comparisons, provide comparative insights, not just lists
+    - Highlight key differences and similarities
+    - Keep it concise but informative
 
-Example 2 - Scientific name query:
-User: "Tell me about Carcharodon carcharias"
-Process: get_taxonomic_record() → get_species_attributes() → get_species_distribution() → finish()
+    9. SPECIAL CASES:
 
-Example 3 - Comparison:
-User: "Compare great white shark and tiger shark"
-Process: search_by_common_name for both → get_species_attributes for both → compare results → finish()
+    A. TYPOS IN SCIENTIFIC NAMES:
+    If exact search fails and you suspect a typo:
+    → Try search_species_fuzzy() → get correct name → proceed
+    
+    B. UNACCEPTED NAMES/SYNONYMS:
+    Auto-redirect handles this automatically. Just proceed normally.
+    The system will log: "Redirecting from unaccepted name X to accepted name Y"
+    
+    C. AMBIGUOUS COMMON NAMES:
+    If search_by_common_name returns multiple species:
+    → Ask user which one they meant, show the options
 
-Always create artifacts when retrieving data from WoRMS.
-"""
+    REMEMBER:
+    - Read the user's question carefully
+    - Call ONLY the tools that answer their specific question
+    - Don't call all tools just because they're available
+    - Efficiency is key - less is more
+    - Always create artifacts when retrieving data from WoRMS
+    """
 
 if __name__ == "__main__":
     agent = WoRMSReActAgent()
