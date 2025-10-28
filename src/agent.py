@@ -7,6 +7,8 @@ from ichatbio.types import AgentCard, AgentEntrypoint
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 import dotenv
 import asyncio
 from functools import lru_cache  
@@ -70,58 +72,99 @@ class WoRMSReActAgent(IChatBioAgent):
     async def _create_plan(self, request: str, species_names: list[str]) -> ResearchPlan:
         """Create execution plan using LLM"""
         
-        prompt = f"""Analyze this marine species query and create a research plan.
-
-Query: "{request}"
-Species mentioned: {species_names if species_names else "unknown"}
-
-Available tools:
-- search_by_common_name: Convert common names to scientific (USE FIRST if common name)
-- get_species_attributes: Conservation status, body size, IUCN, CITES
-- get_taxonomic_record: Basic taxonomy (family, order, class)
-- get_species_distribution: Geographic range
-- get_vernacular_names: Common names in languages
-- get_taxonomic_classification: Full taxonomy tree
-
-Classify the query type:
-- "single_species": Info about one species
-- "comparison": Compare multiple species
-- "conservation": Specifically about conservation/IUCN status
-- "distribution": Specifically about where species lives
-- "taxonomy": About classification
-
-For each species, determine if it's a COMMON name (like "killer whale") or SCIENTIFIC name (like "Orcinus orca").
-
-For each tool, mark priority:
-- "must_call": Required to answer the query
-- "should_call": Recommended for complete answer
-- "optional": Only if user specifically asks
-
-Return JSON:
-{{
-  "query_type": "conservation",
-  "species_mentioned": ["killer whale"],
-  "are_common_names": [true],
-  "tools_planned": [
-    {{
-      "tool_name": "search_by_common_name",
-      "priority": "must_call",
-      "reason": "Need to resolve common name first"
-    }},
-    {{
-      "tool_name": "get_species_attributes",
-      "priority": "must_call",
-      "reason": "Query asks about conservation status"
-    }}
-  ],
-  "reasoning": "User asks about conservation, need to resolve name then get attributes"
-}}"""
-
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-        response = await llm.ainvoke([HumanMessage(content=prompt)])
+        from langchain_core.output_parsers import JsonOutputParser
+        from langchain_core.prompts import ChatPromptTemplate
         
-        plan_dict = json.loads(response.content)
-        return ResearchPlan(**plan_dict)
+        # Use structured output parser
+        parser = JsonOutputParser(pydantic_object=ResearchPlan)
+        
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", """You are a marine biology research planning expert.
+    Analyze queries and create structured execution plans.
+
+    Available tools:
+    - search_by_common_name: Convert common names to scientific (USE FIRST if common name)
+    - get_species_attributes: Conservation status, body size, IUCN, CITES
+    - get_taxonomic_record: Basic taxonomy (family, order, class)
+    - get_species_distribution: Geographic range
+    - get_vernacular_names: Common names in languages
+    - get_taxonomic_classification: Full taxonomy tree
+
+    Query types:
+    - "single_species": Info about one species
+    - "comparison": Compare multiple species
+    - "conservation": Specifically about conservation/IUCN status
+    - "distribution": Specifically about where species lives
+    - "taxonomy": About classification
+
+    Tool priorities:
+    - "must_call": Required to answer the query
+    - "should_call": Recommended for complete answer
+    - "optional": Only if user specifically asks
+
+    {format_instructions}
+    """),
+            ("human", """Query: "{request}"
+    Species mentioned: {species}
+
+    Create the execution plan.""")
+        ])
+        
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        chain = prompt | llm | parser
+        
+        try:
+            plan = await chain.ainvoke({
+                "format_instructions": parser.get_format_instructions(),
+                "request": request,
+                "species": species_names if species_names else "unknown"
+            })
+            
+            return ResearchPlan(**plan)
+        
+        except Exception as e:
+            # Fallback plan if LLM fails
+            print(f"Warning: Plan creation failed ({e}), using fallback plan")
+            
+            # Determine if names are likely common or scientific
+            are_common = []
+            for name in species_names:
+                # Simple heuristic: scientific names usually have 2 words and first letter capitalized
+                words = name.split()
+                is_scientific = len(words) == 2 and words[0][0].isupper() and words[1][0].islower()
+                are_common.append(not is_scientific)
+            
+            # Build fallback plan
+            tools_planned = []
+            
+            # If any common names, need to resolve them
+            if any(are_common):
+                tools_planned.append(ToolPlan(
+                    tool_name="search_by_common_name",
+                    priority="must_call",
+                    reason="Need to resolve common names to scientific names"
+                ))
+            
+            # Always get basic attributes
+            tools_planned.append(ToolPlan(
+                tool_name="get_species_attributes",
+                priority="must_call",
+                reason="Get ecological traits and conservation status"
+            ))
+            
+            tools_planned.append(ToolPlan(
+                tool_name="get_taxonomic_record",
+                priority="should_call",
+                reason="Get basic taxonomy information"
+            ))
+            
+            return ResearchPlan(
+                query_type="single_species" if len(species_names) <= 1 else "comparison",
+                species_mentioned=species_names,
+                are_common_names=are_common,
+                tools_planned=tools_planned,
+                reasoning="Fallback plan: get core species information"
+            )
 
     async def _resolve_common_names_parallel(
         self, 
