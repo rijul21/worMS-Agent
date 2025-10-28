@@ -242,17 +242,31 @@ class WoRMSReActAgent(IChatBioAgent):
             
             plan = await self._create_plan(request, params.species_names)
             
-            # Single concise log
+            # Log 1: Query analysis and species identification
             species_str = ", ".join(plan.species_mentioned)
             await process.log(f"{plan.query_type.replace('_', ' ').title()} query: {species_str}")
             
-            # User message
+            # Log 2: Execution plan with tool priorities
             must_call_tools = [t.tool_name for t in plan.tools_planned if t.priority == "must_call"]
+            should_call_tools = [t.tool_name for t in plan.tools_planned if t.priority == "should_call"]
+            
+            plan_details = f"📋 Execution Plan: {len(must_call_tools)} required tools"
+            if should_call_tools:
+                plan_details += f", {len(should_call_tools)} recommended tools"
+            
+            await process.log(plan_details, data={
+                "query_type": plan.query_type,
+                "species_count": len(plan.species_mentioned),
+                "must_call": [t.tool_name for t in plan.tools_planned if t.priority == "must_call"],
+                "should_call": [t.tool_name for t in plan.tools_planned if t.priority == "should_call"],
+                "reasoning": plan.reasoning
+            })
+            
+            # User message
             await context.reply(f"Researching {len(plan.species_mentioned)} species using {len(must_call_tools)} tools...")
 
-        # ============================================================
+
         # PHASE 2: PARALLEL NAME RESOLUTION
-        # ============================================================
         
         resolved_names = {}
         
@@ -288,9 +302,8 @@ class WoRMSReActAgent(IChatBioAgent):
                     if not aphia_id:
                         await process.log(f"Warning: Could not validate {species_name}")
 
-        # ============================================================
+  
         # PHASE 3: GUIDED EXECUTION
-        # ============================================================
         
         # Create tools
         tools = create_worms_tools(
