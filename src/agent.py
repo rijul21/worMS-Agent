@@ -238,7 +238,7 @@ class WoRMSReActAgent(IChatBioAgent):
         # PHASE 1: PLANNING
         
         
-        async with context.begin_process("Fetching data from WoRMS and responding with a plan") as process:
+        async with context.begin_process("Searching WoRMS") as process:
             
             plan = await self._create_plan(request, params.species_names)
             
