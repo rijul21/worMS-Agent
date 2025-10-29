@@ -119,10 +119,7 @@ def create_worms_tools(
                 # Log data fetched
                 await log_data_fetched(process, "get_species_synonyms", species_name, len(all_synonyms))
                 
-                # Extract sample synonym names
-                samples = [s.get('scientificname', 'Unknown') for s in all_synonyms[:5] if isinstance(s, dict)]
-                
-                # Create artifact (matching other tools - just uris, no content)
+                # Create artifact
                 base_api_url = worms_logic.build_synonyms_url(syn_params)
                 
                 await process.create_artifact(
@@ -138,15 +135,12 @@ def create_worms_tools(
                 
                 # Log artifact created
                 await log_artifact_created(process, "get_species_synonyms", species_name)
-                                    
-                more_text = f" and {len(all_synonyms) - 5} more" if len(all_synonyms) > 5 else ""
                 
-                return f"Found {len(all_synonyms)} synonyms for {species_name}. Examples: {', '.join(samples)}{more_text}. Full data available in artifact."
+                return f"Found {len(all_synonyms)} synonyms for {species_name}."
                     
             except Exception as e:
                 await log_tool_error(process, "get_species_synonyms", species_name, e)
                 return f"Error retrieving synonyms: {str(e)}"
-
 
     @tool
     async def get_species_distribution(species_name: str) -> str:
@@ -249,16 +243,6 @@ def create_worms_tools(
                 # Log data fetched
                 await log_data_fetched(process, "get_vernacular_names", species_name, len(vernaculars))
                 
-                # Extract sample names with languages
-                samples = []
-                languages = set()
-                for v in vernaculars[:5]:
-                    if isinstance(v, dict):
-                        name = v.get('vernacular', 'Unknown')
-                        lang = v.get('language', 'Unknown')
-                        languages.add(lang)
-                        samples.append(f"{name} ({lang})")
-                
                 # Create artifact
                 await process.create_artifact(
                     mimetype="application/json",
@@ -267,15 +251,14 @@ def create_worms_tools(
                     metadata={
                         "aphia_id": aphia_id, 
                         "count": len(vernaculars),
-                        "species": species_name,
-                        "languages": list(languages)
+                        "species": species_name
                     }
                 )
                 
                 # Log artifact created
                 await log_artifact_created(process, "get_vernacular_names", species_name)
                 
-                return f"Found {len(vernaculars)} vernacular names for {species_name} in {len(languages)} languages. Examples: {', '.join(samples)}. Full data available in artifact."
+                return f"Found {len(vernaculars)} vernacular names for {species_name}."
                     
             except Exception as e:
                 await log_tool_error(process, "get_vernacular_names", species_name, e)
@@ -322,13 +305,6 @@ def create_worms_tools(
                 # Log data fetched
                 await log_data_fetched(process, "get_literature_sources", species_name, len(sources))
                 
-                # Extract sample citations
-                samples = []
-                for s in sources[:3]:
-                    if isinstance(s, dict):
-                        title = s.get('title', s.get('reference', 'Unknown'))[:50]
-                        samples.append(title + "..." if len(title) == 50 else title)
-                
                 # Create artifact
                 await process.create_artifact(
                     mimetype="application/json",
@@ -344,7 +320,7 @@ def create_worms_tools(
                 # Log artifact created
                 await log_artifact_created(process, "get_literature_sources", species_name)
                 
-                return f"Found {len(sources)} literature sources for {species_name}. Sample titles: {', '.join(samples)}. Full data available in artifact."
+                return f"Found {len(sources)} literature sources for {species_name}."
                     
             except Exception as e:
                 await log_tool_error(process, "get_literature_sources", species_name, e)
@@ -389,15 +365,6 @@ def create_worms_tools(
                 # Log data fetched
                 await log_data_fetched(process, "get_taxonomic_record", species_name, 1)
                 
-                # Extract key taxonomic info
-                rank = raw_response.get('rank', 'Unknown')
-                status = raw_response.get('status', 'Unknown')
-                kingdom = raw_response.get('kingdom', 'Unknown')
-                phylum = raw_response.get('phylum', 'Unknown')
-                class_name = raw_response.get('class', 'Unknown')
-                order = raw_response.get('order', 'Unknown')
-                family = raw_response.get('family', 'Unknown')
-                
                 # Create artifact
                 await process.create_artifact(
                     mimetype="application/json",
@@ -406,15 +373,15 @@ def create_worms_tools(
                     metadata={
                         "aphia_id": aphia_id,
                         "species": species_name,
-                        "rank": rank,
-                        "status": status
+                        "rank": raw_response.get('rank', 'Unknown'),
+                        "status": raw_response.get('status', 'Unknown')
                     }
                 )
                 
                 # Log artifact created
                 await log_artifact_created(process, "get_taxonomic_record", species_name)
                 
-                return f"Taxonomic record for {species_name}: Rank={rank}, Status={status}, Kingdom={kingdom}, Phylum={phylum}, Class={class_name}, Order={order}, Family={family}. Full data available in artifact."
+                return f"Retrieved taxonomic record for {species_name}."
                     
             except Exception as e:
                 await log_tool_error(process, "get_taxonomic_record", species_name, e)
@@ -461,14 +428,6 @@ def create_worms_tools(
                 # Log data fetched
                 await log_data_fetched(process, "get_taxonomic_classification", species_name, len(classification))
                 
-                # Extract taxonomic hierarchy
-                hierarchy = []
-                for level in classification[:6]:
-                    if isinstance(level, dict):
-                        rank = level.get('rank', 'Unknown')
-                        name = level.get('scientificname', 'Unknown')
-                        hierarchy.append(f"{rank}: {name}")
-                
                 # Create artifact
                 await process.create_artifact(
                     mimetype="application/json",
@@ -484,7 +443,7 @@ def create_worms_tools(
                 # Log artifact created
                 await log_artifact_created(process, "get_taxonomic_classification", species_name)
                 
-                return f"Found {len(classification)}-level taxonomic classification for {species_name}. Hierarchy: {' > '.join(hierarchy)}. Full data available in artifact."
+                return f"Found {len(classification)}-level taxonomic classification for {species_name}."
                     
             except Exception as e:
                 await log_tool_error(process, "get_taxonomic_classification", species_name, e)
@@ -531,14 +490,6 @@ def create_worms_tools(
                 # Log data fetched
                 await log_data_fetched(process, "get_child_taxa", species_name, len(children))
                 
-                # Extract child names and ranks
-                child_info = []
-                for child in children[:5]:
-                    if isinstance(child, dict):
-                        child_name = child.get('scientificname', 'Unknown')
-                        child_rank = child.get('rank', 'Unknown')
-                        child_info.append(f"{child_name} ({child_rank})")
-                
                 # Create artifact
                 await process.create_artifact(
                     mimetype="application/json",
@@ -554,7 +505,7 @@ def create_worms_tools(
                 # Log artifact created
                 await log_artifact_created(process, "get_child_taxa", species_name)
                 
-                return f"Found {len(children)} child taxa for {species_name}. Examples: {', '.join(child_info)}. Full data available in artifact."
+                return f"Found {len(children)} child taxa for {species_name}."
                     
             except Exception as e:
                 await log_tool_error(process, "get_child_taxa", species_name, e)
@@ -604,9 +555,6 @@ def create_worms_tools(
                 # Log data fetched
                 await log_data_fetched(process, "get_external_ids", species_name, len(external_ids))
 
-                # Format the IDs for display
-                ids_display = ", ".join([str(id_val) for id_val in external_ids])
-
                 # Create artifact
                 await process.create_artifact(
                     mimetype="application/json",
@@ -622,7 +570,7 @@ def create_worms_tools(
                 # Log artifact created
                 await log_artifact_created(process, "get_external_ids", species_name)
 
-                return f"External database IDs for {species_name}: {ids_display}. Full data in artifact."
+                return f"Found {len(external_ids)} external database IDs for {species_name}."
                             
             except Exception as e:
                 await log_tool_error(process, "get_external_ids", species_name, e)
@@ -670,58 +618,6 @@ def create_worms_tools(
                 # Log data fetched
                 await log_data_fetched(process, "get_species_attributes", species_name, len(attributes))
                 
-                # Extract and flatten attributes with children
-                attr_summary = []
-                important_attrs = []
-
-                def extract_attribute_info(attr, depth=0):
-                    """Recursively extract attribute information"""
-                    if not isinstance(attr, dict):
-                        return []
-                    
-                    results = []
-                    measure_type = attr.get('measurementType', 'Unknown')
-                    measure_value = attr.get('measurementValue', 'Unknown')
-                    quality = attr.get('qualitystatus', '')
-                    
-                    # Build readable string
-                    indent = "  " * depth
-                    attr_str = f"{indent}{measure_type}: {measure_value}"
-                    if quality == 'checked':
-                        attr_str += " ✓"
-                    
-                    results.append(attr_str)
-                    
-                    # Process children recursively
-                    children = attr.get('children', [])
-                    if children:
-                        for child in children:
-                            results.extend(extract_attribute_info(child, depth + 1))
-                    
-                    return results
-
-                # Extract all attributes
-                for attr in attributes:
-                    attr_lines = extract_attribute_info(attr)
-                    attr_summary.extend(attr_lines)
-                    
-                    # Also build a simplified summary for important ones
-                    measure_type = attr.get('measurementType', '')
-                    measure_value = attr.get('measurementValue', '')
-                    
-                    if measure_type in ['IUCN Red List Category', 'Body size', 'CITES Annex']:
-                        important_attrs.append(f"{measure_type}: {measure_value}")
-                    
-                    # Extract nested important values
-                    for child in attr.get('children', []):
-                        if isinstance(child, dict):
-                            child_type = child.get('measurementType', '')
-                            child_value = child.get('measurementValue', '')
-                            if child_type == 'IUCN Red List Category':
-                                important_attrs.append(f"Conservation status: {child_value}")
-                            elif child_type == 'CITES Annex':
-                                important_attrs.append(f"CITES: Annex {child_value}")
-
                 # Create artifact
                 await process.create_artifact(
                     mimetype="application/json",
@@ -738,19 +634,11 @@ def create_worms_tools(
                 # Log artifact created
                 await log_artifact_created(process, "get_species_attributes", species_name)
 
-                # Build response
-                if important_attrs:
-                    key_info = "; ".join(important_attrs[:5])
-                    return f"{species_name} has {len(attributes)} ecological attributes. Key info: {key_info}. Full detailed data in artifact."
-                else:
-                    summary_preview = "; ".join([a.split(':')[0] for a in attr_summary[:5] if ':' in a])
-                    return f"{species_name} has {len(attributes)} ecological attributes including: {summary_preview}. Full data in artifact."
+                return f"Found {len(attributes)} ecological attributes for {species_name}."
                         
             except Exception as e:
                 await log_tool_error(process, "get_species_attributes", species_name, e)
                 return f"Error retrieving attributes: {str(e)}"
-
-
 
     @tool
     async def search_by_common_name(common_name: str) -> str:
