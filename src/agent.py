@@ -234,9 +234,9 @@ class WoRMSReActAgent(IChatBioAgent):
     ):
         """Main entry point with planning and parallel resolution"""
 
-        # ============================================================
+        
         # PHASE 1: PLANNING
-        # ============================================================
+        
         
         async with context.begin_process("Fetching data from WoRMS and responding with a plan") as process:
             

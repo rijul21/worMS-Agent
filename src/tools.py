@@ -150,68 +150,64 @@ def create_worms_tools(
 
     @tool
     async def get_species_distribution(species_name: str) -> str:
-        """Get geographic distribution data for a marine species.
-        
-        Args:
-            species_name: Scientific name (e.g., "Orcinus orca")
-        """
-        async with context.begin_process(f"Searching WoRMS for distribution of {species_name}") as process:
-            try:
-                # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
-                aphia_id = await get_cached_aphia_id_func(species_name, process)
+            """Get geographic distribution data for a marine species.
+            
+            Args:
+                species_name: Scientific name (e.g., "Orcinus orca")
+            """
+            async with context.begin_process(f"Searching WoRMS for distribution of {species_name}") as process:
+                try:
+                    # Get AphiaID (cached - cache logs happen inside _get_cached_aphia_id)
+                    aphia_id = await get_cached_aphia_id_func(species_name, process)
 
-                if not aphia_id:
-                    await log_species_not_found(process, species_name)
-                    return f"Species '{species_name}' not found in WoRMS database."
-                
-                loop = asyncio.get_event_loop()
-                
-                # Get distribution from WoRMS API
-                dist_params = DistributionParams(aphia_id=aphia_id)
-                api_url = worms_logic.build_distribution_url(dist_params)
-                
-                # Log API call
-                await log_api_call(process, "get_species_distribution", species_name, aphia_id, api_url)
-                
-                raw_response = await loop.run_in_executor(
-                    None,
-                    lambda: worms_logic.execute_request(api_url)
-                )
-                
-                # Normalize response
-                distributions = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
-                
-                if not distributions:
-                    await log_no_data(process, "get_species_distribution", species_name, aphia_id)
-                    return f"No distribution data found for {species_name}"
-                
-                # Log data fetched
-                await log_data_fetched(process, "get_species_distribution", species_name, len(distributions))
-                
-                # Extract location info
-                locations = [d.get('locality', d.get('location', 'Unknown')) for d in distributions[:5] if isinstance(d, dict)]
-                
-                # Create artifact
-                await process.create_artifact(
-                    mimetype="application/json",
-                    description=f"Distribution for {species_name} (AphiaID: {aphia_id}) - {len(distributions)} locations",
-                    uris=[api_url],
-                    metadata={
-                        "aphia_id": aphia_id, 
-                        "count": len(distributions),
-                        "species": species_name
-                    }
-                )
-                
-                # Log artifact created
-                await log_artifact_created(process, "get_species_distribution", species_name)
-                
-                return f"Found {len(distributions)} distribution records for {species_name}. Sample locations: {', '.join(locations)}. Full data available in artifact."
+                    if not aphia_id:
+                        await log_species_not_found(process, species_name)
+                        return f"Species '{species_name}' not found in WoRMS database."
                     
-            except Exception as e:
-                await log_tool_error(process, "get_species_distribution", species_name, e)
-                return f"Error retrieving distribution: {str(e)}"
-
+                    loop = asyncio.get_event_loop()
+                    
+                    # Get distribution from WoRMS API
+                    dist_params = DistributionParams(aphia_id=aphia_id)
+                    api_url = worms_logic.build_distribution_url(dist_params)
+                    
+                    # Log API call
+                    await log_api_call(process, "get_species_distribution", species_name, aphia_id, api_url)
+                    
+                    raw_response = await loop.run_in_executor(
+                        None,
+                        lambda: worms_logic.execute_request(api_url)
+                    )
+                    
+                    # Normalize response
+                    distributions = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                    
+                    if not distributions:
+                        await log_no_data(process, "get_species_distribution", species_name, aphia_id)
+                        return f"No distribution data found for {species_name}"
+                    
+                    # Log data fetched
+                    await log_data_fetched(process, "get_species_distribution", species_name, len(distributions))
+                    
+                    # Create artifact with full data
+                    await process.create_artifact(
+                        mimetype="application/json",
+                        description=f"Distribution for {species_name} (AphiaID: {aphia_id}) - {len(distributions)} locations",
+                        uris=[api_url],
+                        metadata={
+                            "aphia_id": aphia_id, 
+                            "count": len(distributions),
+                            "species": species_name
+                        }
+                    )
+                    
+                    # Log artifact created
+                    await log_artifact_created(process, "get_species_distribution", species_name)
+                    
+                    return f"Found {len(distributions)} distribution records for {species_name}."
+                        
+                except Exception as e:
+                    await log_tool_error(process, "get_species_distribution", species_name, e)
+                    return f"Error retrieving distribution: {str(e)}"
 
     @tool
     async def get_vernacular_names(species_name: str) -> str:

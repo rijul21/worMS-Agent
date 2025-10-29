@@ -35,7 +35,7 @@ async def log(
         await process.log(formatted_message)
 
 
-# Convenience functions for common logging patterns
+# common logging patterns
 
 
 async def log_api_call(process, tool_name: str, species_name: str, aphia_id: int, url: str):
