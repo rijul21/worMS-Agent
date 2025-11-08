@@ -174,9 +174,13 @@ class WoRMSReActAgent(IChatBioAgent):
                 
                 await process.log(f"Batch matching {len(names)} names")
                 
-                raw_response = await loop.run_in_executor(
-                    None,
-                    lambda: self.worms_logic.execute_request(api_url)
+                # Add timeout to prevent hanging
+                raw_response = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        lambda: self.worms_logic.execute_request(api_url)
+                    ),
+                    timeout=30.0  # 30 second timeout
                 )
                 
                 if not isinstance(raw_response, list):
@@ -193,14 +197,18 @@ class WoRMSReActAgent(IChatBioAgent):
                         resolved[input_name] = scientific_name
                         
                         if match_type == 'exact':
-                            await process.log(f"Resolved {input_name} -> {scientific_name}")
+                            await process.log(f"'{input_name}' → {scientific_name} [exact match]")
                         else:
-                            await process.log(f"Resolved {input_name} -> {scientific_name} [fuzzy: {match_type}]")
+                            # Show fuzzy correction
+                            await process.log(f"'{input_name}' → {scientific_name} [fuzzy match: {match_type}]")
                     else:
-                        await process.log(f"Failed to resolve {input_name}")
+                        await process.log(f"'{input_name}' → NOT FOUND")
                 
                 return resolved
                 
+            except asyncio.TimeoutError:
+                await process.log(f"Batch resolution timed out after 30 seconds")
+                return {}
             except Exception as e:
                 await process.log(f"Batch resolution failed: {e}")
                 return {}
@@ -305,7 +313,7 @@ class WoRMSReActAgent(IChatBioAgent):
                     ]
                 },
                 config={
-                    "recursion_limit": 7
+                    "recursion_limit": 20
                 }
             )
         except Exception as e:
