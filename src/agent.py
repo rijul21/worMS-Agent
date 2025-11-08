@@ -316,7 +316,7 @@ class WoRMSReActAgent(IChatBioAgent):
                     ]
                 },
                 config={
-                    "recursion_limit": 20
+                    "recursion_limit": 5
                 }
             )
         except Exception as e:
