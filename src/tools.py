@@ -710,32 +710,25 @@ def create_worms_tools(
                 return f"Error searching for common name: {str(e)}"
             
     @tool
-    async def get_filtered_attributes(species_name: str, category_id: int) -> str:
-        """Get attributes filtered by specific category.
-        Use after get_available_attributes to get specific trait data.
+    async def get_attribute_definitions(attribute_id: int = 0) -> str:
+        """Get the tree of attribute definitions available in WoRMS.
+        This shows what types of ecological attributes can be recorded (e.g., habitat, depth, IUCN status).
+        Use attribute_id=0 to get root definitions, or specify an ID to get a subtree.
         
         Args:
-            species_name: Scientific name (e.g., "Orcinus orca")
-            category_id: Category ID from available attributes (e.g., 1 for habitat, 9 for IUCN)
+            attribute_id: The attribute definition ID (default: 0 for root items)
         """
-        async with context.begin_process(f"Searching WoRMS for filtered attributes of {species_name}") as process:
+        async with context.begin_process(f"Searching WoRMS for attribute definitions") as process:
             try:
-                # Get AphiaID
-                aphia_id = await get_cached_aphia_id_func(species_name, process)
-                
-                if not aphia_id:
-                    await log_species_not_found(process, species_name)
-                    return f"Species '{species_name}' not found in WoRMS database."
-                
                 loop = asyncio.get_event_loop()
                 
-                # Get filtered attributes
-                from worms_api import AttributeValuesByCategoryParams
-                attr_params = AttributeValuesByCategoryParams(aphia_id=aphia_id, category_id=category_id)
-                api_url = worms_logic.build_attribute_values_by_category_url(attr_params)
+                # Get attribute definition tree
+                from worms_api import AttributeKeysParams
+                keys_params = AttributeKeysParams(attribute_id=attribute_id, include_children=True)
+                api_url = worms_logic.build_attribute_keys_url(keys_params)
                 
                 # Log API call
-                await log_api_call(process, "get_filtered_attributes", species_name, aphia_id, api_url)
+                await process.log(f"Calling WoRMS API: {api_url}")
                 
                 raw_response = await loop.run_in_executor(
                     None,
@@ -743,45 +736,127 @@ def create_worms_tools(
                 )
                 
                 # Normalize response
-                attributes = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                definitions = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                 
-                if not attributes:
-                    await log_no_data(process, "get_filtered_attributes", species_name, aphia_id)
-                    return f"No attributes found for {species_name} in category {category_id}"
+                if not definitions:
+                    await process.log(f"No attribute definitions found for ID {attribute_id}")
+                    return f"No attribute definitions found for ID {attribute_id}"
                 
                 # Log data fetched
-                await log_data_fetched(process, "get_filtered_attributes", species_name, len(attributes))
+                await process.log(f"Found {len(definitions)} attribute definition(s)")
+                
+                # Extract definition info
+                def_list = []
+                for defn in definitions[:10]:  # Show top 10
+                    if isinstance(defn, dict):
+                        mtype = defn.get('measurementType', 'Unknown')
+                        mtype_id = defn.get('measurementTypeID', 'N/A')
+                        category_id = defn.get('CategoryID', 'N/A')
+                        def_list.append(f"{mtype} (TypeID: {mtype_id}, CategoryID: {category_id})")
                 
                 # Create artifact
                 await process.create_artifact(
                     mimetype="application/json",
-                    description=f"Filtered attributes for {species_name} (AphiaID: {aphia_id}, Category: {category_id}) - {len(attributes)} attributes",
+                    description=f"Attribute definitions from WoRMS - {len(definitions)} definition(s)",
                     uris=[api_url],
                     metadata={
-                        "aphia_id": aphia_id,
-                        "category_id": category_id,
-                        "count": len(attributes),
-                        "species": species_name
+                        "attribute_id": attribute_id,
+                        "count": len(definitions)
                     }
                 )
                 
                 # Log artifact created
-                await log_artifact_created(process, "get_filtered_attributes", species_name)
+                await process.log(f"Created artifact with {len(definitions)} definitions")
                 
-                return f"Found {len(attributes)} attributes for {species_name} in category {category_id}"
+                summary = f"Found {len(definitions)} attribute definitions. Top items:\n"
+                summary += "\n".join(def_list[:10])
+                if len(definitions) > 10:
+                    summary += f"\n\n...and {len(definitions) - 10} more in artifact."
+                
+                return summary
                         
             except Exception as e:
-                await log_tool_error(process, "get_filtered_attributes", species_name, e)
-                return f"Error retrieving filtered attributes: {str(e)}"
+                await process.log(f"Error retrieving attribute definitions: {type(e).__name__} - {str(e)}")
+                return f"Error retrieving attribute definitions: {str(e)}"
+            
+    @tool
+    async def get_attribute_value_options(category_id: int) -> str:
+        """Get the list of possible values for a specific attribute category.
+        For example, CategoryID 7 might return values like 'benthos', 'zooplankton', 'phytoplankton'.
+        Use get_attribute_definitions first to find category IDs.
+        
+        Args:
+            category_id: The CategoryID to get value options for (e.g., 1, 7, 9)
+        """
+        async with context.begin_process(f"Searching WoRMS for attribute values in category {category_id}") as process:
+            try:
+                loop = asyncio.get_event_loop()
                 
+                # Get attribute values by category
+                from worms_api import AttributeValuesByCategoryParams
+                values_params = AttributeValuesByCategoryParams(category_id=category_id)
+                api_url = worms_logic.build_attribute_values_by_category_url(values_params)
+                
+                # Log API call
+                await process.log(f"Calling WoRMS API: {api_url}")
+                
+                raw_response = await loop.run_in_executor(
+                    None,
+                    lambda: worms_logic.execute_request(api_url)
+                )
+                
+                # Normalize response
+                values = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                
+                if not values:
+                    await process.log(f"No attribute values found for category {category_id}")
+                    return f"No attribute values found for category {category_id}"
+                
+                # Log data fetched
+                await process.log(f"Found {len(values)} attribute value(s)")
+                
+                # Extract value info
+                value_list = []
+                for val in values[:20]:  # Show top 20
+                    if isinstance(val, dict):
+                        mvalue = val.get('measurementValue', 'Unknown')
+                        mvalue_id = val.get('measurementValueID', 'N/A')
+                        value_list.append(f"{mvalue} (ValueID: {mvalue_id})")
+                
+                # Create artifact
+                await process.create_artifact(
+                    mimetype="application/json",
+                    description=f"Attribute values for category {category_id} - {len(values)} value(s)",
+                    uris=[api_url],
+                    metadata={
+                        "category_id": category_id,
+                        "count": len(values)
+                    }
+                )
+                
+                # Log artifact created
+                await process.log(f"Created artifact with {len(values)} values")
+                
+                summary = f"Found {len(values)} possible values for category {category_id}:\n"
+                summary += "\n".join(value_list[:20])
+                if len(values) > 20:
+                    summary += f"\n\n...and {len(values) - 20} more in artifact."
+                
+                return summary
+                        
+            except Exception as e:
+                await process.log(f"Error retrieving attribute values: {type(e).__name__} - {str(e)}")
+                return f"Error retrieving attribute values: {str(e)}"
+            
 
     @tool
-    async def get_recent_species_changes(start_date: str, max_results: int = 50) -> str:
-        """Get species that were added or modified in WoRMS after a specific date.
+    async def get_recent_species_changes(start_date: str, end_date: str = None, max_results: int = 50) -> str:
+        """Get species that were added or modified in WoRMS during a time period.
         Useful for tracking new discoveries and taxonomic updates.
         
         Args:
-            start_date: ISO format date YYYY-MM-DD (e.g., "2024-01-01")
+            start_date: Start date in ISO 8601 format (e.g., "2024-01-01T00:00:00+00:00")
+            end_date: Optional end date in ISO 8601 format (defaults to today)
             max_results: Maximum number of results to return (default: 50)
         """
         async with context.begin_process(f"Searching WoRMS for species changes since {start_date}") as process:
@@ -790,7 +865,13 @@ def create_worms_tools(
                 
                 # Get records by date
                 from worms_api import RecordsByDateParams
-                date_params = RecordsByDateParams(start_date=start_date, marine_only=True, offset=1)
+                date_params = RecordsByDateParams(
+                    startdate=start_date,
+                    enddate=end_date,
+                    marine_only=True,
+                    extant_only=True,
+                    offset=1
+                )
                 api_url = worms_logic.build_records_by_date_url(date_params)
                 
                 # Log API call
@@ -833,6 +914,7 @@ def create_worms_tools(
                     uris=[api_url],
                     metadata={
                         "start_date": start_date,
+                        "end_date": end_date or "today",
                         "count": len(records),
                         "limited_to": max_results
                     }
@@ -853,78 +935,6 @@ def create_worms_tools(
                 return f"Error retrieving recent changes: {str(e)}"
                 
 
-    @tool
-    async def get_available_attributes(species_name: str) -> str:
-        """Get list of available attribute categories for a species.
-        Shows what types of ecological data are available (habitat, depth, temperature, etc.).
-        
-        Args:
-            species_name: Scientific name (e.g., "Orcinus orca")
-        """
-        async with context.begin_process(f"Searching WoRMS for available attributes of {species_name}") as process:
-            try:
-                # Get AphiaID
-                aphia_id = await get_cached_aphia_id_func(species_name, process)
-                
-                if not aphia_id:
-                    await log_species_not_found(process, species_name)
-                    return f"Species '{species_name}' not found in WoRMS database."
-                
-                loop = asyncio.get_event_loop()
-                
-                # Get attribute keys
-                from worms_api import AttributeKeysParams
-                keys_params = AttributeKeysParams(aphia_id=aphia_id)
-                api_url = worms_logic.build_attribute_keys_url(keys_params)
-                
-                # Log API call
-                await log_api_call(process, "get_available_attributes", species_name, aphia_id, api_url)
-                
-                raw_response = await loop.run_in_executor(
-                    None,
-                    lambda: worms_logic.execute_request(api_url)
-                )
-                
-                # Normalize response
-                attribute_keys = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
-                
-                if not attribute_keys:
-                    await log_no_data(process, "get_available_attributes", species_name, aphia_id)
-                    return f"No attribute categories found for {species_name}"
-                
-                # Log data fetched
-                await log_data_fetched(process, "get_available_attributes", species_name, len(attribute_keys))
-                
-                # Extract category names
-                categories = []
-                for key in attribute_keys:
-                    if isinstance(key, dict):
-                        category_id = key.get('CategoryID', 'N/A')
-                        measure_type = key.get('measurementType', 'Unknown')
-                        categories.append(f"{measure_type} (ID: {category_id})")
-                
-                # Create artifact
-                await process.create_artifact(
-                    mimetype="application/json",
-                    description=f"Available attribute categories for {species_name} (AphiaID: {aphia_id}) - {len(attribute_keys)} categories",
-                    uris=[api_url],
-                    metadata={
-                        "aphia_id": aphia_id,
-                        "count": len(attribute_keys),
-                        "species": species_name
-                    }
-                )
-                
-                # Log artifact created
-                await log_artifact_created(process, "get_available_attributes", species_name)
-                
-                return f"Found {len(attribute_keys)} attribute categories for {species_name}: {', '.join(categories[:5])}{'...' if len(categories) > 5 else ''}"
-                        
-            except Exception as e:
-                await log_tool_error(process, "get_available_attributes", species_name, e)
-                return f"Error retrieving available attributes: {str(e)}"
-            
-
 
     return [
     get_species_synonyms,
@@ -936,9 +946,9 @@ def create_worms_tools(
     get_child_taxa,
     get_external_ids,
     get_species_attributes,
-    get_available_attributes,      
-    get_filtered_attributes,         
-    get_recent_species_changes,      
+    get_attribute_definitions,      
+    get_attribute_value_options,   
+    get_recent_species_changes,    
     search_by_common_name,
     abort,
     finish

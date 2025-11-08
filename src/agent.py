@@ -85,8 +85,8 @@ class WoRMSReActAgent(IChatBioAgent):
     - search_by_common_name: Convert common names to scientific (USE FIRST if common name)
     - get_species_synonyms: Alternative scientific names for a species
     - get_species_attributes: Conservation status, body size, IUCN, CITES, ecological traits
-    - get_available_attributes: List available attribute categories for a species
-    - get_filtered_attributes: Get attributes filtered by specific category ID
+    - get_attribute_definitions: Get the tree of attribute definitions (what types of data WoRMS can store)
+    - get_attribute_value_options: Get possible values for a specific attribute category
     - get_taxonomic_record: Basic taxonomy (family, order, class)
     - get_species_distribution: Geographic distribution/range
     - get_vernacular_names: Common names in different languages
@@ -94,7 +94,7 @@ class WoRMSReActAgent(IChatBioAgent):
     - get_literature_sources: Scientific references and citations
     - get_child_taxa: Child taxa/species under a taxonomic group
     - get_external_ids: External database IDs (FishBase, NCBI, etc.)
-    - get_recent_species_changes: Species added/modified after a specific date
+    - get_recent_species_changes: Species added/modified during a time period
     - abort: Call if request cannot be fulfilled
     - finish: Call when request is successfully completed
 

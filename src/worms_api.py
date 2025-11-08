@@ -6,7 +6,7 @@ from typing import Optional, Dict
 from urllib.parse import urlencode, quote
 import cloudscraper
 
-# Parameter Models - 14 endpoints total (added 3 new high-value endpoints)
+# Parameter Models - 14 endpoints total (11 original + 3 corrected new endpoints)
 class SpeciesSearchParams(BaseModel):
     """Parameters for searching marine species in WoRMS"""
     scientific_name: str = Field(..., 
@@ -119,38 +119,43 @@ class MatchNamesParams(BaseModel):
         description="Use the authority in the matching process"
     )
 
-# NEW: High-value endpoint #2
+# CORRECTED: High-value endpoint #2 - Gets attribute DEFINITIONS, not species attributes
 class AttributeKeysParams(BaseModel):
-    """Parameters for getting available attribute categories for a species"""
-    aphia_id: int = Field(...,
-        description="The AphiaID of the species to get attribute keys for",
-        examples=[137205, 104625, 137094]
+    """Parameters for getting attribute definition tree"""
+    attribute_id: int = Field(0,
+        description="The attribute definition ID to search for (0 for root items)",
+        examples=[0, 1, 7]
+    )
+    include_children: Optional[bool] = Field(True,
+        description="Include the tree of children"
     )
 
-# NEW: High-value endpoint #3
+# CORRECTED: High-value endpoint #3 - Gets value OPTIONS for a category
 class AttributeValuesByCategoryParams(BaseModel):
-    """Parameters for getting attribute values filtered by category"""
-    aphia_id: int = Field(...,
-        description="The AphiaID of the species to get attributes for",
-        examples=[137205, 104625, 137094]
-    )
+    """Parameters for getting attribute values grouped by category"""
     category_id: int = Field(...,
-        description="Category ID to filter attributes (e.g., 1 for habitat, 9 for IUCN status)",
-        examples=[1, 9, 18]
+        description="The CategoryID to search for",
+        examples=[1, 7, 9]
     )
 
-# NEW: High-value endpoint #4
+# CORRECTED: High-value endpoint #4 - Uses QUERY parameters for dates
 class RecordsByDateParams(BaseModel):
-    """Parameters for getting species records modified after a date"""
-    start_date: str = Field(...,
-        description="ISO format date (YYYY-MM-DD) to get records modified after",
-        examples=["2024-01-01", "2023-06-15"]
+    """Parameters for getting species records modified during a time period"""
+    startdate: str = Field(...,
+        description="ISO 8601 formatted start date(time) - e.g., 2024-01-01T00:00:00+00:00",
+        examples=["2024-01-01T00:00:00+00:00", "2025-11-08T00:00:00+00:00"]
+    )
+    enddate: Optional[str] = Field(None,
+        description="ISO 8601 formatted end date(time) - defaults to today if not provided"
     )
     marine_only: Optional[bool] = Field(True,
         description="Limit to marine taxa"
     )
+    extant_only: Optional[bool] = Field(True,
+        description="Limit to extant (non-extinct) taxa"
+    )
     offset: Optional[int] = Field(1,
-        description="Offset for pagination (starts at 1)"
+        description="Starting record number for pagination (default: 1)"
     )
 
 class NoParams(BaseModel):
@@ -269,29 +274,38 @@ class WoRMS:
         
         return f"{self.worms_api_base_url}/AphiaRecordsByMatchNames?{query_string}"
     
-    # NEW: High-value endpoint #2
+    # CORRECTED: High-value endpoint #2
     def build_attribute_keys_url(self, params: AttributeKeysParams) -> str:
-        """Build URL for getting available attribute categories"""
-        return f"{self.worms_api_base_url}/AphiaAttributeKeysByID/{params.aphia_id}"
-    
-    # NEW: High-value endpoint #3
-    def build_attribute_values_by_category_url(self, params: AttributeValuesByCategoryParams) -> str:
-        """Build URL for getting attribute values filtered by category"""
-        return f"{self.worms_api_base_url}/AphiaAttributeValuesByCategoryID/{params.aphia_id}?CategoryID={params.category_id}"
-    
-    # NEW: High-value endpoint #4
-    def build_records_by_date_url(self, params: RecordsByDateParams) -> str:
-        """Build URL for getting records modified after a specific date"""
+        """Build URL for getting attribute definition tree"""
         query_params = {}
+        if params.include_children is not None:
+            query_params['include_children'] = str(params.include_children).lower()
         
+        query_string = urlencode(query_params) if query_params else ''
+        base_url = f"{self.worms_api_base_url}/AphiaAttributeKeysByID/{params.attribute_id}"
+        return f"{base_url}?{query_string}" if query_string else base_url
+    
+    # CORRECTED: High-value endpoint #3
+    def build_attribute_values_by_category_url(self, params: AttributeValuesByCategoryParams) -> str:
+        """Build URL for getting attribute values grouped by category"""
+        return f"{self.worms_api_base_url}/AphiaAttributeValuesByCategoryID/{params.category_id}"
+    
+    # CORRECTED: High-value endpoint #4
+    def build_records_by_date_url(self, params: RecordsByDateParams) -> str:
+        """Build URL for getting records modified during a specific time period"""
+        query_params = {'startdate': params.startdate}
+        
+        if params.enddate:
+            query_params['enddate'] = params.enddate
         if params.marine_only is not None:
             query_params['marine_only'] = str(params.marine_only).lower()
+        if params.extant_only is not None:
+            query_params['extant_only'] = str(params.extant_only).lower()
         if params.offset is not None:
             query_params['offset'] = str(params.offset)
         
-        query_string = urlencode(query_params) if query_params else ''
-        base_url = f"{self.worms_api_base_url}/AphiaRecordsByDate/{params.start_date}"
-        return f"{base_url}?{query_string}" if query_string else base_url
+        query_string = urlencode(query_params)
+        return f"{self.worms_api_base_url}/AphiaRecordsByDate?{query_string}"
 
     # Execution methods 
     def execute_request(self, url: str) -> Dict:
