@@ -297,12 +297,17 @@ class WoRMSReActAgent(IChatBioAgent):
         agent = create_react_agent(llm, tools)
         
         try:
-            await agent.ainvoke({
-                "messages": [
-                    SystemMessage(content=system_prompt),
-                    HumanMessage(content=request)
-                ]
-            })
+            await agent.ainvoke(
+                {
+                    "messages": [
+                        SystemMessage(content=system_prompt),
+                        HumanMessage(content=request)
+                    ]
+                },
+                config={
+                    "recursion_limit": 7
+                }
+            )
         except Exception as e:
             await context.reply(f"An error occurred: {str(e)}")
     
