@@ -171,58 +171,51 @@ class WoRMSReActAgent(IChatBioAgent):
         names: list[str], 
         context: ResponseContext
     ) -> dict[str, str]:
-        """Resolve multiple common names to scientific names in parallel"""
+        """Resolve multiple common names to scientific names using batch API"""
         
-        from tools import search_by_common_name
-        
-        async with context.begin_process(f"Resolving {len(names)} species names in parallel") as process:
-            
-            async def resolve_one(common_name: str) -> tuple[str, Optional[str]]:
-                """Resolve single common name"""
-                try:
-                    # Call search tool
-                    result = await search_by_common_name(common_name)
-                    
-                    # Parse result to extract scientific name
-                    if "refers to" in result:
-                        scientific_name = result.split("refers to ")[1].split(" ")[0:2]
-                        scientific_name = " ".join(scientific_name).strip("()")
-                        return (common_name, scientific_name)
-                    return (common_name, None)
-                except Exception as e:
-                    await process.log(f"Error resolving {common_name}: {e}")
-                    return (common_name, None)
-            
-            # Execute all resolutions in parallel
-            tasks = [resolve_one(name) for name in names]
-            results = await asyncio.gather(*tasks)
-            
-            # Build mapping
-            resolved = {}
-            for common_name, scientific_name in results:
-                if scientific_name:
-                    resolved[common_name] = scientific_name
-                    await process.log(f"Resolved {common_name} -> {scientific_name}")
-                else:
-                    await process.log(f"Failed to resolve {common_name}")
-            
-            return resolved
-
-    async def _get_cached_aphia_id(self, species_name: str, process) -> Optional[int]:
-        """Get AphiaID with automatic caching"""
-        loop = asyncio.get_event_loop()
-        aphia_id = await loop.run_in_executor(
-            None,
-            self._cached_lookup,
-            species_name
-        )
-        
-        if aphia_id:
-            await process.log(f"Resolved {species_name} -> AphiaID {aphia_id}")
-        else:
-            await log_species_not_found(process, species_name)
-        
-        return aphia_id
+        async with context.begin_process(f"Resolving {len(names)} species names") as process:
+            try:
+                loop = asyncio.get_event_loop()
+                
+                from worms_api import MatchNamesParams
+                match_params = MatchNamesParams(
+                    scientific_names=names,
+                    marine_only=True
+                )
+                api_url = self.worms_logic.build_match_names_url(match_params)
+                
+                await process.log(f"Batch matching {len(names)} names")
+                
+                raw_response = await loop.run_in_executor(
+                    None,
+                    lambda: self.worms_logic.execute_request(api_url)
+                )
+                
+                if not isinstance(raw_response, list):
+                    await process.log("Unexpected API response format")
+                    return {}
+                
+                resolved = {}
+                for input_name, matches in zip(names, raw_response):
+                    if matches and len(matches) > 0:
+                        best = matches[0]
+                        scientific_name = best.get('scientificname')
+                        match_type = best.get('match_type', 'unknown')
+                        
+                        resolved[input_name] = scientific_name
+                        
+                        if match_type == 'exact':
+                            await process.log(f"Resolved {input_name} -> {scientific_name}")
+                        else:
+                            await process.log(f"Resolved {input_name} -> {scientific_name} [fuzzy: {match_type}]")
+                    else:
+                        await process.log(f"Failed to resolve {input_name}")
+                
+                return resolved
+                
+            except Exception as e:
+                await process.log(f"Batch resolution failed: {e}")
+                return {}
     
     @override
     async def run(

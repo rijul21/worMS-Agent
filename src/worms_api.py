@@ -99,6 +99,26 @@ class VernacularSearchParams(BaseModel):
         description="Use fuzzy matching for names"
     )
 
+class MatchNamesParams(BaseModel):
+    """Parameters for batch matching multiple species names"""
+    scientific_names: list[str] = Field(...,
+        description="List of scientific names to match (max 50)",
+        examples=[["Orcinus orca", "Delphinus delphis", "Tursiops truncatus"]],
+        max_length=50
+    )
+    authorships: Optional[list[str]] = Field(None,
+        description="Optional list of authorities for each name"
+    )
+    marine_only: Optional[bool] = Field(True,
+        description="Limit to marine taxa"
+    )
+    extant_only: Optional[bool] = Field(True,
+        description="Limit to extant (non-extinct) taxa"
+    )
+    match_authority: Optional[bool] = Field(True,
+        description="Use the authority in the matching process"
+    )
+
 class NoParams(BaseModel):
     """An empty model for entrypoints that require no parameters."""
     pass
@@ -188,6 +208,33 @@ class WoRMS:
         query_string = urlencode(query_params) if query_params else ''
         base_url = f"{self.worms_api_base_url}/AphiaRecordsByVernacular/{encoded_name}"
         return f"{base_url}?{query_string}" if query_string else base_url
+    
+
+    def build_match_names_url(self, params: MatchNamesParams) -> str:
+        """Build URL for batch matching multiple species names using TAXAMATCH fuzzy matching"""
+        query_params = []
+        
+        # Add each scientific name as scientificnames[]
+        for name in params.scientific_names:
+            query_params.append(('scientificnames[]', name))
+        
+        # Add authorships if provided
+        if params.authorships:
+            for auth in params.authorships:
+                query_params.append(('authorships[]', auth))
+        
+        # Add boolean parameters
+        if params.marine_only is not None:
+            query_params.append(('marine_only', str(params.marine_only).lower()))
+        if params.extant_only is not None:
+            query_params.append(('extant_only', str(params.extant_only).lower()))
+        if params.match_authority is not None:
+            query_params.append(('match_authority', str(params.match_authority).lower()))
+        
+        # Build query string manually to handle array parameters
+        query_string = '&'.join([f"{k}={quote(str(v))}" for k, v in query_params])
+        
+        return f"{self.worms_api_base_url}/AphiaRecordsByMatchNames?{query_string}"
 
     # Execution methods 
     def execute_request(self, url: str) -> Dict:
