@@ -81,6 +81,20 @@ class WoRMSReActAgent(IChatBioAgent):
             ("system", """You are a marine biology research planning expert.
     Analyze queries and create structured execution plans.
 
+    Available tools:
+    - search_by_common_name: Convert common names to scientific (USE FIRST if common name)
+    - get_species_synonyms: Alternative scientific names for a species
+    - get_species_attributes: Conservation status, body size, IUCN, CITES, ecological traits
+    - get_taxonomic_record: Basic taxonomy (family, order, class)
+    - get_species_distribution: Geographic distribution/range
+    - get_vernacular_names: Common names in different languages
+    - get_taxonomic_classification: Full taxonomic hierarchy
+    - get_literature_sources: Scientific references and citations
+    - get_child_taxa: Child taxa/species under a taxonomic group
+    - get_external_ids: External database IDs (FishBase, NCBI, etc.)
+    - abort: Call if request cannot be fulfilled
+    - finish: Call when request is successfully completed
+
     Query types:
     - "single_species": Info about one species
     - "comparison": Compare multiple species
@@ -249,41 +263,23 @@ class WoRMSReActAgent(IChatBioAgent):
             await context.reply(f"Researching {len(plan.species_mentioned)} species using {len(must_call_tools)} tools...")
 
 
-        # PHASE 2: PARALLEL NAME RESOLUTION
+        # PHASE 2: BATCH NAME RESOLUTION
         
-        resolved_names = {}
-        
-        # Get common names that need resolution
-        common_names = [
-            name for name, is_common in zip(plan.species_mentioned, plan.are_common_names)
-            if is_common
-        ]
-        
-        if common_names:
-            async with context.begin_process("Resolving species names") as process:
+        if plan.species_mentioned:
+            async with context.begin_process("Resolving and validating species names") as process:
                 
-                await process.log(f"Resolving {len(common_names)} common name(s) in parallel")
+                await process.log(f"Batch resolving {len(plan.species_mentioned)} name(s)")
                 
-                # Resolve in parallel using the method
-                resolved = await self._resolve_common_names_parallel(common_names, context)
+                # Use batch API to resolve/validate ALL names at once
+                resolved = await self._resolve_common_names_parallel(plan.species_mentioned, context)
                 
-                # Single summary log
-                await process.log(f"Resolved {len(resolved)}/{len(common_names)} species")
+                await process.log(f"Resolved {len(resolved)}/{len(plan.species_mentioned)} species")
                 
-                resolved_names = resolved
-        
-        # Pre-resolve scientific names (for caching)
-        scientific_names = [
-            name for name, is_common in zip(plan.species_mentioned, plan.are_common_names)
-            if not is_common
-        ]
-        
-        if scientific_names:
-            async with context.begin_process("Validating scientific names") as process:
-                for species_name in scientific_names:
-                    aphia_id = await self._get_cached_aphia_id(species_name, process)
+                # Cache the AphiaIDs
+                for input_name, scientific_name in resolved.items():
+                    aphia_id = await self._get_cached_aphia_id(scientific_name, process)
                     if not aphia_id:
-                        await process.log(f"Warning: Could not validate {species_name}")
+                        await process.log(f"Warning: Could not cache AphiaID for {scientific_name}")
 
   
         # PHASE 3: GUIDED EXECUTION
