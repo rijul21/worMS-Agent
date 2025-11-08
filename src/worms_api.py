@@ -6,7 +6,7 @@ from typing import Optional, Dict
 from urllib.parse import urlencode, quote
 import cloudscraper
 
-# Parameter Models - 7 endpoints total
+# Parameter Models - 14 endpoints total (added 3 new high-value endpoints)
 class SpeciesSearchParams(BaseModel):
     """Parameters for searching marine species in WoRMS"""
     scientific_name: str = Field(..., 
@@ -119,6 +119,40 @@ class MatchNamesParams(BaseModel):
         description="Use the authority in the matching process"
     )
 
+# NEW: High-value endpoint #2
+class AttributeKeysParams(BaseModel):
+    """Parameters for getting available attribute categories for a species"""
+    aphia_id: int = Field(...,
+        description="The AphiaID of the species to get attribute keys for",
+        examples=[137205, 104625, 137094]
+    )
+
+# NEW: High-value endpoint #3
+class AttributeValuesByCategoryParams(BaseModel):
+    """Parameters for getting attribute values filtered by category"""
+    aphia_id: int = Field(...,
+        description="The AphiaID of the species to get attributes for",
+        examples=[137205, 104625, 137094]
+    )
+    category_id: int = Field(...,
+        description="Category ID to filter attributes (e.g., 1 for habitat, 9 for IUCN status)",
+        examples=[1, 9, 18]
+    )
+
+# NEW: High-value endpoint #4
+class RecordsByDateParams(BaseModel):
+    """Parameters for getting species records modified after a date"""
+    start_date: str = Field(...,
+        description="ISO format date (YYYY-MM-DD) to get records modified after",
+        examples=["2024-01-01", "2023-06-15"]
+    )
+    marine_only: Optional[bool] = Field(True,
+        description="Limit to marine taxa"
+    )
+    offset: Optional[int] = Field(1,
+        description="Offset for pagination (starts at 1)"
+    )
+
 class NoParams(BaseModel):
     """An empty model for entrypoints that require no parameters."""
     pass
@@ -143,7 +177,7 @@ class WoRMS:
                 value = config.get(key, default)
         return value if value is not None else default
 
-    # URL Building Methods - 5 core endpoints + search
+    # URL Building Methods - All endpoints
     def build_species_search_url(self, params: SpeciesSearchParams) -> str:
         """Build URL for searching species by name"""
         encoded_name = quote(params.scientific_name)
@@ -209,7 +243,6 @@ class WoRMS:
         base_url = f"{self.worms_api_base_url}/AphiaRecordsByVernacular/{encoded_name}"
         return f"{base_url}?{query_string}" if query_string else base_url
     
-
     def build_match_names_url(self, params: MatchNamesParams) -> str:
         """Build URL for batch matching multiple species names using TAXAMATCH fuzzy matching"""
         query_params = []
@@ -235,6 +268,30 @@ class WoRMS:
         query_string = '&'.join([f"{k}={quote(str(v))}" for k, v in query_params])
         
         return f"{self.worms_api_base_url}/AphiaRecordsByMatchNames?{query_string}"
+    
+    # NEW: High-value endpoint #2
+    def build_attribute_keys_url(self, params: AttributeKeysParams) -> str:
+        """Build URL for getting available attribute categories"""
+        return f"{self.worms_api_base_url}/AphiaAttributeKeysByID/{params.aphia_id}"
+    
+    # NEW: High-value endpoint #3
+    def build_attribute_values_by_category_url(self, params: AttributeValuesByCategoryParams) -> str:
+        """Build URL for getting attribute values filtered by category"""
+        return f"{self.worms_api_base_url}/AphiaAttributeValuesByCategoryID/{params.aphia_id}?CategoryID={params.category_id}"
+    
+    # NEW: High-value endpoint #4
+    def build_records_by_date_url(self, params: RecordsByDateParams) -> str:
+        """Build URL for getting records modified after a specific date"""
+        query_params = {}
+        
+        if params.marine_only is not None:
+            query_params['marine_only'] = str(params.marine_only).lower()
+        if params.offset is not None:
+            query_params['offset'] = str(params.offset)
+        
+        query_string = urlencode(query_params) if query_params else ''
+        base_url = f"{self.worms_api_base_url}/AphiaRecordsByDate/{params.start_date}"
+        return f"{base_url}?{query_string}" if query_string else base_url
 
     # Execution methods 
     def execute_request(self, url: str) -> Dict:

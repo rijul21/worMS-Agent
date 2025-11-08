@@ -709,19 +709,237 @@ def create_worms_tools(
                 await process.log(f"Error searching for common name '{common_name}': {type(e).__name__} - {str(e)}")
                 return f"Error searching for common name: {str(e)}"
             
+    @tool
+    async def get_filtered_attributes(species_name: str, category_id: int) -> str:
+        """Get attributes filtered by specific category.
+        Use after get_available_attributes to get specific trait data.
+        
+        Args:
+            species_name: Scientific name (e.g., "Orcinus orca")
+            category_id: Category ID from available attributes (e.g., 1 for habitat, 9 for IUCN)
+        """
+        async with context.begin_process(f"Searching WoRMS for filtered attributes of {species_name}") as process:
+            try:
+                # Get AphiaID
+                aphia_id = await get_cached_aphia_id_func(species_name, process)
+                
+                if not aphia_id:
+                    await log_species_not_found(process, species_name)
+                    return f"Species '{species_name}' not found in WoRMS database."
+                
+                loop = asyncio.get_event_loop()
+                
+                # Get filtered attributes
+                from worms_api import AttributeValuesByCategoryParams
+                attr_params = AttributeValuesByCategoryParams(aphia_id=aphia_id, category_id=category_id)
+                api_url = worms_logic.build_attribute_values_by_category_url(attr_params)
+                
+                # Log API call
+                await log_api_call(process, "get_filtered_attributes", species_name, aphia_id, api_url)
+                
+                raw_response = await loop.run_in_executor(
+                    None,
+                    lambda: worms_logic.execute_request(api_url)
+                )
+                
+                # Normalize response
+                attributes = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                
+                if not attributes:
+                    await log_no_data(process, "get_filtered_attributes", species_name, aphia_id)
+                    return f"No attributes found for {species_name} in category {category_id}"
+                
+                # Log data fetched
+                await log_data_fetched(process, "get_filtered_attributes", species_name, len(attributes))
+                
+                # Create artifact
+                await process.create_artifact(
+                    mimetype="application/json",
+                    description=f"Filtered attributes for {species_name} (AphiaID: {aphia_id}, Category: {category_id}) - {len(attributes)} attributes",
+                    uris=[api_url],
+                    metadata={
+                        "aphia_id": aphia_id,
+                        "category_id": category_id,
+                        "count": len(attributes),
+                        "species": species_name
+                    }
+                )
+                
+                # Log artifact created
+                await log_artifact_created(process, "get_filtered_attributes", species_name)
+                
+                return f"Found {len(attributes)} attributes for {species_name} in category {category_id}"
+                        
+            except Exception as e:
+                await log_tool_error(process, "get_filtered_attributes", species_name, e)
+                return f"Error retrieving filtered attributes: {str(e)}"
+                
+
+    @tool
+    async def get_recent_species_changes(start_date: str, max_results: int = 50) -> str:
+        """Get species that were added or modified in WoRMS after a specific date.
+        Useful for tracking new discoveries and taxonomic updates.
+        
+        Args:
+            start_date: ISO format date YYYY-MM-DD (e.g., "2024-01-01")
+            max_results: Maximum number of results to return (default: 50)
+        """
+        async with context.begin_process(f"Searching WoRMS for species changes since {start_date}") as process:
+            try:
+                loop = asyncio.get_event_loop()
+                
+                # Get records by date
+                from worms_api import RecordsByDateParams
+                date_params = RecordsByDateParams(start_date=start_date, marine_only=True, offset=1)
+                api_url = worms_logic.build_records_by_date_url(date_params)
+                
+                # Log API call
+                await process.log(f"Calling WoRMS API: {api_url}")
+                
+                raw_response = await loop.run_in_executor(
+                    None,
+                    lambda: worms_logic.execute_request(api_url)
+                )
+                
+                # Normalize response
+                records = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                
+                if not records:
+                    await process.log(f"No species changes found since {start_date}")
+                    return f"No species changes found in WoRMS since {start_date}"
+                
+                # Limit results
+                if len(records) > max_results:
+                    await process.log(f"Limiting results to {max_results} (found {len(records)})")
+                    records = records[:max_results]
+                
+                # Log data fetched
+                await process.log(f"Found {len(records)} species modified since {start_date}")
+                
+                # Extract species info
+                species_list = []
+                for record in records[:10]:  # Show top 10 in summary
+                    if isinstance(record, dict):
+                        sci_name = record.get('scientificname', 'Unknown')
+                        aphia_id = record.get('AphiaID', 'N/A')
+                        status = record.get('status', 'Unknown')
+                        modified = record.get('modified', 'N/A')
+                        species_list.append(f"{sci_name} (AphiaID: {aphia_id}, Status: {status}, Modified: {modified})")
+                
+                # Create artifact
+                await process.create_artifact(
+                    mimetype="application/json",
+                    description=f"Species changes since {start_date} - {len(records)} records",
+                    uris=[api_url],
+                    metadata={
+                        "start_date": start_date,
+                        "count": len(records),
+                        "limited_to": max_results
+                    }
+                )
+                
+                # Log artifact created
+                await process.log(f"Created artifact with {len(records)} species records")
+                
+                summary = f"Found {len(records)} species modified since {start_date}. Top 10:\n"
+                summary += "\n".join(species_list[:10])
+                if len(records) > 10:
+                    summary += f"\n\n...and {len(records) - 10} more in artifact."
+                
+                return summary
+                        
+            except Exception as e:
+                await process.log(f"Error retrieving recent changes: {type(e).__name__} - {str(e)}")
+                return f"Error retrieving recent changes: {str(e)}"
+                
+
+    @tool
+    async def get_available_attributes(species_name: str) -> str:
+        """Get list of available attribute categories for a species.
+        Shows what types of ecological data are available (habitat, depth, temperature, etc.).
+        
+        Args:
+            species_name: Scientific name (e.g., "Orcinus orca")
+        """
+        async with context.begin_process(f"Searching WoRMS for available attributes of {species_name}") as process:
+            try:
+                # Get AphiaID
+                aphia_id = await get_cached_aphia_id_func(species_name, process)
+                
+                if not aphia_id:
+                    await log_species_not_found(process, species_name)
+                    return f"Species '{species_name}' not found in WoRMS database."
+                
+                loop = asyncio.get_event_loop()
+                
+                # Get attribute keys
+                from worms_api import AttributeKeysParams
+                keys_params = AttributeKeysParams(aphia_id=aphia_id)
+                api_url = worms_logic.build_attribute_keys_url(keys_params)
+                
+                # Log API call
+                await log_api_call(process, "get_available_attributes", species_name, aphia_id, api_url)
+                
+                raw_response = await loop.run_in_executor(
+                    None,
+                    lambda: worms_logic.execute_request(api_url)
+                )
+                
+                # Normalize response
+                attribute_keys = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
+                
+                if not attribute_keys:
+                    await log_no_data(process, "get_available_attributes", species_name, aphia_id)
+                    return f"No attribute categories found for {species_name}"
+                
+                # Log data fetched
+                await log_data_fetched(process, "get_available_attributes", species_name, len(attribute_keys))
+                
+                # Extract category names
+                categories = []
+                for key in attribute_keys:
+                    if isinstance(key, dict):
+                        category_id = key.get('CategoryID', 'N/A')
+                        measure_type = key.get('measurementType', 'Unknown')
+                        categories.append(f"{measure_type} (ID: {category_id})")
+                
+                # Create artifact
+                await process.create_artifact(
+                    mimetype="application/json",
+                    description=f"Available attribute categories for {species_name} (AphiaID: {aphia_id}) - {len(attribute_keys)} categories",
+                    uris=[api_url],
+                    metadata={
+                        "aphia_id": aphia_id,
+                        "count": len(attribute_keys),
+                        "species": species_name
+                    }
+                )
+                
+                # Log artifact created
+                await log_artifact_created(process, "get_available_attributes", species_name)
+                
+                return f"Found {len(attribute_keys)} attribute categories for {species_name}: {', '.join(categories[:5])}{'...' if len(categories) > 5 else ''}"
+                        
+            except Exception as e:
+                await log_tool_error(process, "get_available_attributes", species_name, e)
+                return f"Error retrieving available attributes: {str(e)}"
+            
 
 
     return [
-            get_species_synonyms,
-            get_species_distribution,
-            get_vernacular_names,
-            get_literature_sources,
-            get_taxonomic_record,
-            get_taxonomic_classification,
-            get_child_taxa,
-            get_external_ids,
-            get_species_attributes,
-            search_by_common_name,
-            abort,
-            finish
-        ]
+    get_species_synonyms,
+    get_species_distribution,
+    get_vernacular_names,
+    get_literature_sources,
+    get_taxonomic_record,
+    get_taxonomic_classification,
+    get_child_taxa,
+    get_external_ids,
+    get_species_attributes,
+    get_available_attributes,      
+    get_filtered_attributes,         
+    get_recent_species_changes,      
+    search_by_common_name,
+    abort,
+    finish
+]
