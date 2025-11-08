@@ -29,7 +29,6 @@ class ToolPlan(BaseModel):
 class ResearchPlan(BaseModel):
     query_type: Literal["single_species", "comparison", "conservation", "distribution", "taxonomy"]
     species_mentioned: list[str]
-    are_common_names: list[bool]
     tools_planned: list[ToolPlan]
     reasoning: str
 
@@ -82,14 +81,6 @@ class WoRMSReActAgent(IChatBioAgent):
             ("system", """You are a marine biology research planning expert.
     Analyze queries and create structured execution plans.
 
-    Available tools:
-    - search_by_common_name: Convert common names to scientific (USE FIRST if common name)
-    - get_species_attributes: Conservation status, body size, IUCN, CITES
-    - get_taxonomic_record: Basic taxonomy (family, order, class)
-    - get_species_distribution: Geographic range
-    - get_vernacular_names: Common names in languages
-    - get_taxonomic_classification: Full taxonomy tree
-
     Query types:
     - "single_species": Info about one species
     - "comparison": Compare multiple species
@@ -126,24 +117,8 @@ class WoRMSReActAgent(IChatBioAgent):
             # Fallback plan if LLM fails
             print(f"Warning: Plan creation failed ({e}), using fallback plan")
             
-            # Determine if names are likely common or scientific
-            are_common = []
-            for name in species_names:
-                # Simple heuristic: scientific names usually have 2 words and first letter capitalized
-                words = name.split()
-                is_scientific = len(words) == 2 and words[0][0].isupper() and words[1][0].islower()
-                are_common.append(not is_scientific)
-            
             # Build fallback plan
             tools_planned = []
-            
-            # If any common names, need to resolve them
-            if any(are_common):
-                tools_planned.append(ToolPlan(
-                    tool_name="search_by_common_name",
-                    priority="must_call",
-                    reason="Need to resolve common names to scientific names"
-                ))
             
             # Always get basic attributes
             tools_planned.append(ToolPlan(
@@ -161,7 +136,6 @@ class WoRMSReActAgent(IChatBioAgent):
             return ResearchPlan(
                 query_type="single_species" if len(species_names) <= 1 else "comparison",
                 species_mentioned=species_names,
-                are_common_names=are_common,
                 tools_planned=tools_planned,
                 reasoning="Fallback plan: get core species information"
             )
@@ -216,6 +190,22 @@ class WoRMSReActAgent(IChatBioAgent):
             except Exception as e:
                 await process.log(f"Batch resolution failed: {e}")
                 return {}
+    
+    async def _get_cached_aphia_id(self, species_name: str, process) -> Optional[int]:
+        """Get AphiaID with automatic caching"""
+        loop = asyncio.get_event_loop()
+        aphia_id = await loop.run_in_executor(
+            None,
+            self._cached_lookup,
+            species_name
+        )
+        
+        if aphia_id:
+            await process.log(f"Resolved {species_name} -> AphiaID {aphia_id}")
+        else:
+            await log_species_not_found(process, species_name)
+        
+        return aphia_id
     
     @override
     async def run(
@@ -307,7 +297,7 @@ class WoRMSReActAgent(IChatBioAgent):
         
         # Create agent with plan-enhanced prompt
         llm = ChatOpenAI(model="gpt-4o-mini")
-        system_prompt = self._make_system_prompt_with_plan(request, plan, resolved_names)
+        system_prompt = self._make_system_prompt_with_plan(request, plan)
         agent = create_react_agent(llm, tools)
         
         try:
@@ -323,18 +313,9 @@ class WoRMSReActAgent(IChatBioAgent):
     def _make_system_prompt_with_plan(
         self, 
         request: str, 
-        plan: ResearchPlan,
-        resolved_names: dict[str, str]
+        plan: ResearchPlan
     ) -> str:
         """Generate system prompt that includes the plan"""
-        
-        # Build species context
-        species_context = "\n\nSPECIES INFORMATION:\n"
-        for species, is_common in zip(plan.species_mentioned, plan.are_common_names):
-            if is_common and species in resolved_names:
-                species_context += f"  • {species} (common name) -> {resolved_names[species]} (scientific name)\n"
-            else:
-                species_context += f"  • {species} (scientific name)\n"
         
         # Build tool plan
         must_call = [t for t in plan.tools_planned if t.priority == "must_call"]
@@ -350,13 +331,16 @@ class WoRMSReActAgent(IChatBioAgent):
             for tool in should_call:
                 tool_context += f"  • {tool.tool_name} - {tool.reason}\n"
         
+        species_list = ", ".join(plan.species_mentioned) if plan.species_mentioned else "unknown"
+        
         return f"""You are a marine biology research assistant with access to the WoRMS database.
 
 USER REQUEST: "{request}"
 
 QUERY TYPE: {plan.query_type}
 STRATEGY: {plan.reasoning}
-{species_context}{tool_context}
+SPECIES: {species_list}
+{tool_context}
 
 CRITICAL INSTRUCTIONS:
 
@@ -366,10 +350,10 @@ CRITICAL INSTRUCTIONS:
    - Skip tools not listed in the plan
    - Call each tool AT MOST ONCE per species
 
-2. USE RESOLVED NAMES:
-   - Common names have already been resolved to scientific names (see above)
-   - Always use the scientific names shown above for tool calls
-   - Do NOT call search_by_common_name again - names are already resolved
+2. NAME HANDLING:
+   - If user provides common names, names have been pre-resolved via batch API
+   - Use the scientific names for all tool calls
+   - If resolution fails, tools will handle the lookup
 
 3. FOR COMPARISON QUERIES:
    - Collect the SAME data points for all species
