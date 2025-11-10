@@ -710,25 +710,45 @@ def create_worms_tools(
                 return f"Error searching for common name: {str(e)}"
             
     @tool
-    async def get_attribute_definitions(attribute_id: int = 0) -> str:
+    async def get_attribute_definitions(attribute_id: int = 0, include_children: bool = True) -> str:
         """Get the tree of attribute definitions available in WoRMS.
         This shows what types of ecological attributes can be recorded (e.g., habitat, depth, IUCN status).
         Use attribute_id=0 to get root definitions, or specify an ID to get a subtree.
         
         Args:
             attribute_id: The attribute definition ID (default: 0 for root items)
+            include_children: Include the tree of children (default: True)
+        
+        Returns:
+            Success: "Found X attribute definitions for ID Y."
+            No data: "No attribute definitions found for ID Y"
+            Error: "Error retrieving attribute definitions: {error message}"
+        
+        Response Schema:
+            [
+                {
+                    "measurementTypeID": int,
+                    "measurementType": str,
+                    "input_id": int,
+                    "CategoryID": int,
+                    "children": [str]
+                }
+            ]
         """
-        async with context.begin_process(f"Searching WoRMS for attribute definitions") as process:
+        async with context.begin_process(f"Searching WoRMS for attribute definitions (ID: {attribute_id})") as process:
             try:
                 loop = asyncio.get_event_loop()
                 
                 # Get attribute definition tree
                 from worms_api import AttributeKeysParams
-                keys_params = AttributeKeysParams(attribute_id=attribute_id, include_children=True)
+                keys_params = AttributeKeysParams(
+                    attribute_id=attribute_id, 
+                    include_children=include_children
+                )
                 api_url = worms_logic.build_attribute_keys_url(keys_params)
                 
                 # Log API call
-                await process.log(f"Calling WoRMS API: {api_url}")
+                await log_api_call(process, "get_attribute_definitions", f"Attribute ID {attribute_id}", None, api_url)
                 
                 raw_response = await loop.run_in_executor(
                     None,
@@ -739,44 +759,31 @@ def create_worms_tools(
                 definitions = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                 
                 if not definitions:
-                    await process.log(f"No attribute definitions found for ID {attribute_id}")
+                    await log_no_data(process, "get_attribute_definitions", f"Attribute ID {attribute_id}", None)
                     return f"No attribute definitions found for ID {attribute_id}"
                 
                 # Log data fetched
-                await process.log(f"Found {len(definitions)} attribute definition(s)")
+                await log_data_fetched(process, "get_attribute_definitions", f"Attribute ID {attribute_id}", len(definitions))
                 
-                # Extract definition info
-                def_list = []
-                for defn in definitions[:10]:  # Show top 10
-                    if isinstance(defn, dict):
-                        mtype = defn.get('measurementType', 'Unknown')
-                        mtype_id = defn.get('measurementTypeID', 'N/A')
-                        category_id = defn.get('CategoryID', 'N/A')
-                        def_list.append(f"{mtype} (TypeID: {mtype_id}, CategoryID: {category_id})")
-                
-                # Create artifact
+                # Create artifact with full data
                 await process.create_artifact(
                     mimetype="application/json",
-                    description=f"Attribute definitions from WoRMS - {len(definitions)} definition(s)",
+                    description=f"Attribute definitions from WoRMS (ID: {attribute_id}) - {len(definitions)} definition(s)",
                     uris=[api_url],
                     metadata={
                         "attribute_id": attribute_id,
+                        "include_children": include_children,
                         "count": len(definitions)
                     }
                 )
                 
                 # Log artifact created
-                await process.log(f"Created artifact with {len(definitions)} definitions")
+                await log_artifact_created(process, "get_attribute_definitions", f"Attribute ID {attribute_id}")
                 
-                summary = f"Found {len(definitions)} attribute definitions. Top items:\n"
-                summary += "\n".join(def_list[:10])
-                if len(definitions) > 10:
-                    summary += f"\n\n...and {len(definitions) - 10} more in artifact."
-                
-                return summary
+                return f"Found {len(definitions)} attribute definitions for ID {attribute_id}."
                         
             except Exception as e:
-                await process.log(f"Error retrieving attribute definitions: {type(e).__name__} - {str(e)}")
+                await log_tool_error(process, "get_attribute_definitions", f"Attribute ID {attribute_id}", e)
                 return f"Error retrieving attribute definitions: {str(e)}"
             
     @tool
@@ -787,6 +794,21 @@ def create_worms_tools(
         
         Args:
             category_id: The CategoryID to get value options for (e.g., 1, 7, 9)
+        
+        Returns:
+            Success: "Found X attribute values for category Y."
+            No data: "No attribute values found for category Y"
+            Error: "Error retrieving attribute values: {error message}"
+        
+        Response Schema:
+            [
+                {
+                    "measurementValueID": int,
+                    "measurementValue": str,
+                    "measurementValueCode": str,
+                    "children": [str]
+                }
+            ]
         """
         async with context.begin_process(f"Searching WoRMS for attribute values in category {category_id}") as process:
             try:
@@ -798,7 +820,7 @@ def create_worms_tools(
                 api_url = worms_logic.build_attribute_values_by_category_url(values_params)
                 
                 # Log API call
-                await process.log(f"Calling WoRMS API: {api_url}")
+                await log_api_call(process, "get_attribute_value_options", f"Category {category_id}", None, api_url)
                 
                 raw_response = await loop.run_in_executor(
                     None,
@@ -809,21 +831,13 @@ def create_worms_tools(
                 values = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                 
                 if not values:
-                    await process.log(f"No attribute values found for category {category_id}")
+                    await log_no_data(process, "get_attribute_value_options", f"Category {category_id}", None)
                     return f"No attribute values found for category {category_id}"
                 
                 # Log data fetched
-                await process.log(f"Found {len(values)} attribute value(s)")
+                await log_data_fetched(process, "get_attribute_value_options", f"Category {category_id}", len(values))
                 
-                # Extract value info
-                value_list = []
-                for val in values[:20]:  # Show top 20
-                    if isinstance(val, dict):
-                        mvalue = val.get('measurementValue', 'Unknown')
-                        mvalue_id = val.get('measurementValueID', 'N/A')
-                        value_list.append(f"{mvalue} (ValueID: {mvalue_id})")
-                
-                # Create artifact
+                # Create artifact with full data
                 await process.create_artifact(
                     mimetype="application/json",
                     description=f"Attribute values for category {category_id} - {len(values)} value(s)",
@@ -835,29 +849,66 @@ def create_worms_tools(
                 )
                 
                 # Log artifact created
-                await process.log(f"Created artifact with {len(values)} values")
+                await log_artifact_created(process, "get_attribute_value_options", f"Category {category_id}")
                 
-                summary = f"Found {len(values)} possible values for category {category_id}:\n"
-                summary += "\n".join(value_list[:20])
-                if len(values) > 20:
-                    summary += f"\n\n...and {len(values) - 20} more in artifact."
-                
-                return summary
+                return f"Found {len(values)} attribute values for category {category_id}."
                         
             except Exception as e:
-                await process.log(f"Error retrieving attribute values: {type(e).__name__} - {str(e)}")
+                await log_tool_error(process, "get_attribute_value_options", f"Category {category_id}", e)
                 return f"Error retrieving attribute values: {str(e)}"
             
 
     @tool
-    async def get_recent_species_changes(start_date: str, end_date: str = None, max_results: int = 50) -> str:
+    async def get_recent_species_changes(start_date: str, end_date: str = None, marine_only: bool = True, extant_only: bool = True, offset: int = 1, max_results: int = 50) -> str:
         """Get species that were added or modified in WoRMS during a time period.
         Useful for tracking new discoveries and taxonomic updates.
+        Returns records in chunks of 50.
         
         Args:
-            start_date: Start date in ISO 8601 format (e.g., "2024-01-01T00:00:00+00:00")
-            end_date: Optional end date in ISO 8601 format (defaults to today)
+            start_date: ISO 8601 formatted start date(time) (e.g., "2025-11-10T04:00:17+01:00"). Default=today()
+            end_date: Optional ISO 8601 formatted end date(time). Default=today()
+            marine_only: Limit to marine taxa (default: True)
+            extant_only: Limit to extant taxa (default: True)
+            offset: Starting record number for pagination (default: 1)
             max_results: Maximum number of results to return (default: 50)
+        
+        Returns:
+            Success: "Found X species modified since {start_date}."
+            No data: "No species changes found in WoRMS since {start_date}"
+            Error: "Error retrieving recent changes: {error message}"
+        
+        Response Schema:
+            [
+                {
+                    "AphiaID": int,
+                    "url": str,
+                    "scientificname": str,
+                    "authority": str,
+                    "taxonRankID": int,
+                    "rank": str,
+                    "status": str,
+                    "unacceptreason": str,
+                    "valid_AphiaID": bool,
+                    "valid_name": str,
+                    "valid_authority": str,
+                    "parentNameUsageID": int,
+                    "kingdom": str,
+                    "phylum": str,
+                    "class": str,
+                    "order": str,
+                    "family": str,
+                    "genus": str,
+                    "citation": str,
+                    "lsid": str,
+                    "isMarine": bool,
+                    "isBrackish": bool,
+                    "isFreshwater": bool,
+                    "isTerrestrial": bool,
+                    "isExtinct": bool,
+                    "match_type": str,
+                    "modified": str
+                }
+            ]
         """
         async with context.begin_process(f"Searching WoRMS for species changes since {start_date}") as process:
             try:
@@ -868,14 +919,14 @@ def create_worms_tools(
                 date_params = RecordsByDateParams(
                     startdate=start_date,
                     enddate=end_date,
-                    marine_only=True,
-                    extant_only=True,
-                    offset=1
+                    marine_only=marine_only,
+                    extant_only=extant_only,
+                    offset=offset
                 )
                 api_url = worms_logic.build_records_by_date_url(date_params)
                 
                 # Log API call
-                await process.log(f"Calling WoRMS API: {api_url}")
+                await log_api_call(process, "get_recent_species_changes", f"Date range {start_date} to {end_date or 'today'}", None, api_url)
                 
                 raw_response = await loop.run_in_executor(
                     None,
@@ -886,54 +937,48 @@ def create_worms_tools(
                 records = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
                 
                 if not records:
-                    await process.log(f"No species changes found since {start_date}")
+                    await log_no_data(process, "get_recent_species_changes", f"Date range {start_date} to {end_date or 'today'}", None)
                     return f"No species changes found in WoRMS since {start_date}"
                 
-                # Limit results
+                # Limit results if needed
+                total_found = len(records)
                 if len(records) > max_results:
-                    await process.log(f"Limiting results to {max_results} (found {len(records)})")
+                    await process.log(f"Limiting results to {max_results} out of {total_found} found")
                     records = records[:max_results]
                 
                 # Log data fetched
-                await process.log(f"Found {len(records)} species modified since {start_date}")
+                await log_data_fetched(process, "get_recent_species_changes", f"Date range {start_date} to {end_date or 'today'}", len(records))
                 
-                # Extract species info
-                species_list = []
-                for record in records[:10]:  # Show top 10 in summary
-                    if isinstance(record, dict):
-                        sci_name = record.get('scientificname', 'Unknown')
-                        aphia_id = record.get('AphiaID', 'N/A')
-                        status = record.get('status', 'Unknown')
-                        modified = record.get('modified', 'N/A')
-                        species_list.append(f"{sci_name} (AphiaID: {aphia_id}, Status: {status}, Modified: {modified})")
-                
-                # Create artifact
+                # Create artifact with full data
                 await process.create_artifact(
                     mimetype="application/json",
-                    description=f"Species changes since {start_date} - {len(records)} records",
+                    description=f"Species changes since {start_date} - {len(records)} records" + (f" (limited from {total_found})" if total_found > max_results else ""),
                     uris=[api_url],
                     metadata={
                         "start_date": start_date,
                         "end_date": end_date or "today",
+                        "marine_only": marine_only,
+                        "extant_only": extant_only,
+                        "offset": offset,
                         "count": len(records),
+                        "total_found": total_found,
                         "limited_to": max_results
                     }
                 )
                 
                 # Log artifact created
-                await process.log(f"Created artifact with {len(records)} species records")
+                await log_artifact_created(process, "get_recent_species_changes", f"Date range {start_date} to {end_date or 'today'}")
                 
-                summary = f"Found {len(records)} species modified since {start_date}. Top 10:\n"
-                summary += "\n".join(species_list[:10])
-                if len(records) > 10:
-                    summary += f"\n\n...and {len(records) - 10} more in artifact."
+                result_msg = f"Found {len(records)} species modified since {start_date}"
+                if total_found > max_results:
+                    result_msg += f" (limited from {total_found} total results)"
+                result_msg += "."
                 
-                return summary
+                return result_msg
                         
             except Exception as e:
-                await process.log(f"Error retrieving recent changes: {type(e).__name__} - {str(e)}")
-                return f"Error retrieving recent changes: {str(e)}"
-                
+                await log_tool_error(process, "get_recent_species_changes", f"Date range {start_date} to {end_date or 'today'}", e)
+                return f"Error retrieving recent changes: {str(e)}"               
 
 
     return [
