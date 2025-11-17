@@ -1,4 +1,3 @@
-import asyncio
 from typing import Callable
 from langchain.tools import tool
 from worms_api import (
@@ -30,14 +29,17 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
     
     @tool(return_direct=True)
     async def abort(reason: str):
+        """Call if you cannot fulfill the request. Provide a clear reason why."""
         await context.reply(f"Unable to complete request: {reason}")
 
     @tool(return_direct=True)
     async def finish(summary: str):
+        """Call when request is successfully completed. Provide a summary of findings including specific facts and mention artifacts."""
         await context.reply(summary)
 
     @tool
     async def get_species_synonyms(species_name: str) -> str:
+        """Get synonyms and alternative scientific names for a marine species."""
         async with context.begin_process(f"Searching WoRMS for synonyms of {species_name}") as process:
             try:
                 aphia_id = await get_cached_aphia_id_func(species_name, process)
@@ -103,6 +105,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
 
     @tool
     async def get_species_distribution(species_name: str) -> str:
+        """Get geographic distribution and range data for a marine species. Shows where the species is found globally."""
         async with context.begin_process(f"Searching WoRMS for distribution of {species_name}") as process:
             try:
                 aphia_id = await get_cached_aphia_id_func(species_name, process)
@@ -149,6 +152,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
 
     @tool
     async def get_vernacular_names(species_name: str) -> str:
+        """Get common names for a marine species in different languages. Useful for finding local or colloquial names."""
         async with context.begin_process(f"Searching WoRMS for vernacular names of {species_name}") as process:
             try:
                 aphia_id = await get_cached_aphia_id_func(species_name, process)
@@ -195,6 +199,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
 
     @tool
     async def get_literature_sources(species_name: str) -> str:
+        """Get scientific literature sources, references, and citations for a marine species. Provides academic sources."""
         async with context.begin_process(f"Searching WoRMS for literature sources of {species_name}") as process:
             try:
                 aphia_id = await get_cached_aphia_id_func(species_name, process)
@@ -241,6 +246,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
 
     @tool
     async def get_taxonomic_record(species_name: str) -> str:
+        """Get basic taxonomic record including family, order, class, status, and authority. Good for quick taxonomy overview."""
         async with context.begin_process(f"Searching WoRMS for taxonomic record of {species_name}") as process:
             try:
                 aphia_id = await get_cached_aphia_id_func(species_name, process)
@@ -286,6 +292,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
 
     @tool
     async def get_taxonomic_classification(species_name: str) -> str:
+        """Get complete taxonomic hierarchy from kingdom to species. Use for full classification lineage."""
         async with context.begin_process(f"Searching WoRMS for taxonomic classification of {species_name}") as process:
             try:
                 aphia_id = await get_cached_aphia_id_func(species_name, process)
@@ -332,6 +339,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
 
     @tool
     async def get_child_taxa(species_name: str) -> str:
+        """Get child taxa like subspecies, varieties, or forms. Returns empty for species without subspecies (normal)."""
         async with context.begin_process(f"Searching WoRMS for child taxa of {species_name}") as process:
             try:
                 aphia_id = await get_cached_aphia_id_func(species_name, process)
@@ -378,6 +386,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
 
     @tool
     async def get_external_ids(species_name: str) -> str:
+        """Get external database identifiers (FishBase, NCBI, ITIS, etc.). Useful for cross-referencing with other databases."""
         async with context.begin_process(f"Searching WoRMS for external IDs of {species_name}") as process:
             try:
                 aphia_id = await get_cached_aphia_id_func(species_name, process)
@@ -424,6 +433,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
 
     @tool
     async def get_species_attributes(species_name: str) -> str:
+        """Get ecological attributes including IUCN status, CITES, body size, habitat, depth range, and environmental traits. Essential for conservation and ecology queries."""
         async with context.begin_process(f"Searching WoRMS for attributes of {species_name}") as process:
             try:
                 aphia_id = await get_cached_aphia_id_func(species_name, process)
@@ -471,6 +481,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
 
     @tool
     async def search_by_common_name(common_name: str) -> str:
+        """Search for species using common names like 'killer whale' or 'great white shark'. Returns matching species with scientific names."""
         async with context.begin_process(f"Searching WoRMS for species with common name '{common_name}'") as process:
             try:
                 loop = asyncio.get_event_loop()
@@ -528,6 +539,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
             
     @tool
     async def get_attribute_definitions(attribute_id: int = 0, include_children: bool = True) -> str:
+        """Get the tree of available attribute types in WoRMS. Shows what ecological data categories exist (use attribute_id=0 for root)."""
         async with context.begin_process(f"Searching WoRMS for attribute definitions (ID: {attribute_id})") as process:
             try:
                 loop = asyncio.get_event_loop()
@@ -569,6 +581,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
             
     @tool
     async def get_attribute_value_options(category_id: int) -> str:
+        """Get possible values for a specific attribute category. Use after get_attribute_definitions to find valid options."""
         async with context.begin_process(f"Searching WoRMS for attribute values in category {category_id}") as process:
             try:
                 loop = asyncio.get_event_loop()
@@ -609,6 +622,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
 
     @tool
     async def get_recent_species_changes(start_date: str, end_date: str = None, marine_only: bool = True, extant_only: bool = True, offset: int = 1, max_results: int = 50) -> str:
+        """Get species added or modified in WoRMS during a date range. Useful for tracking new discoveries and taxonomic updates. Use ISO 8601 format (e.g., '2024-01-01T00:00:00+00:00')."""
         async with context.begin_process(f"Searching WoRMS for species changes since {start_date}") as process:
             try:
                 loop = asyncio.get_event_loop()
