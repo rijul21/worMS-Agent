@@ -1,4 +1,4 @@
-from typing import override, Optional  
+from typing import override, Optional, Literal
 from pydantic import BaseModel, Field
 from ichatbio.agent import IChatBioAgent
 from ichatbio.agent_response import ResponseContext
@@ -11,20 +11,20 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 import dotenv
 import asyncio
-from functools import lru_cache  
-import json
-from typing import Literal
+from functools import lru_cache
 
-from worms_api import WoRMS
+from worms_api import WoRMS, MatchNamesParams
 from tools import create_worms_tools
 from src.logging import log_species_not_found
 
 dotenv.load_dotenv()
 
+
 class ToolPlan(BaseModel):
     tool_name: str
     priority: Literal["must_call", "should_call", "optional"]
     reason: str
+
 
 class ResearchPlan(BaseModel):
     query_type: Literal["single_species", "comparison", "conservation", "distribution", "taxonomy"]
@@ -32,8 +32,8 @@ class ResearchPlan(BaseModel):
     tools_planned: list[ToolPlan]
     reasoning: str
 
+
 class MarineResearchParams(BaseModel):
-    """Parameters for marine species research requests"""
     species_names: list[str] = Field(
         default=[],
         description="Scientific names of marine species to research",
@@ -47,7 +47,6 @@ AGENT_DESCRIPTION = "Marine species research assistant using WoRMS database"
 class WoRMSReActAgent(IChatBioAgent):
     def __init__(self):
         self.worms_logic = WoRMS()
-        # Stores up to 256 species
         self._cached_lookup = lru_cache(maxsize=256)(
             self.worms_logic.get_species_aphia_id
         )
@@ -69,53 +68,47 @@ class WoRMSReActAgent(IChatBioAgent):
         )
     
     async def _create_plan(self, request: str, species_names: list[str]) -> ResearchPlan:
-        """Create execution plan using LLM"""
-        
-        from langchain_core.output_parsers import JsonOutputParser
-        from langchain_core.prompts import ChatPromptTemplate
-        
-        # Use structured output parser
         parser = JsonOutputParser(pydantic_object=ResearchPlan)
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", """You are a marine biology research planning expert.
-    Analyze queries and create structured execution plans.
+Analyze queries and create structured execution plans.
 
-    Available tools:
-    - search_by_common_name: Convert common names to scientific (USE FIRST if common name)
-    - get_species_synonyms: Alternative scientific names for a species
-    - get_species_attributes: Conservation status, body size, IUCN, CITES, ecological traits
-    - get_attribute_definitions: Get the tree of attribute definitions (what types of data WoRMS can store)
-    - get_attribute_value_options: Get possible values for a specific attribute category
-    - get_taxonomic_record: Basic taxonomy (family, order, class)
-    - get_species_distribution: Geographic distribution/range
-    - get_vernacular_names: Common names in different languages
-    - get_taxonomic_classification: Full taxonomic hierarchy
-    - get_literature_sources: Scientific references and citations
-    - get_child_taxa: Child taxa/species under a taxonomic group
-    - get_external_ids: External database IDs (FishBase, NCBI, etc.)
-    - get_recent_species_changes: Species added/modified during a time period
-    - abort: Call if request cannot be fulfilled
-    - finish: Call when request is successfully completed
+Available tools:
+- search_by_common_name: Convert common names to scientific (USE FIRST if common name)
+- get_species_synonyms: Alternative scientific names for a species
+- get_species_attributes: Conservation status, body size, IUCN, CITES, ecological traits
+- get_attribute_definitions: Get the tree of attribute definitions (what types of data WoRMS can store)
+- get_attribute_value_options: Get possible values for a specific attribute category
+- get_taxonomic_record: Basic taxonomy (family, order, class)
+- get_species_distribution: Geographic distribution/range
+- get_vernacular_names: Common names in different languages
+- get_taxonomic_classification: Full taxonomic hierarchy
+- get_literature_sources: Scientific references and citations
+- get_child_taxa: Child taxa/species under a taxonomic group
+- get_external_ids: External database IDs (FishBase, NCBI, etc.)
+- get_recent_species_changes: Species added/modified during a time period
+- abort: Call if request cannot be fulfilled
+- finish: Call when request is successfully completed
 
-    Query types:
-    - "single_species": Info about one species
-    - "comparison": Compare multiple species
-    - "conservation": Specifically about conservation/IUCN status
-    - "distribution": Specifically about where species lives
-    - "taxonomy": About classification
+Query types:
+- "single_species": Info about one species
+- "comparison": Compare multiple species
+- "conservation": Specifically about conservation/IUCN status
+- "distribution": Specifically about where species lives
+- "taxonomy": About classification
 
-    Tool priorities:
-    - "must_call": Required to answer the query
-    - "should_call": Recommended for complete answer
-    - "optional": Only if user specifically asks
+Tool priorities:
+- "must_call": Required to answer the query
+- "should_call": Recommended for complete answer
+- "optional": Only if user specifically asks
 
-    {format_instructions}
-    """),
+{format_instructions}
+"""),
             ("human", """Query: "{request}"
-    Species mentioned: {species}
+Species mentioned: {species}
 
-    Create the execution plan.""")
+Create the execution plan.""")
         ])
         
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
@@ -127,28 +120,22 @@ class WoRMSReActAgent(IChatBioAgent):
                 "request": request,
                 "species": species_names if species_names else "unknown"
             })
-            
             return ResearchPlan(**plan)
-        
         except Exception as e:
-            # Fallback plan if LLM fails
             print(f"Warning: Plan creation failed ({e}), using fallback plan")
             
-            # Build fallback plan
-            tools_planned = []
-            
-            # Always get basic attributes
-            tools_planned.append(ToolPlan(
-                tool_name="get_species_attributes",
-                priority="must_call",
-                reason="Get ecological traits and conservation status"
-            ))
-            
-            tools_planned.append(ToolPlan(
-                tool_name="get_taxonomic_record",
-                priority="should_call",
-                reason="Get basic taxonomy information"
-            ))
+            tools_planned = [
+                ToolPlan(
+                    tool_name="get_species_attributes",
+                    priority="must_call",
+                    reason="Get ecological traits and conservation status"
+                ),
+                ToolPlan(
+                    tool_name="get_taxonomic_record",
+                    priority="should_call",
+                    reason="Get basic taxonomy information"
+                )
+            ]
             
             return ResearchPlan(
                 query_type="single_species" if len(species_names) <= 1 else "comparison",
@@ -157,18 +144,11 @@ class WoRMSReActAgent(IChatBioAgent):
                 reasoning="Fallback plan: get core species information"
             )
 
-    async def _resolve_common_names_parallel(
-        self, 
-        names: list[str], 
-        context: ResponseContext
-    ) -> dict[str, str]:
-        """Resolve multiple common names to scientific names using batch API"""
-        
+    async def _resolve_common_names_parallel(self, names: list[str], context: ResponseContext) -> dict[str, str]:
         async with context.begin_process(f"Resolving {len(names)} species names") as process:
             try:
                 loop = asyncio.get_event_loop()
                 
-                from worms_api import MatchNamesParams
                 match_params = MatchNamesParams(
                     scientific_names=names,
                     marine_only=True
@@ -177,13 +157,12 @@ class WoRMSReActAgent(IChatBioAgent):
                 
                 await process.log(f"Batch matching {len(names)} names")
                 
-                # Add timeout to prevent hanging
                 raw_response = await asyncio.wait_for(
                     loop.run_in_executor(
                         None,
                         lambda: self.worms_logic.execute_request(api_url)
                     ),
-                    timeout=30.0  # 30 second timeout
+                    timeout=30.0
                 )
                 
                 if not isinstance(raw_response, list):
@@ -202,7 +181,6 @@ class WoRMSReActAgent(IChatBioAgent):
                         if match_type == 'exact':
                             await process.log(f"'{input_name}' → {scientific_name} [exact match]")
                         else:
-                            # Show fuzzy correction
                             await process.log(f"'{input_name}' → {scientific_name} [fuzzy match: {match_type}]")
                     else:
                         await process.log(f"'{input_name}' → NOT FOUND")
@@ -217,7 +195,6 @@ class WoRMSReActAgent(IChatBioAgent):
                 return {}
     
     async def _get_cached_aphia_id(self, species_name: str, process) -> Optional[int]:
-        """Get AphiaID with automatic caching"""
         loop = asyncio.get_event_loop()
         aphia_id = await loop.run_in_executor(
             None,
@@ -233,28 +210,13 @@ class WoRMSReActAgent(IChatBioAgent):
         return aphia_id
     
     @override
-    async def run(
-        self,
-        context: ResponseContext,
-        request: str,
-        entrypoint: str,
-        params: MarineResearchParams,
-    ):
-        """Main entry point with planning and parallel resolution"""
-
-        
-        # PHASE 1: PLANNING
-        
-        
+    async def run(self, context: ResponseContext, request: str, entrypoint: str, params: MarineResearchParams):
         async with context.begin_process("Searching WoRMS") as process:
-            
             plan = await self._create_plan(request, params.species_names)
             
-            # Log 1: Query analysis and species identification
             species_str = ", ".join(plan.species_mentioned)
             await process.log(f"{plan.query_type.replace('_', ' ').title()} query: {species_str}")
             
-            # Log 2: Execution plan with tool priorities
             must_call_tools = [t.tool_name for t in plan.tools_planned if t.priority == "must_call"]
             should_call_tools = [t.tool_name for t in plan.tools_planned if t.priority == "should_call"]
             
@@ -265,44 +227,32 @@ class WoRMSReActAgent(IChatBioAgent):
             await process.log(plan_details, data={
                 "query_type": plan.query_type,
                 "species_count": len(plan.species_mentioned),
-                "must_call": [t.tool_name for t in plan.tools_planned if t.priority == "must_call"],
-                "should_call": [t.tool_name for t in plan.tools_planned if t.priority == "should_call"],
+                "must_call": must_call_tools,
+                "should_call": should_call_tools,
                 "reasoning": plan.reasoning
             })
             
-            # User message
             await context.reply(f"Researching {len(plan.species_mentioned)} species using {len(must_call_tools)} tools...")
 
-
-        # PHASE 2: BATCH NAME RESOLUTION
-        
         if plan.species_mentioned:
             async with context.begin_process("Resolving and validating species names") as process:
-                
                 await process.log(f"Batch resolving {len(plan.species_mentioned)} name(s)")
                 
-                # Use batch API to resolve/validate ALL names at once
                 resolved = await self._resolve_common_names_parallel(plan.species_mentioned, context)
                 
                 await process.log(f"Resolved {len(resolved)}/{len(plan.species_mentioned)} species")
                 
-                # Cache the AphiaIDs
                 for input_name, scientific_name in resolved.items():
                     aphia_id = await self._get_cached_aphia_id(scientific_name, process)
                     if not aphia_id:
                         await process.log(f"Warning: Could not cache AphiaID for {scientific_name}")
 
-  
-        # PHASE 3: GUIDED EXECUTION
-        
-        # Create tools
         tools = create_worms_tools(
             worms_logic=self.worms_logic,
             context=context,
             get_cached_aphia_id_func=self._get_cached_aphia_id
         )
         
-        # Create agent with plan-enhanced prompt
         llm = ChatOpenAI(model="gpt-4o-mini")
         system_prompt = self._make_system_prompt_with_plan(request, plan)
         agent = create_react_agent(llm, tools)
@@ -315,21 +265,12 @@ class WoRMSReActAgent(IChatBioAgent):
                         HumanMessage(content=request)
                     ]
                 },
-                config={
-                    "recursion_limit": 5
-                }
+                config={"recursion_limit": 7}
             )
         except Exception as e:
             await context.reply(f"An error occurred: {str(e)}")
     
-    def _make_system_prompt_with_plan(
-        self, 
-        request: str, 
-        plan: ResearchPlan
-    ) -> str:
-        """Generate system prompt that includes the plan"""
-        
-        # Build tool plan
+    def _make_system_prompt_with_plan(self, request: str, plan: ResearchPlan) -> str:
         must_call = [t for t in plan.tools_planned if t.priority == "must_call"]
         should_call = [t for t in plan.tools_planned if t.priority == "should_call"]
         

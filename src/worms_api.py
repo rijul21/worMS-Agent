@@ -6,7 +6,7 @@ from typing import Optional, Dict
 from urllib.parse import urlencode, quote
 import cloudscraper
 
-# Parameter Models - 14 endpoints total (11 original + 3 corrected new endpoints)
+
 class SpeciesSearchParams(BaseModel):
     """Parameters for searching marine species in WoRMS"""
     scientific_name: str = Field(..., 
@@ -119,7 +119,7 @@ class MatchNamesParams(BaseModel):
         description="Use the authority in the matching process"
     )
 
-# CORRECTED: High-value endpoint #2 - Gets attribute DEFINITIONS, not species attributes
+
 class AttributeKeysParams(BaseModel):
     """Parameters for getting attribute definition tree"""
     attribute_id: int = Field(0,
@@ -130,7 +130,7 @@ class AttributeKeysParams(BaseModel):
         description="Include the tree of children"
     )
 
-# CORRECTED: High-value endpoint #3 - Gets value OPTIONS for a category
+
 class AttributeValuesByCategoryParams(BaseModel):
     """Parameters for getting attribute values grouped by category"""
     category_id: int = Field(...,
@@ -138,7 +138,6 @@ class AttributeValuesByCategoryParams(BaseModel):
         examples=[1, 7, 9]
     )
 
-# CORRECTED: High-value endpoint #4 - Uses QUERY parameters for dates
 class RecordsByDateParams(BaseModel):
     """Parameters for getting species records modified during a time period"""
     startdate: str = Field(...,
@@ -182,7 +181,7 @@ class WoRMS:
                 value = config.get(key, default)
         return value if value is not None else default
 
-    # URL Building Methods - All endpoints
+
     def build_species_search_url(self, params: SpeciesSearchParams) -> str:
         """Build URL for searching species by name"""
         encoded_name = quote(params.scientific_name)
@@ -252,16 +251,15 @@ class WoRMS:
         """Build URL for batch matching multiple species names using TAXAMATCH fuzzy matching"""
         query_params = []
         
-        # Add each scientific name as scientificnames[]
         for name in params.scientific_names:
             query_params.append(('scientificnames[]', name))
         
-        # Add authorships if provided
+
         if params.authorships:
             for auth in params.authorships:
                 query_params.append(('authorships[]', auth))
         
-        # Add boolean parameters
+    
         if params.marine_only is not None:
             query_params.append(('marine_only', str(params.marine_only).lower()))
         if params.extant_only is not None:
@@ -269,12 +267,12 @@ class WoRMS:
         if params.match_authority is not None:
             query_params.append(('match_authority', str(params.match_authority).lower()))
         
-        # Build query string manually to handle array parameters
+      
         query_string = '&'.join([f"{k}={quote(str(v))}" for k, v in query_params])
         
         return f"{self.worms_api_base_url}/AphiaRecordsByMatchNames?{query_string}"
     
-    # CORRECTED: High-value endpoint #2
+ 
     def build_attribute_keys_url(self, params: AttributeKeysParams) -> str:
         """Build URL for getting attribute definition tree"""
         query_params = {}
@@ -285,12 +283,12 @@ class WoRMS:
         base_url = f"{self.worms_api_base_url}/AphiaAttributeKeysByID/{params.attribute_id}"
         return f"{base_url}?{query_string}" if query_string else base_url
     
-    # CORRECTED: High-value endpoint #3
+ 
     def build_attribute_values_by_category_url(self, params: AttributeValuesByCategoryParams) -> str:
         """Build URL for getting attribute values grouped by category"""
         return f"{self.worms_api_base_url}/AphiaAttributeValuesByCategoryID/{params.category_id}"
     
-    # CORRECTED: High-value endpoint #4
+  
     def build_records_by_date_url(self, params: RecordsByDateParams) -> str:
         """Build URL for getting records modified during a specific time period"""
         query_params = {'startdate': params.startdate}
@@ -307,7 +305,7 @@ class WoRMS:
         query_string = urlencode(query_params)
         return f"{self.worms_api_base_url}/AphiaRecordsByDate?{query_string}"
 
-    # Execution methods 
+
     def execute_request(self, url: str) -> Dict:
         """Execute GET request and return JSON response"""
         try:
@@ -320,7 +318,7 @@ class WoRMS:
         except requests.exceptions.RequestException as e:
             raise ConnectionError(f"API request failed: {e}")
 
-    # Helper method for getting AphiaID from species name
+
     def get_species_aphia_id(self, scientific_name: str) -> Optional[int]:
         """Get AphiaID for a species name - synchronous helper"""
         params = SpeciesSearchParams(scientific_name=scientific_name)
