@@ -1,5 +1,4 @@
 import asyncio
-from collections import defaultdict
 from typing import Callable
 from langchain.tools import tool
 from worms_api import (
@@ -127,26 +126,6 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
                 )
                 
                 distributions = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
-
-                geographic_groups = defaultdict(list)
-
-                for dist in distributions:
-                    if isinstance(dist, dict):
-                        higher_geo = dist.get('higherGeography', 'Unspecified Region')
-                        geographic_groups[higher_geo].append(dist)
-
-                
-                structured_distribution = {
-                    'by_region': dict(geographic_groups),
-                    'summary': {
-                        'total_locations': len(distributions),
-                        'regions': list(geographic_groups.keys()),
-                        'region_count': len(geographic_groups),
-                        'valid_records': sum(1 for d in distributions if isinstance(d, dict) and d.get('recordStatus') == 'valid'),
-                        'doubtful_records': sum(1 for d in distributions if isinstance(d, dict) and d.get('recordStatus') == 'doubtful')
-                    },
-                    'all_distributions': distributions  
-                }
                 
                 if not distributions:
                     await log_no_data(process, "get_species_distribution", species_name, aphia_id)
@@ -156,16 +135,13 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
                 
                 await process.create_artifact(
                     mimetype="application/json",
-                    description=f"Distribution for {species_name} (AphiaID: {aphia_id}) - {len(distributions)} locations across {len(geographic_groups)} regions",
+                    description=f"Distribution for {species_name} (AphiaID: {aphia_id}) - {len(distributions)} locations",
                     uris=[api_url],
                     metadata={
                         "aphia_id": aphia_id, 
                         "count": len(distributions),
-                        "species": species_name,
-                        "regions": list(geographic_groups.keys()),
-                        "region_count": len(geographic_groups)
-                    },
-                    content=structured_distribution  
+                        "species": species_name
+                    }
                 )
                 
                 await log_artifact_created(process, "get_species_distribution", species_name)
@@ -244,51 +220,6 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
                 )
                 
                 sources = raw_response if isinstance(raw_response, list) else [raw_response] if raw_response else []
-
-                categorized_sources = {
-                    'peer_reviewed': [],
-                    'books': [],
-                    'databases': [],
-                    'other': []
-                }
-
-                for source in sources:
-                    if isinstance(source, dict):
-                        use = source.get('use', '').lower()
-                        has_doi = bool(source.get('doi'))
-                        
-                    
-                        source['has_doi'] = has_doi
-                        source['use_category'] = use
-                        
-                        if 'original description' in use or 'taxonomy' in use:
-                            source['priority'] = 'high'
-                            categorized_sources['peer_reviewed'].append(source)
-                        elif has_doi or 'journal' in use:
-                            source['priority'] = 'high'
-                            categorized_sources['peer_reviewed'].append(source)
-                        elif 'book' in use or 'monograph' in use:
-                            source['priority'] = 'medium'
-                            categorized_sources['books'].append(source)
-                        elif 'database' in use or 'checklist' in use:
-                            source['priority'] = 'medium'
-                            categorized_sources['databases'].append(source)
-                        else:
-                            source['priority'] = 'low'
-                            categorized_sources['other'].append(source)
-
-             
-                structured_sources = {
-                    'by_category': categorized_sources,
-                    'summary': {
-                        'total_sources': len(sources),
-                        'peer_reviewed': len(categorized_sources['peer_reviewed']),
-                        'books': len(categorized_sources['books']),
-                        'databases': len(categorized_sources['databases']),
-                        'with_doi': sum(1 for s in sources if isinstance(s, dict) and s.get('doi'))
-                    },
-                    'all_sources': sources  # Keep original data too
-                }
                 
                 if not sources:
                     await log_no_data(process, "get_literature_sources", species_name, aphia_id)
@@ -298,16 +229,13 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
                 
                 await process.create_artifact(
                     mimetype="application/json",
-                    description=f"Literature sources for {species_name} (AphiaID: {aphia_id}) - {len(sources)} sources (ranked by quality)",
+                    description=f"Literature sources for {species_name} (AphiaID: {aphia_id}) - {len(sources)} sources",
                     uris=[api_url],
                     metadata={
                         "aphia_id": aphia_id, 
                         "count": len(sources),
-                        "species": species_name,
-                        "peer_reviewed_count": len(categorized_sources['peer_reviewed']),
-                        "doi_count": sum(1 for s in sources if isinstance(s, dict) and s.get('doi'))
-                    },
-                    content=structured_sources 
+                        "species": species_name
+                    }
                 )
                 
                 await log_artifact_created(process, "get_literature_sources", species_name)
