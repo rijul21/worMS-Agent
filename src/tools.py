@@ -1,3 +1,4 @@
+import asyncio
 from typing import Callable
 from langchain.tools import tool
 from worms_api import (
