@@ -235,7 +235,7 @@ Create the execution plan.""")
             await context.reply(f"Researching {len(plan.species_mentioned)} species using {len(must_call_tools)} tools...")
 
         if plan.species_mentioned:
-            async with context.begin_process("Resolving and validating species names") as process:
+            async with context.begin_process("Resolving species names") as process:
                 await process.log(f"Batch resolving {len(plan.species_mentioned)} name(s)")
                 
                 resolved = await self._resolve_common_names_parallel(plan.species_mentioned, context)
