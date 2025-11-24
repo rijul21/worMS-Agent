@@ -265,7 +265,7 @@ Create the execution plan.""")
                         HumanMessage(content=request)
                     ]
                 },
-                config={"recursion_limit": 20}
+               
             )
         except Exception as e:
             await context.reply(f"An error occurred: {str(e)}")
