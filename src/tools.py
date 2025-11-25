@@ -48,7 +48,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
     @tool
     async def get_species_synonyms(species_name: str) -> str:
         """Get synonyms and alternative scientific names for a marine species."""
-        # Check if already called
+        #checks if the tool is already called or not
         call_key = create_tracked_key("get_species_synonyms", species_name=species_name)
         if call_key in tool_call_tracker:
             return tool_call_tracker[call_key]
@@ -127,7 +127,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
     @tool
     async def get_species_distribution(species_name: str) -> str:
         """Get geographic distribution and range data for a marine species. Shows where the species is found globally."""
-        # Check if already called
+        #checks if the tool is already called or not
         call_key = create_tracked_key("get_species_distribution", species_name=species_name)
         if call_key in tool_call_tracker:
             return tool_call_tracker[call_key]
@@ -187,7 +187,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
     @tool
     async def get_vernacular_names(species_name: str) -> str:
         """Get common names for a marine species in different languages. Useful for finding local or colloquial names."""
-        # Check if already called
+        #checks if the tool is already called or not
         call_key = create_tracked_key("get_vernacular_names", species_name=species_name)
         if call_key in tool_call_tracker:
             return tool_call_tracker[call_key]
@@ -247,7 +247,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
     @tool
     async def get_literature_sources(species_name: str) -> str:
         """Get scientific literature sources, references, and citations for a marine species. Provides academic sources."""
-        # Check if already called
+        #checks if the tool is already called or not
         call_key = create_tracked_key("get_literature_sources", species_name=species_name)
         if call_key in tool_call_tracker:
             return tool_call_tracker[call_key]
@@ -307,7 +307,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
     @tool
     async def get_taxonomic_record(species_name: str) -> str:
         """Get basic taxonomic record including family, order, class, status, and authority. Good for quick taxonomy overview."""
-        # Check if already called
+        #checks if the tool is already called or not
         call_key = create_tracked_key("get_taxonomic_record", species_name=species_name)
         if call_key in tool_call_tracker:
             return tool_call_tracker[call_key]
@@ -366,7 +366,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
     @tool
     async def get_taxonomic_classification(species_name: str) -> str:
         """Get complete taxonomic hierarchy from kingdom to species. Use for full classification lineage."""
-        # Check if already called
+        #checks if the tool is already called or not
         call_key = create_tracked_key("get_taxonomic_classification", species_name=species_name)
         if call_key in tool_call_tracker:
             return tool_call_tracker[call_key]
@@ -426,7 +426,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
     @tool
     async def get_child_taxa(species_name: str) -> str:
         """Get child taxa like subspecies, varieties, or forms. Returns empty for species without subspecies (normal)."""
-        # Check if already called
+        #checks if the tool is already called or not
         call_key = create_tracked_key("get_child_taxa", species_name=species_name)
         if call_key in tool_call_tracker:
             return tool_call_tracker[call_key]
@@ -486,7 +486,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
     @tool
     async def get_external_ids(species_name: str) -> str:
         """Get external database identifiers (FishBase, NCBI, ITIS, etc.). Useful for cross-referencing with other databases."""
-        # Check if already called
+        #checks if the tool is already called or not
         call_key = create_tracked_key("get_external_ids", species_name=species_name)
         if call_key in tool_call_tracker:
             return tool_call_tracker[call_key]
@@ -546,7 +546,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
     @tool
     async def get_species_attributes(species_name: str) -> str:
         """Get ecological attributes including IUCN status, CITES, body size, habitat, depth range, and environmental traits. Essential for conservation and ecology queries."""
-        # Check if already called
+        #checks if the tool is already called or not
         call_key = create_tracked_key("get_species_attributes", species_name=species_name)
         if call_key in tool_call_tracker:
             return tool_call_tracker[call_key]
@@ -607,7 +607,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
     @tool
     async def search_by_common_name(common_name: str) -> str:
         """Search for species using common names like 'killer whale' or 'great white shark'. Returns matching species with scientific names."""
-        # Check if already called
+        #checks if the tool is already called or not
         call_key = create_tracked_key("search_by_common_name", common_name=common_name)
         if call_key in tool_call_tracker:
             return tool_call_tracker[call_key]
@@ -678,7 +678,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
     @tool
     async def get_attribute_definitions(attribute_id: int = 0, include_children: bool = True) -> str:
         """Get the tree of available attribute types in WoRMS. Shows what ecological data categories exist (use attribute_id=0 for root)."""
-        # Check if already called
+        #checks if the tool is already called or not
         call_key = create_tracked_key("get_attribute_definitions", attribute_id=attribute_id, include_children=include_children)
         if call_key in tool_call_tracker:
             return tool_call_tracker[call_key]
@@ -731,7 +731,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
     @tool
     async def get_attribute_value_options(category_id: int) -> str:
         """Get possible values for a specific attribute category. Use after get_attribute_definitions to find valid options."""
-        # Check if already called
+        #checks if the tool is already called or not
         call_key = create_tracked_key("get_attribute_value_options", category_id=category_id)
         if call_key in tool_call_tracker:
             return tool_call_tracker[call_key]
@@ -783,7 +783,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
     @tool
     async def get_recent_species_changes(start_date: str, end_date: str = None, marine_only: bool = True, extant_only: bool = True, offset: int = 1, max_results: int = 50) -> str:
         """Get species added or modified in WoRMS during a date range. Useful for tracking new discoveries and taxonomic updates. Use ISO 8601 format (e.g., '2024-01-01T00:00:00+00:00')."""
-        # Check if already called
+        #checks if the tool is already called or not
         call_key = create_tracked_key("get_recent_species_changes", start_date=start_date, end_date=end_date, marine_only=marine_only, extant_only=extant_only, offset=offset, max_results=max_results)
         if call_key in tool_call_tracker:
             return tool_call_tracker[call_key]
