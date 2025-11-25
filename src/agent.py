@@ -5,7 +5,7 @@ from ichatbio.agent_response import ResponseContext
 from ichatbio.server import run_agent_server
 from ichatbio.types import AgentCard, AgentEntrypoint
 from langchain_openai import ChatOpenAI
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_react_agent
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate

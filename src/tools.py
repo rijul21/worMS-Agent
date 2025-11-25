@@ -27,7 +27,6 @@ from src.logging import (
 
 
 def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable):
-    # Track which tools have been called to prevent duplicates
     tool_call_tracker = {}
     
     def create_tracked_key(tool_name: str, **kwargs) -> str:
