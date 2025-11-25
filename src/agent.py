@@ -5,7 +5,7 @@ from ichatbio.agent_response import ResponseContext
 from ichatbio.server import run_agent_server
 from ichatbio.types import AgentCard, AgentEntrypoint
 from langchain_openai import ChatOpenAI
-from langchain.agents import create_react_agent
+from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -258,15 +258,15 @@ Create the execution plan.""")
         agent = create_react_agent(llm, tools)
         
         try:
-            await agent.ainvoke(
+            result = await agent.ainvoke(
                 {
                     "messages": [
                         SystemMessage(content=system_prompt),
                         HumanMessage(content=request)
                     ]
-                },
-               
+                }
             )
+            # Agent execution completed
         except Exception as e:
             await context.reply(f"An error occurred: {str(e)}")
     
@@ -312,10 +312,11 @@ CRITICAL INSTRUCTIONS:
    - Collect the SAME data points for all species
    - After collecting, provide comparative analysis with specific facts
 
-4. EFFICIENCY:
-   - If you have enough data to answer the query, call finish() immediately
-   - Don't call unnecessary tools
-   - Don't retry failed calls
+4. TERMINATION (CRITICAL):
+   - IMMEDIATELY call finish() after collecting all required data
+   - DO NOT wait or hesitate - finish() as soon as you have the data
+   - If tools return cached results, you ALREADY have the data
+   - The finish() tool terminates execution - use it RIGHT AWAY
 
 5. RESPONSE QUALITY:
    - Lead with direct answer to user's question
