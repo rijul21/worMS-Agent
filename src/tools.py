@@ -856,9 +856,7 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
                 tool_call_tracker[call_key] = result
                 return result
 
-    result = [
-    tool_call_tracker[call_key] = result
-    return result
+    return [
         get_species_synonyms,
         get_species_distribution,
         get_vernacular_names,
