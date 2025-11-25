@@ -255,18 +255,21 @@ Create the execution plan.""")
         
         llm = ChatOpenAI(model="gpt-4o-mini")
         system_prompt = self._make_system_prompt_with_plan(request, plan)
-        agent = create_react_agent(llm, tools)
+        
+        # Create agent with explicit configuration
+        agent = create_react_agent(
+            llm, 
+            tools,
+            state_modifier=system_prompt
+        )
         
         try:
-            await agent.ainvoke(
+            result = await agent.ainvoke(
                 {
-                    "messages": [
-                        SystemMessage(content=system_prompt),
-                        HumanMessage(content=request)
-                    ]
-                },
-               
+                    "messages": [HumanMessage(content=request)]
+                }
             )
+            # Agent execution completed
         except Exception as e:
             await context.reply(f"An error occurred: {str(e)}")
     
@@ -312,10 +315,11 @@ CRITICAL INSTRUCTIONS:
    - Collect the SAME data points for all species
    - After collecting, provide comparative analysis with specific facts
 
-4. EFFICIENCY:
-   - If you have enough data to answer the query, call finish() immediately
-   - Don't call unnecessary tools
-   - Don't retry failed calls
+4. TERMINATION (CRITICAL):
+   - IMMEDIATELY call finish() after collecting all required data
+   - DO NOT wait or hesitate - finish() as soon as you have the data
+   - If tools return cached results, you ALREADY have the data
+   - The finish() tool terminates execution - use it RIGHT AWAY
 
 5. RESPONSE QUALITY:
    - Lead with direct answer to user's question
