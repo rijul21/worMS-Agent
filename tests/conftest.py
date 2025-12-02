@@ -1,32 +1,33 @@
+"""
+Pytest configuration file for WoRMS Agent.
+"""
+import importlib
+from importlib.resources.abc import Traversable
 import pytest
-
 from ichatbio.agent_response import ResponseChannel, ResponseContext, ResponseMessage
+from src.agent import WoRMSReActAgent
 
 
 class InMemoryResponseChannel(ResponseChannel):
     """
-    Useful for interacting with agents locally (e.g., unit tests, command line interfaces) instead of sending responses
-    over the network. The `message_buffer` is populated by running an agent.
-
+    In-memory channel for testing without network calls.
+    Stores all agent responses in a message buffer.
+    
     Example:
-
         messages = list()
         channel = InMemoryResponseChannel(messages)
-        context = ResponseContext(channel)
-
-        # `messages` starts empty
-        agent = HelloWorldAgent()
-        await agent.run(context, "Hi", "hello", None)
-        # `messages` should now be populated
-
-        assert messages[1].text == "Hello world!"
+        context = ResponseContext(channel, TEST_CONTEXT_ID)
+        
+        agent = WoRMSReActAgent()
+        await agent.run(context, "Tell me about killer whales", "research_marine_species", params)
+        
+        # messages now contains all agent responses
+        assert len(messages) > 0
     """
-
     def __init__(self, message_buffer: list):
         self.message_buffer = message_buffer
-
+    
     async def submit(self, message: ResponseMessage, context_id: str):
-        print(f"Submitting message: {type(message).__name__}, Attributes: {vars(message)}")
         self.message_buffer.append(message)
 
 
@@ -34,15 +35,39 @@ TEST_CONTEXT_ID = "617727d1-4ce8-4902-884c-db786854b51c"
 
 
 @pytest.fixture(scope="function")
+def agent():
+    """Create a fresh WoRMS agent instance for each test."""
+    return WoRMSReActAgent()
+
+
+@pytest.fixture(scope="function")
 def messages() -> list[ResponseMessage]:
-    """During unit tests, the agent's replies to iChatBio will be stored in this list"""
+    """During unit tests, agent replies are stored in this list."""
     return list()
 
 
 @pytest.fixture(scope="function")
 def context(messages) -> ResponseContext:
     """
-    A special test context which gathers agent response messages as they are generated. Messages that do not occur
-    within a process block are assigned the context_id ``"617727d1-4ce8-4902-884c-db786854b51c"``.
+    Test context that captures agent response messages.
+    Messages outside process blocks use context_id: 617727d1-4ce8-4902-884c-db786854b51c
     """
     return ResponseContext(InMemoryResponseChannel(messages), TEST_CONTEXT_ID)
+
+
+def resource(*path, text=True) -> str | Traversable:
+    """
+    Load test resource files from the resources/ directory.
+    
+    Args:
+        *path: Path components to the resource file
+        text: If True, returns file content as string. If False, returns Traversable
+    
+    Example:
+        # Load mock WoRMS API response
+        mock_data = resource("worms_responses", "orcinus_orca.json")
+    """
+    file = importlib.resources.files("resources").joinpath(*path)
+    if text:
+        return file.read_text()
+    return file
