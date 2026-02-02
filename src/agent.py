@@ -265,16 +265,11 @@ Create the execution plan.""")
         system_prompt = self._make_system_prompt_with_plan(request, plan)
         agent = create_react_agent(llm, tools)
         
-        # logging metadata for LangSmith
+        # Metadata for LangSmith
         run_metadata = {
             "query_type": plan.query_type,
             "species_count": len(plan.species_mentioned),
-            "species_names": plan.species_mentioned,
             "planned_tools": must_call_tools,
-            "should_call_tools": should_call_tools,
-            "plan_reasoning": plan.reasoning,
-            "total_planned_tools": len(must_call_tools) + len(should_call_tools),
-            "has_comparison": len(plan.species_mentioned) > 1,
             "user_query": request,
         }
         
@@ -291,23 +286,6 @@ Create the execution plan.""")
                     "run_name": f"{plan.query_type}_{len(plan.species_mentioned)}_species"
                 }
             )
-            
-            # tools that were actually called
-            called_tools = []
-            for message in result.get("messages", []):
-                if hasattr(message, "tool_calls") and message.tool_calls:
-                    for tool_call in message.tool_calls:
-                        called_tools.append(tool_call.get("name", "unknown"))
-            
-            # calculate adherence metric
-            planned_set = set(must_call_tools)
-            called_set = set(called_tools)
-            
-            if planned_set:
-                adherence_score = len(planned_set & called_set) / len(planned_set)
-            else:
-                adherence_score = 1.0
-        
         except Exception as e:
             await context.reply(f"An error occurred: {str(e)}")
     
