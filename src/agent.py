@@ -213,113 +213,112 @@ Create the execution plan.""")
         
         return aphia_id
     
-@override
-@traceable(
-    name="worms_agent_run",
-    run_type="chain"
-)
-async def run(self, context: ResponseContext, request: str, entrypoint: str, params: MarineResearchParams):
-    async with context.begin_process("Searching WoRMS") as process:
-        plan = await self._create_plan(request, params.species_names)
-        
-        species_str = ", ".join(plan.species_mentioned)
-        await process.log(f"{plan.query_type.replace('_', ' ').title()} query: {species_str}")
-        
-        must_call_tools = [t.tool_name for t in plan.tools_planned if t.priority == "must_call"]
-        should_call_tools = [t.tool_name for t in plan.tools_planned if t.priority == "should_call"]
-        
-        plan_details = f"Execution Plan: {len(must_call_tools)} required tools"
-        if should_call_tools:
-            plan_details += f", {len(should_call_tools)} recommended tools"
-        
-        await process.log(plan_details, data={
-            "query_type": plan.query_type,
-            "species_count": len(plan.species_mentioned),
-            "must_call": must_call_tools,
-            "should_call": should_call_tools,
-            "reasoning": plan.reasoning
-        })
-        
-        await context.reply(f"Researching {len(plan.species_mentioned)} species using {len(must_call_tools)} tools...")
-
-    if plan.species_mentioned:
-        async with context.begin_process("Resolving species names") as process:
-            await process.log(f"Batch resolving {len(plan.species_mentioned)} name(s)")
-            
-            resolved = await self._resolve_common_names_parallel(plan.species_mentioned, context)
-            
-            await process.log(f"Resolved {len(resolved)}/{len(plan.species_mentioned)} species")
-            
-            for input_name, scientific_name in resolved.items():
-                aphia_id = await self._get_cached_aphia_id(scientific_name, process)
-                if not aphia_id:
-                    await process.log(f"Warning: Could not cache AphiaID for {scientific_name}")
-
-    tools = create_worms_tools(
-        worms_logic=self.worms_logic,
-        context=context,
-        get_cached_aphia_id_func=self._get_cached_aphia_id
+    @override
+    @traceable(
+        name="worms_agent_run",
+        run_type="chain"
     )
-    
-    llm = ChatOpenAI(model="gpt-4o-mini")
-    system_prompt = self._make_system_prompt_with_plan(request, plan)
-    agent = create_react_agent(llm, tools)
-    
-    # logging metadata for LangSmith
-    run_metadata = {
-        "query_type": plan.query_type,
-        "species_count": len(plan.species_mentioned),
-        "species_names": plan.species_mentioned,
-        "planned_tools": must_call_tools,
-        "should_call_tools": should_call_tools,
-        "plan_reasoning": plan.reasoning
-    }
-    
-    try:
-        result = await agent.ainvoke(
-            {
-                "messages": [
-                    SystemMessage(content=system_prompt),
-                    HumanMessage(content=request)
-                ]
-            },
-            config={
-                "metadata": run_metadata,
-                "run_name": f"{plan.query_type}_{len(plan.species_mentioned)}_species"
-            }
+    async def run(self, context: ResponseContext, request: str, entrypoint: str, params: MarineResearchParams):
+        async with context.begin_process("Searching WoRMS") as process:
+            plan = await self._create_plan(request, params.species_names)
+            
+            species_str = ", ".join(plan.species_mentioned)
+            await process.log(f"{plan.query_type.replace('_', ' ').title()} query: {species_str}")
+            
+            must_call_tools = [t.tool_name for t in plan.tools_planned if t.priority == "must_call"]
+            should_call_tools = [t.tool_name for t in plan.tools_planned if t.priority == "should_call"]
+            
+            plan_details = f"Execution Plan: {len(must_call_tools)} required tools"
+            if should_call_tools:
+                plan_details += f", {len(should_call_tools)} recommended tools"
+            
+            await process.log(plan_details, data={
+                "query_type": plan.query_type,
+                "species_count": len(plan.species_mentioned),
+                "must_call": must_call_tools,
+                "should_call": should_call_tools,
+                "reasoning": plan.reasoning
+            })
+            
+            await context.reply(f"Researching {len(plan.species_mentioned)} species using {len(must_call_tools)} tools...")
+
+        if plan.species_mentioned:
+            async with context.begin_process("Resolving species names") as process:
+                await process.log(f"Batch resolving {len(plan.species_mentioned)} name(s)")
+                
+                resolved = await self._resolve_common_names_parallel(plan.species_mentioned, context)
+                
+                await process.log(f"Resolved {len(resolved)}/{len(plan.species_mentioned)} species")
+                
+                for input_name, scientific_name in resolved.items():
+                    aphia_id = await self._get_cached_aphia_id(scientific_name, process)
+                    if not aphia_id:
+                        await process.log(f"Warning: Could not cache AphiaID for {scientific_name}")
+
+        tools = create_worms_tools(
+            worms_logic=self.worms_logic,
+            context=context,
+            get_cached_aphia_id_func=self._get_cached_aphia_id
         )
         
-        # tools that were actually called
-        called_tools = []
-        for message in result.get("messages", []):
-            if hasattr(message, "tool_calls") and message.tool_calls:
-                for tool_call in message.tool_calls:
-                    called_tools.append(tool_call.get("name", "unknown"))
+        llm = ChatOpenAI(model="gpt-4o-mini")
+        system_prompt = self._make_system_prompt_with_plan(request, plan)
+        agent = create_react_agent(llm, tools)
         
-        # calculate adherence metric
-        planned_set = set(must_call_tools)
-        called_set = set(called_tools)
+        # logging metadata for LangSmith
+        run_metadata = {
+            "query_type": plan.query_type,
+            "species_count": len(plan.species_mentioned),
+            "species_names": plan.species_mentioned,
+            "planned_tools": must_call_tools,
+            "should_call_tools": should_call_tools,
+            "plan_reasoning": plan.reasoning
+        }
         
-        if planned_set:
-            adherence_score = len(planned_set & called_set) / len(planned_set)
-        else:
-            adherence_score = 1.0
-        
-       
-        async with context.begin_process("Plan Adherence") as adherence_process:
-            await adherence_process.log(
-                f"Adherence Score: {adherence_score:.2f}",
-                data={
-                    "adherence_score": adherence_score,
-                    "tools_called": list(called_set),
-                    "tools_missing": list(planned_set - called_set),
-                    "tools_extra": list(called_set - planned_set)
+        try:
+            result = await agent.ainvoke(
+                {
+                    "messages": [
+                        SystemMessage(content=system_prompt),
+                        HumanMessage(content=request)
+                    ]
+                },
+                config={
+                    "metadata": run_metadata,
+                    "run_name": f"{plan.query_type}_{len(plan.species_mentioned)}_species"
                 }
             )
-    
-    except Exception as e:
-        await context.reply(f"An error occurred: {str(e)}")
-  
+            
+            # tools that were actually called
+            called_tools = []
+            for message in result.get("messages", []):
+                if hasattr(message, "tool_calls") and message.tool_calls:
+                    for tool_call in message.tool_calls:
+                        called_tools.append(tool_call.get("name", "unknown"))
+            
+            # calculate adherence metric
+            planned_set = set(must_call_tools)
+            called_set = set(called_tools)
+            
+            if planned_set:
+                adherence_score = len(planned_set & called_set) / len(planned_set)
+            else:
+                adherence_score = 1.0
+            
+            # log adherence to LangSmith
+            async with context.begin_process("Plan Adherence") as adherence_process:
+                await adherence_process.log(
+                    f"Adherence Score: {adherence_score:.2f}",
+                    data={
+                        "adherence_score": adherence_score,
+                        "tools_called": list(called_set),
+                        "tools_missing": list(planned_set - called_set),
+                        "tools_extra": list(called_set - planned_set)
+                    }
+                )
+        
+        except Exception as e:
+            await context.reply(f"An error occurred: {str(e)}")
     
     def _make_system_prompt_with_plan(self, request: str, plan: ResearchPlan) -> str:
         must_call = [t for t in plan.tools_planned if t.priority == "must_call"]
