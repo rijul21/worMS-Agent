@@ -1,14 +1,18 @@
 from typing import override, Optional, Literal
 from pydantic import BaseModel, Field
+
 from ichatbio.agent import IChatBioAgent
 from ichatbio.agent_response import ResponseContext
 from ichatbio.server import run_agent_server
 from ichatbio.types import AgentCard, AgentEntrypoint
+
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+from langsmith import traceable
+
 import dotenv
 import asyncio
 from functools import lru_cache
@@ -210,6 +214,10 @@ Create the execution plan.""")
         return aphia_id
     
     @override
+    @traceable(
+        name="worms_agent_run",
+        run_type="chain"
+    )
     async def run(self, context: ResponseContext, request: str, entrypoint: str, params: MarineResearchParams):
         async with context.begin_process("Searching WoRMS") as process:
             plan = await self._create_plan(request, params.species_names)
@@ -257,6 +265,16 @@ Create the execution plan.""")
         system_prompt = self._make_system_prompt_with_plan(request, plan)
         agent = create_react_agent(llm, tools)
         
+        # logging metadata for LangSmith
+        run_metadata = {
+            "query_type": plan.query_type,
+            "species_count": len(plan.species_mentioned),
+            "species_names": plan.species_mentioned,
+            "planned_tools": must_call_tools,
+            "should_call_tools": should_call_tools,
+            "plan_reasoning": plan.reasoning
+        }
+        
         try:
             result = await agent.ainvoke(
                 {
@@ -264,9 +282,12 @@ Create the execution plan.""")
                         SystemMessage(content=system_prompt),
                         HumanMessage(content=request)
                     ]
+                },
+                config={
+                    "metadata": run_metadata,
+                    "run_name": f"{plan.query_type}_{len(plan.species_mentioned)}_species"
                 }
             )
-            # Agent execution completed
         except Exception as e:
             await context.reply(f"An error occurred: {str(e)}")
     
