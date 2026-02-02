@@ -272,7 +272,10 @@ Create the execution plan.""")
             "species_names": plan.species_mentioned,
             "planned_tools": must_call_tools,
             "should_call_tools": should_call_tools,
-            "plan_reasoning": plan.reasoning
+            "plan_reasoning": plan.reasoning,
+            "total_planned_tools": len(must_call_tools) + len(should_call_tools),
+            "has_comparison": len(plan.species_mentioned) > 1,
+            "user_query": request,
         }
         
         try:
@@ -304,18 +307,6 @@ Create the execution plan.""")
                 adherence_score = len(planned_set & called_set) / len(planned_set)
             else:
                 adherence_score = 1.0
-            
-            # log adherence to LangSmith
-            async with context.begin_process("Plan Adherence") as adherence_process:
-                await adherence_process.log(
-                    f"Adherence Score: {adherence_score:.2f}",
-                    data={
-                        "adherence_score": adherence_score,
-                        "tools_called": list(called_set),
-                        "tools_missing": list(planned_set - called_set),
-                        "tools_extra": list(called_set - planned_set)
-                    }
-                )
         
         except Exception as e:
             await context.reply(f"An error occurred: {str(e)}")
