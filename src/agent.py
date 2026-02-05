@@ -8,7 +8,7 @@ from ichatbio.types import AgentCard, AgentEntrypoint
 
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langsmith import traceable
@@ -263,9 +263,14 @@ Create the execution plan.""")
         
         llm = ChatOpenAI(model="gpt-4o-mini")
         system_prompt = self._make_system_prompt_with_plan(request, plan)
-        agent = create_react_agent(llm, tools)
         
-        # Metadata for LangSmith
+        # Use prompt parameter to inject system prompt
+        agent = create_react_agent(
+            llm, 
+            tools, 
+            prompt=system_prompt
+        )
+        
         run_metadata = {
             "query_type": plan.query_type,
             "species_count": len(plan.species_mentioned),
@@ -275,12 +280,7 @@ Create the execution plan.""")
         
         try:
             result = await agent.ainvoke(
-                {
-                    "messages": [
-                        SystemMessage(content=system_prompt),
-                        HumanMessage(content=request)
-                    ]
-                },
+                {"messages": [HumanMessage(content=request)]},
                 config={
                     "metadata": run_metadata,
                     "run_name": f"{plan.query_type}_{len(plan.species_mentioned)}_species"
