@@ -18,7 +18,7 @@ import asyncio
 from functools import lru_cache
 
 from src.worms_api import WoRMS, MatchNamesParams
-from src.logging import log_species_not_found
+from src.Wormslogging import log_species_not_found
 from src.tools import create_worms_tools
 
 dotenv.load_dotenv()

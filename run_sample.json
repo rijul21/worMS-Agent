@@ -1,0 +1,18 @@
+{
+  "id": "019c2f87-0daa-7dc3-b0c0-8d6531b558c7",
+  "name": "worms_agent_run",
+  "run_type": "chain",
+  "inputs": {
+    "context": "<ichatbio.agent_response.ResponseContext object at 0x78a8184b9880>",
+    "entrypoint": "research_marine_species",
+    "params": {
+      "species_names": [
+        "Carcharodon carcharias"
+      ]
+    },
+    "request": "Find the distribution and habitats of Carcharodon carcharias (great white shark) using WoRMS data."
+  },
+  "outputs": {
+    "output": null
+  }
+}

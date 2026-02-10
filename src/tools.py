@@ -17,7 +17,7 @@ from src.worms_api import  (
     AttributeValuesByCategoryParams,
     RecordsByDateParams
 )
-from src.logging import (
+from src.Wormslogging import (
     log_species_not_found,
     log_api_call,
     log_data_fetched,
