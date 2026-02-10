@@ -224,14 +224,17 @@ class ErrorDetector:
             
             print(f"Found {len(agent_runs)} worms_agent_run conversations")
             
-            # Show what types of runs we got (helpful for debugging)
+            # Show key run types only
             run_types = {}
             for r in all_runs:
                 run_types[r.name] = run_types.get(r.name, 0) + 1
             
-            print(f"\nRun types found:")
-            for name, count in sorted(run_types.items(), key=lambda x: x[1], reverse=True)[:10]:
-                print(f"  {name}: {count}")
+            # Display only the 4 most important types
+            important_types = ['Prompt', 'tools', 'ChatOpenAI', 'agent']
+            print(f"\nKey run types:")
+            for name in important_types:
+                if name in run_types:
+                    print(f"  {name}: {run_types[name]}")
             print()
             
             for run in agent_runs:
@@ -318,7 +321,7 @@ class ErrorDetector:
             print(f"{'='*70}")
             
             for i, error in enumerate(errors, 1):
-                print(f"\n--- Instance {i} ---")
+                print(f"\nInstance {i}")
                 print(f"Severity: {error.severity}")
                 print(f"Timestamp: {error.timestamp}")
                 print(f"\nQUERY:")
@@ -328,10 +331,9 @@ class ErrorDetector:
                 print(f"\nPROBLEM:")
                 print(f"  {error.description}")
                 print(f"\nEVIDENCE:")
-                print(f"  {error.evidence}")
-                print(f"\n{'-'*70}")
+                print(f"  {error.evidence}\n")
         
-        print(f"\n{'='*70}\n")
+        print(f"{'='*70}\n")
 
 
 if __name__ == "__main__":
