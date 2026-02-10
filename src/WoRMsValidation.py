@@ -294,9 +294,9 @@ class ErrorDetector:
     
     def print_report(self):
         """Output the results"""
-        print("=" * 70)
+        print("=" * 20)
         print("ERROR DETECTION REPORT")
-        print("=" * 70)
+        
         
         if not self.errors:
             print("\nNo errors detected.")
@@ -316,9 +316,9 @@ class ErrorDetector:
         
         # Print details for each error type
         for error_type, errors in errors_by_type.items():
-            print(f"\n{'='*70}")
+            print(f"\n{'='*20}")
             print(f"{error_type.upper().replace('_', ' ')} ({len(errors)} instances)")
-            print(f"{'='*70}")
+            
             
             for i, error in enumerate(errors, 1):
                 print(f"\nInstance {i}")
@@ -333,7 +333,7 @@ class ErrorDetector:
                 print(f"\nEVIDENCE:")
                 print(f"  {error.evidence}\n")
         
-        print(f"{'='*70}\n")
+       
 
 
 if __name__ == "__main__":
