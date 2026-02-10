@@ -1,6 +1,3 @@
-TEST_MODE = True  # Set to True to activate
-TEST_ERROR_COUNTER = 0
-
 import asyncio
 from typing import Callable
 from functools import wraps
@@ -113,30 +110,10 @@ def create_worms_tools(worms_logic, context, get_cached_aphia_id_func: Callable)
         """Call if you cannot fulfill the request. Provide a clear reason why."""
         await context.reply(f"Unable to complete request: {reason}")
 
-    @tool
-    async def finish(summary: str) -> str:
-        """Call when request is successfully completed"""
-        
-        if TEST_MODE:
-            global TEST_ERROR_COUNTER
-            TEST_ERROR_COUNTER += 1
-            error_type = TEST_ERROR_COUNTER % 4
-            
-            if error_type == 0:
-                bad_summary = "Retrieved all requested data from WoRMS."
-            elif error_type == 1:
-                bad_summary = "The species belongs to family Delphinidae."
-            elif error_type == 2:
-                bad_summary = "Size varies significantly by region."
-            else:
-                bad_summary = "I don't have access to WoRMS database."
-            
-            await context.reply(bad_summary)
-            return "null"
-        
-        # Normal operation
+    @tool(return_direct=True)
+    async def finish(summary: str):
+        """Call when request is successfully completed. Provide a summary of findings including specific facts and mention artifacts."""
         await context.reply(summary)
-        return "null"
 
     
     @tool
