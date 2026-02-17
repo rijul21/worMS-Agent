@@ -64,7 +64,7 @@ class ValidationResult:
 
 # 1: SYSTEM VALIDATORS
 class SystemValidator:
-    """Validates infra and tool execution"""
+    """Validates infrastructure and tool execution"""
     
     def __init__(self, client: Client):
         self.client = client
@@ -396,7 +396,7 @@ class SemanticValidator:
         
         return errors
 
-# 3: DATA VALIDATORS  
+# BUCKET 3: DATA VALIDATORS  
 
 class DataValidator:
     """Validates WoRMS API data quality"""
@@ -556,7 +556,9 @@ class ValidationFramework:
         end_time = datetime.now(timezone.utc)
         start_time = end_time - timedelta(hours=hours)
         
-    
+        print(f"\n{'='*60}")
+        print(f"VALIDATION FRAMEWORK v0.2")
+        print(f"{'='*60}")
         print(f"Project: {project_name}")
         print(f"Time range: Last {hours} hours")
         print(f"{'='*10}\n")
@@ -571,18 +573,22 @@ class ValidationFramework:
             agent_runs = [r for r in all_runs if r.name == "worms_agent_run"]
             
             print(f"Found {len(agent_runs)} agent conversations")
-            print(f"Running  validators ....\n")
+            print(f"Running 5 validators across 3 buckets...\n")
             
             for run in agent_runs:
                 # Extract query
                 query = run.inputs.get("request", "") if run.inputs else ""
                 if not query:
+                    print(f"  Skipping run {str(run.id)[:8]}: No query found")
                     continue
                 
                 # Extract response (simplified)
                 response = self._extract_response(run.id)
                 if not response:
+                    print(f"  Skipping run {str(run.id)[:8]}: No response found (query: '{query[:50]}...')")
                     continue
+                
+                print(f"  ✓ Analyzing run {str(run.id)[:8]}: '{query[:50]}...'")
                 
                 # Run validation
                 result = self.validate_run(str(run.id), query, response, run.start_time)
@@ -599,13 +605,22 @@ class ValidationFramework:
         try:
             child_runs = list(self.client.list_runs(trace_id=run_id, limit=50))
             
+            # Debug: Print what we found
+            finish_tools = [r for r in child_runs if r.name == "finish"]
+            # print(f"    DEBUG: Found {len(finish_tools)} finish tools in {len(child_runs)} child runs")
+            
             # Look for finish tool
             for child in child_runs:
                 if child.name == "finish" and child.inputs:
-                    return child.inputs.get("summary", "")
+                    summary = child.inputs.get("summary", "")
+                    if summary:
+                        # print(f"    DEBUG: Found summary: '{summary[:50]}...'")
+                        return summary
             
+            # print(f"    DEBUG: No finish tool with summary found")
             return None
-        except:
+        except Exception as e:
+            # print(f"    DEBUG: Exception in _extract_response: {e}")
             return None
     
     def print_report(self):
@@ -614,7 +629,7 @@ class ValidationFramework:
             print("No validation results to report.\n")
             return
         
-        print(f"\n{'='*5}")
+        print(f"\n{'='*60}")
         print("VALIDATION REPORT")
         print(f"{'='*10}\n")
         
@@ -654,7 +669,7 @@ class ValidationFramework:
             if result.total_errors == 0:
                 continue
             
-            print(f"\n{'='*5}")
+            print(f"\n{'='*60}")
             print(f"Run ID: {result.run_id[:16]}...")
             print(f"Timestamp: {result.timestamp}")
             print(f"{'='*60}")
@@ -684,7 +699,7 @@ class ValidationFramework:
                     print(f"    {err.description}")
                     print(f"    Suggestion: {err.suggestion}\n")
         
-        print(f"\n{'='*5}")
+        print(f"\n{'='*60}")
         print("END OF REPORT")
         print(f"{'='*10}\n")
 
