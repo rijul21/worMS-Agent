@@ -556,12 +556,9 @@ class ValidationFramework:
         end_time = datetime.now(timezone.utc)
         start_time = end_time - timedelta(hours=hours)
         
-        print(f"\n{'='*60}")
-        print(f"VALIDATION FRAMEWORK v0.2")
-        print(f"{'='*60}")
-        print(f"Project: {project_name}")
+        print(f"\nProject: {project_name}")
         print(f"Time range: Last {hours} hours")
-        print(f"{'='*10}\n")
+        print(f"Running 5 validators across 3 buckets...\n")
         
         try:
             all_runs = list(self.client.list_runs(
@@ -572,8 +569,7 @@ class ValidationFramework:
             
             agent_runs = [r for r in all_runs if r.name == "worms_agent_run"]
             
-            print(f"Found {len(agent_runs)} agent conversations")
-            print(f"Running 5 validators across 3 buckets...\n")
+            print(f"Found {len(agent_runs)} agent conversations\n")
             
             for run in agent_runs:
                 # Extract query
@@ -588,39 +584,75 @@ class ValidationFramework:
                     print(f"  Skipping run {str(run.id)[:8]}: No response found (query: '{query[:50]}...')")
                     continue
                 
-                print(f"  ✓ Analyzing run {str(run.id)[:8]}: '{query[:50]}...'")
+                print(f"  Analyzing run {str(run.id)[:8]}: '{query[:50]}...'")
                 
                 # Run validation
                 result = self.validate_run(str(run.id), query, response, run.start_time)
                 self.results.append(result)
             
-            print(f"Validation complete: {len(self.results)} conversations analyzed")
-            print(f"{'='*10}\n")
+            print(f"\nValidation complete: {len(self.results)} conversations analyzed\n")
             
         except Exception as e:
             print(f"Error during analysis: {e}\n")
     
     def _extract_response(self, run_id: str) -> Optional[str]:
-        """Extract agent's final response"""
+        """Extract agent's final response - check multiple locations"""
         try:
-            child_runs = list(self.client.list_runs(trace_id=run_id, limit=50))
+            # Get the main run
+            main_run = self.client.read_run(run_id)
             
-            # Debug: Print what we found
-            finish_tools = [r for r in child_runs if r.name == "finish"]
-            # print(f"    DEBUG: Found {len(finish_tools)} finish tools in {len(child_runs)} child runs")
+            # Method 1: Check run outputs (sometimes the final answer is here)
+            if main_run.outputs:
+                if 'output' in main_run.outputs:
+                    output = main_run.outputs['output']
+                    if output and isinstance(output, str) and len(output) > 10:
+                        return output
+                if 'messages' in main_run.outputs:
+                    messages = main_run.outputs['messages']
+                    if isinstance(messages, list) and messages:
+                        # Get last AI message
+                        for msg in reversed(messages):
+                            if isinstance(msg, dict) and msg.get('type') == 'ai':
+                                content = msg.get('content', '')
+                                if content:
+                                    return content
             
-            # Look for finish tool
+            # Method 2: Look in child run messages for finish tool calls (ORIGINAL v0.1 METHOD)
+            child_runs = list(self.client.list_runs(trace_id=run_id, limit=100))
+            for child in child_runs:
+                if child.inputs and "messages" in child.inputs:
+                    messages = child.inputs["messages"]
+                    if isinstance(messages, list):
+                        for msg in reversed(messages):
+                            if isinstance(msg, dict) and msg.get("type") == "ai":
+                                tool_calls = msg.get("tool_calls", [])
+                                for call in tool_calls:
+                                    if call.get("name") == "finish":
+                                        args = call.get("args", {})
+                                        if "summary" in args:
+                                            return args["summary"]
+            
+            # Method 3: Look for finish tool inputs
             for child in child_runs:
                 if child.name == "finish" and child.inputs:
                     summary = child.inputs.get("summary", "")
                     if summary:
-                        # print(f"    DEBUG: Found summary: '{summary[:50]}...'")
                         return summary
             
-            # print(f"    DEBUG: No finish tool with summary found")
+            # Method 4: Look for the last AI message in any child run
+            for child in child_runs:
+                if child.outputs and 'messages' in child.outputs:
+                    messages = child.outputs['messages']
+                    if isinstance(messages, list):
+                        for msg in reversed(messages):
+                            if isinstance(msg, dict) and msg.get('type') == 'ai':
+                                content = msg.get('content', '')
+                                if content and len(content) > 20:
+                                    return content
+            
             return None
         except Exception as e:
-            # print(f"    DEBUG: Exception in _extract_response: {e}")
+            print(f"    DEBUG: Exception in _extract_response: {e}")
             return None
     
     def print_report(self):
@@ -629,9 +661,7 @@ class ValidationFramework:
             print("No validation results to report.\n")
             return
         
-        print(f"\n{'='*60}")
-        print("VALIDATION REPORT")
-        print(f"{'='*10}\n")
+        print(f"\nVALIDATION REPORT\n")
         
         # Summary stats
         total_errors = sum(r.total_errors for r in self.results)
@@ -669,10 +699,10 @@ class ValidationFramework:
             if result.total_errors == 0:
                 continue
             
-            print(f"\n{'='*60}")
+            print(f"\n{'-'*20}")
             print(f"Run ID: {result.run_id[:16]}...")
             print(f"Timestamp: {result.timestamp}")
-            print(f"{'='*60}")
+            print(f"{'-'*20}")
             
             print(f"\nQUERY: {result.query}")
             print(f"RESPONSE: {result.response[:200]}{'...' if len(result.response) > 200 else ''}\n")
@@ -699,9 +729,7 @@ class ValidationFramework:
                     print(f"    {err.description}")
                     print(f"    Suggestion: {err.suggestion}\n")
         
-        print(f"\n{'='*60}")
-        print("END OF REPORT")
-        print(f"{'='*10}\n")
+        print(f"\nEND OF REPORT\n")
 
 # CLI
 
