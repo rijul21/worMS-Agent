@@ -1,0 +1,3867 @@
+{
+  "metadata": {
+    "species_name": "Orcinus orca",
+    "scientific_name": "Orcinus orca",
+    "aphia_id": 137102,
+    "fetch_timestamp": "2026-02-16 22:30:22",
+    "total_requests": 11
+  },
+  "endpoints": {
+    "taxonomic_record": {
+      "AphiaID": 137102,
+      "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=137102",
+      "scientificname": "Orcinus orca",
+      "authority": "(Linnaeus, 1758)",
+      "status": "accepted",
+      "unacceptreason": null,
+      "taxonRankID": 220,
+      "rank": "Species",
+      "valid_AphiaID": 137102,
+      "valid_name": "Orcinus orca",
+      "valid_authority": "(Linnaeus, 1758)",
+      "parentNameUsageID": 137021,
+      "originalNameUsageID": 148730,
+      "kingdom": "Animalia",
+      "phylum": "Chordata",
+      "class": "Mammalia",
+      "order": "Cetartiodactyla",
+      "family": "Delphinidae",
+      "genus": "Orcinus",
+      "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orcinus orca (Linnaeus, 1758). Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=137102 on 2026-02-17",
+      "lsid": "urn:lsid:marinespecies.org:taxname:137102",
+      "isMarine": 1,
+      "isBrackish": null,
+      "isFreshwater": null,
+      "isTerrestrial": 0,
+      "isExtinct": null,
+      "match_type": "exact",
+      "modified": "2008-08-20T11:25:36.853Z"
+    },
+    "classification": {
+      "AphiaID": 1,
+      "rank": "Superdomain",
+      "scientificname": "Biota",
+      "child": {
+        "AphiaID": 2,
+        "rank": "Kingdom",
+        "scientificname": "Animalia",
+        "child": {
+          "AphiaID": 1821,
+          "rank": "Phylum",
+          "scientificname": "Chordata",
+          "child": {
+            "AphiaID": 146419,
+            "rank": "Subphylum",
+            "scientificname": "Vertebrata",
+            "child": {
+              "AphiaID": 1828,
+              "rank": "Infraphylum",
+              "scientificname": "Gnathostomata",
+              "child": {
+                "AphiaID": 1831,
+                "rank": "Megaclass",
+                "scientificname": "Tetrapoda",
+                "child": {
+                  "AphiaID": 1837,
+                  "rank": "Class",
+                  "scientificname": "Mammalia",
+                  "child": {
+                    "AphiaID": 380416,
+                    "rank": "Subclass",
+                    "scientificname": "Theria",
+                    "child": {
+                      "AphiaID": 370511,
+                      "rank": "Order",
+                      "scientificname": "Cetartiodactyla",
+                      "child": {
+                        "AphiaID": 370545,
+                        "rank": "Suborder",
+                        "scientificname": "Cetancodonta",
+                        "child": {
+                          "AphiaID": 2688,
+                          "rank": "Infraorder",
+                          "scientificname": "Cetacea",
+                          "child": {
+                            "AphiaID": 148723,
+                            "rank": "Superfamily",
+                            "scientificname": "Odontoceti",
+                            "child": {
+                              "AphiaID": 136980,
+                              "rank": "Family",
+                              "scientificname": "Delphinidae",
+                              "child": {
+                                "AphiaID": 137021,
+                                "rank": "Genus",
+                                "scientificname": "Orcinus",
+                                "child": {
+                                  "AphiaID": 137102,
+                                  "rank": "Species",
+                                  "scientificname": "Orcinus orca",
+                                  "child": null
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "attributes": [
+      {
+        "AphiaID": 137102,
+        "measurementTypeID": 23,
+        "measurementType": "Species importance to society",
+        "measurementValue": "Habitats Directive",
+        "source_id": 197513,
+        "reference": "The Habitats Directive. Council Directive 92/43/EEC of 21 May 1992 on the conservation of natural habitats and of wild fauna and flora.",
+        "qualitystatus": "unreviewed",
+        "AphiaID_Inherited": 137102,
+        "CategoryID": 13,
+        "children": [
+          {
+            "AphiaID": 137102,
+            "measurementTypeID": 26,
+            "measurementType": "Habitats Directive Annex",
+            "measurementValue": "II",
+            "source_id": 197513,
+            "reference": "The Habitats Directive. Council Directive 92/43/EEC of 21 May 1992 on the conservation of natural habitats and of wild fauna and flora.",
+            "qualitystatus": "unreviewed",
+            "AphiaID_Inherited": 137102,
+            "CategoryID": 17,
+            "children": []
+          }
+        ]
+      },
+      {
+        "AphiaID": 137102,
+        "measurementTypeID": 23,
+        "measurementType": "Species importance to society",
+        "measurementValue": "Habitats Directive",
+        "source_id": 197513,
+        "reference": "The Habitats Directive. Council Directive 92/43/EEC of 21 May 1992 on the conservation of natural habitats and of wild fauna and flora.",
+        "qualitystatus": "unreviewed",
+        "AphiaID_Inherited": 137102,
+        "CategoryID": 13,
+        "children": [
+          {
+            "AphiaID": 137102,
+            "measurementTypeID": 26,
+            "measurementType": "Habitats Directive Annex",
+            "measurementValue": "IV",
+            "source_id": 197513,
+            "reference": "The Habitats Directive. Council Directive 92/43/EEC of 21 May 1992 on the conservation of natural habitats and of wild fauna and flora.",
+            "qualitystatus": "unreviewed",
+            "AphiaID_Inherited": 137102,
+            "CategoryID": 17,
+            "children": []
+          }
+        ]
+      },
+      {
+        "AphiaID": 137102,
+        "measurementTypeID": 23,
+        "measurementType": "Species importance to society",
+        "measurementValue": "CITES",
+        "source_id": 197517,
+        "reference": "Convention on International Trade in Endangered Species of Wild Fauna and Flora (CITES). Consulted April 2015.",
+        "qualitystatus": "unreviewed",
+        "AphiaID_Inherited": 137102,
+        "CategoryID": 13,
+        "children": [
+          {
+            "AphiaID": 137102,
+            "measurementTypeID": 28,
+            "measurementType": "CITES Annex",
+            "measurementValue": "II",
+            "source_id": 197517,
+            "reference": "Convention on International Trade in Endangered Species of Wild Fauna and Flora (CITES). Consulted April 2015.",
+            "qualitystatus": "unreviewed",
+            "AphiaID_Inherited": 137102,
+            "CategoryID": 19,
+            "children": []
+          }
+        ]
+      },
+      {
+        "AphiaID": 137102,
+        "measurementTypeID": 15,
+        "measurementType": "Body size",
+        "measurementValue": "9",
+        "source_id": 127107,
+        "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+        "qualitystatus": "checked",
+        "AphiaID_Inherited": 137102,
+        "CategoryID": null,
+        "children": [
+          {
+            "AphiaID": 137102,
+            "measurementTypeID": 17,
+            "measurementType": "Unit",
+            "measurementValue": "m",
+            "source_id": 127107,
+            "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+            "qualitystatus": "checked",
+            "AphiaID_Inherited": 137102,
+            "CategoryID": 11,
+            "children": [
+              {
+                "AphiaID": 137102,
+                "measurementTypeID": 18,
+                "measurementType": "Type",
+                "measurementValue": "maximum",
+                "source_id": 127107,
+                "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                "qualitystatus": "checked",
+                "AphiaID_Inherited": 137102,
+                "CategoryID": 14,
+                "children": [
+                  {
+                    "AphiaID": 137102,
+                    "measurementTypeID": 19,
+                    "measurementType": "Dimension",
+                    "measurementValue": "length",
+                    "source_id": 127107,
+                    "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                    "qualitystatus": "checked",
+                    "AphiaID_Inherited": 137102,
+                    "CategoryID": 15,
+                    "children": [
+                      {
+                        "AphiaID": 137102,
+                        "measurementTypeID": 20,
+                        "measurementType": "Life stage",
+                        "measurementValue": "adult",
+                        "source_id": 127107,
+                        "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                        "qualitystatus": "checked",
+                        "AphiaID_Inherited": 137102,
+                        "CategoryID": 8,
+                        "children": [
+                          {
+                            "AphiaID": 137102,
+                            "measurementTypeID": 21,
+                            "measurementType": "Sex",
+                            "measurementValue": "male",
+                            "source_id": 127107,
+                            "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                            "qualitystatus": "checked",
+                            "AphiaID_Inherited": 137102,
+                            "CategoryID": 12,
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "AphiaID": 137102,
+        "measurementTypeID": 15,
+        "measurementType": "Body size",
+        "measurementValue": "7.7",
+        "source_id": 127107,
+        "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+        "qualitystatus": "checked",
+        "AphiaID_Inherited": 137102,
+        "CategoryID": null,
+        "children": [
+          {
+            "AphiaID": 137102,
+            "measurementTypeID": 17,
+            "measurementType": "Unit",
+            "measurementValue": "m",
+            "source_id": 127107,
+            "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+            "qualitystatus": "checked",
+            "AphiaID_Inherited": 137102,
+            "CategoryID": 11,
+            "children": [
+              {
+                "AphiaID": 137102,
+                "measurementTypeID": 18,
+                "measurementType": "Type",
+                "measurementValue": "maximum",
+                "source_id": 127107,
+                "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                "qualitystatus": "checked",
+                "AphiaID_Inherited": 137102,
+                "CategoryID": 14,
+                "children": [
+                  {
+                    "AphiaID": 137102,
+                    "measurementTypeID": 19,
+                    "measurementType": "Dimension",
+                    "measurementValue": "length",
+                    "source_id": 127107,
+                    "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                    "qualitystatus": "checked",
+                    "AphiaID_Inherited": 137102,
+                    "CategoryID": 15,
+                    "children": [
+                      {
+                        "AphiaID": 137102,
+                        "measurementTypeID": 20,
+                        "measurementType": "Life stage",
+                        "measurementValue": "adult",
+                        "source_id": 127107,
+                        "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                        "qualitystatus": "checked",
+                        "AphiaID_Inherited": 137102,
+                        "CategoryID": 8,
+                        "children": [
+                          {
+                            "AphiaID": 137102,
+                            "measurementTypeID": 21,
+                            "measurementType": "Sex",
+                            "measurementValue": "female",
+                            "source_id": 127107,
+                            "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                            "qualitystatus": "checked",
+                            "AphiaID_Inherited": 137102,
+                            "CategoryID": 12,
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "AphiaID": 137102,
+        "measurementTypeID": 15,
+        "measurementType": "Body size",
+        "measurementValue": "6600",
+        "source_id": 127107,
+        "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+        "qualitystatus": "checked",
+        "AphiaID_Inherited": 137102,
+        "CategoryID": null,
+        "children": [
+          {
+            "AphiaID": 137102,
+            "measurementTypeID": 17,
+            "measurementType": "Unit",
+            "measurementValue": "kg",
+            "source_id": 127107,
+            "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+            "qualitystatus": "checked",
+            "AphiaID_Inherited": 137102,
+            "CategoryID": 11,
+            "children": [
+              {
+                "AphiaID": 137102,
+                "measurementTypeID": 18,
+                "measurementType": "Type",
+                "measurementValue": "maximum",
+                "source_id": 127107,
+                "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                "qualitystatus": "checked",
+                "AphiaID_Inherited": 137102,
+                "CategoryID": 14,
+                "children": [
+                  {
+                    "AphiaID": 137102,
+                    "measurementTypeID": 19,
+                    "measurementType": "Dimension",
+                    "measurementValue": "weight",
+                    "source_id": 127107,
+                    "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                    "qualitystatus": "checked",
+                    "AphiaID_Inherited": 137102,
+                    "CategoryID": 15,
+                    "children": [
+                      {
+                        "AphiaID": 137102,
+                        "measurementTypeID": 43,
+                        "measurementType": "Corresponding length",
+                        "measurementValue": "7.65",
+                        "source_id": 127107,
+                        "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                        "qualitystatus": "checked",
+                        "AphiaID_Inherited": 137102,
+                        "CategoryID": null,
+                        "children": [
+                          {
+                            "AphiaID": 137102,
+                            "measurementTypeID": 17,
+                            "measurementType": "Unit",
+                            "measurementValue": "m",
+                            "source_id": 127107,
+                            "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                            "qualitystatus": "checked",
+                            "AphiaID_Inherited": 137102,
+                            "CategoryID": 11,
+                            "children": [
+                              {
+                                "AphiaID": 137102,
+                                "measurementTypeID": 20,
+                                "measurementType": "Life stage",
+                                "measurementValue": "adult",
+                                "source_id": 127107,
+                                "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                                "qualitystatus": "checked",
+                                "AphiaID_Inherited": 137102,
+                                "CategoryID": 8,
+                                "children": [
+                                  {
+                                    "AphiaID": 137102,
+                                    "measurementTypeID": 21,
+                                    "measurementType": "Sex",
+                                    "measurementValue": "male",
+                                    "source_id": 127107,
+                                    "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                                    "qualitystatus": "checked",
+                                    "AphiaID_Inherited": 137102,
+                                    "CategoryID": 12,
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "AphiaID": 137102,
+        "measurementTypeID": 15,
+        "measurementType": "Body size",
+        "measurementValue": "4700",
+        "source_id": 127107,
+        "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+        "qualitystatus": "checked",
+        "AphiaID_Inherited": 137102,
+        "CategoryID": null,
+        "children": [
+          {
+            "AphiaID": 137102,
+            "measurementTypeID": 17,
+            "measurementType": "Unit",
+            "measurementValue": "kg",
+            "source_id": 127107,
+            "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+            "qualitystatus": "checked",
+            "AphiaID_Inherited": 137102,
+            "CategoryID": 11,
+            "children": [
+              {
+                "AphiaID": 137102,
+                "measurementTypeID": 18,
+                "measurementType": "Type",
+                "measurementValue": "maximum",
+                "source_id": 127107,
+                "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                "qualitystatus": "checked",
+                "AphiaID_Inherited": 137102,
+                "CategoryID": 14,
+                "children": [
+                  {
+                    "AphiaID": 137102,
+                    "measurementTypeID": 19,
+                    "measurementType": "Dimension",
+                    "measurementValue": "weight",
+                    "source_id": 127107,
+                    "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                    "qualitystatus": "checked",
+                    "AphiaID_Inherited": 137102,
+                    "CategoryID": 15,
+                    "children": [
+                      {
+                        "AphiaID": 137102,
+                        "measurementTypeID": 43,
+                        "measurementType": "Corresponding length",
+                        "measurementValue": "6.58",
+                        "source_id": 127107,
+                        "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                        "qualitystatus": "checked",
+                        "AphiaID_Inherited": 137102,
+                        "CategoryID": null,
+                        "children": [
+                          {
+                            "AphiaID": 137102,
+                            "measurementTypeID": 17,
+                            "measurementType": "Unit",
+                            "measurementValue": "m",
+                            "source_id": 127107,
+                            "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                            "qualitystatus": "checked",
+                            "AphiaID_Inherited": 137102,
+                            "CategoryID": 11,
+                            "children": [
+                              {
+                                "AphiaID": 137102,
+                                "measurementTypeID": 20,
+                                "measurementType": "Life stage",
+                                "measurementValue": "adult",
+                                "source_id": 127107,
+                                "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                                "qualitystatus": "checked",
+                                "AphiaID_Inherited": 137102,
+                                "CategoryID": 8,
+                                "children": [
+                                  {
+                                    "AphiaID": 137102,
+                                    "measurementTypeID": 21,
+                                    "measurementType": "Sex",
+                                    "measurementValue": "female",
+                                    "source_id": 127107,
+                                    "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                                    "qualitystatus": "checked",
+                                    "AphiaID_Inherited": 137102,
+                                    "CategoryID": 12,
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "AphiaID": 137102,
+        "measurementTypeID": 15,
+        "measurementType": "Body size",
+        "measurementValue": "200",
+        "source_id": 127107,
+        "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+        "qualitystatus": "checked",
+        "AphiaID_Inherited": 137102,
+        "CategoryID": null,
+        "children": [
+          {
+            "AphiaID": 137102,
+            "measurementTypeID": 17,
+            "measurementType": "Unit",
+            "measurementValue": "kg",
+            "source_id": 127107,
+            "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+            "qualitystatus": "checked",
+            "AphiaID_Inherited": 137102,
+            "CategoryID": 11,
+            "children": [
+              {
+                "AphiaID": 137102,
+                "measurementTypeID": 19,
+                "measurementType": "Dimension",
+                "measurementValue": "weight",
+                "source_id": 127107,
+                "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                "qualitystatus": "checked",
+                "AphiaID_Inherited": 137102,
+                "CategoryID": 15,
+                "children": [
+                  {
+                    "AphiaID": 137102,
+                    "measurementTypeID": 20,
+                    "measurementType": "Life stage",
+                    "measurementValue": "neonate",
+                    "source_id": 127107,
+                    "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                    "qualitystatus": "checked",
+                    "AphiaID_Inherited": 137102,
+                    "CategoryID": 8,
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "AphiaID": 137102,
+        "measurementTypeID": 15,
+        "measurementType": "Body size",
+        "measurementValue": "2",
+        "source_id": 127107,
+        "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+        "qualitystatus": "checked",
+        "AphiaID_Inherited": 137102,
+        "CategoryID": null,
+        "children": [
+          {
+            "AphiaID": 137102,
+            "measurementTypeID": 17,
+            "measurementType": "Unit",
+            "measurementValue": "m",
+            "source_id": 127107,
+            "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+            "qualitystatus": "checked",
+            "AphiaID_Inherited": 137102,
+            "CategoryID": 11,
+            "children": [
+              {
+                "AphiaID": 137102,
+                "measurementTypeID": 18,
+                "measurementType": "Type",
+                "measurementValue": "minimum",
+                "source_id": 127107,
+                "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                "qualitystatus": "checked",
+                "AphiaID_Inherited": 137102,
+                "CategoryID": 14,
+                "children": [
+                  {
+                    "AphiaID": 137102,
+                    "measurementTypeID": 19,
+                    "measurementType": "Dimension",
+                    "measurementValue": "length",
+                    "source_id": 127107,
+                    "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                    "qualitystatus": "checked",
+                    "AphiaID_Inherited": 137102,
+                    "CategoryID": 15,
+                    "children": [
+                      {
+                        "AphiaID": 137102,
+                        "measurementTypeID": 20,
+                        "measurementType": "Life stage",
+                        "measurementValue": "neonate",
+                        "source_id": 127107,
+                        "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                        "qualitystatus": "checked",
+                        "AphiaID_Inherited": 137102,
+                        "CategoryID": 8,
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "AphiaID": 137102,
+        "measurementTypeID": 15,
+        "measurementType": "Body size",
+        "measurementValue": "2.5",
+        "source_id": 127107,
+        "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+        "qualitystatus": "checked",
+        "AphiaID_Inherited": 137102,
+        "CategoryID": null,
+        "children": [
+          {
+            "AphiaID": 137102,
+            "measurementTypeID": 17,
+            "measurementType": "Unit",
+            "measurementValue": "m",
+            "source_id": 127107,
+            "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+            "qualitystatus": "checked",
+            "AphiaID_Inherited": 137102,
+            "CategoryID": 11,
+            "children": [
+              {
+                "AphiaID": 137102,
+                "measurementTypeID": 18,
+                "measurementType": "Type",
+                "measurementValue": "maximum",
+                "source_id": 127107,
+                "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                "qualitystatus": "checked",
+                "AphiaID_Inherited": 137102,
+                "CategoryID": 14,
+                "children": [
+                  {
+                    "AphiaID": 137102,
+                    "measurementTypeID": 19,
+                    "measurementType": "Dimension",
+                    "measurementValue": "length",
+                    "source_id": 127107,
+                    "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                    "qualitystatus": "checked",
+                    "AphiaID_Inherited": 137102,
+                    "CategoryID": 15,
+                    "children": [
+                      {
+                        "AphiaID": 137102,
+                        "measurementTypeID": 20,
+                        "measurementType": "Life stage",
+                        "measurementValue": "neonate",
+                        "source_id": 127107,
+                        "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+                        "qualitystatus": "checked",
+                        "AphiaID_Inherited": 137102,
+                        "CategoryID": 8,
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "AphiaID": 137102,
+        "measurementTypeID": 144,
+        "measurementType": "Species exhibits underwater soniferous behaviour",
+        "measurementValue": "Produces active sound under natural conditions",
+        "source_id": 452194,
+        "reference": "Ford, J. K. B. (1989). Acoustic behaviour of resident killer whales (Orcinus orca) off Vancouver Island, British-Columbia. Canadian Journal of Zoology, 67(3): 727-745.",
+        "qualitystatus": "unreviewed",
+        "AphiaID_Inherited": 137102,
+        "CategoryID": 55,
+        "children": []
+      },
+      {
+        "AphiaID": 137102,
+        "measurementTypeID": 23,
+        "measurementType": "Species importance to society",
+        "measurementValue": "FAO-ASFIS: Species for Fishery Statistics Purposes",
+        "source_id": 197354,
+        "reference": "FAO Fishery Fact Sheets Collections: Aquatic Sciences & Fisheries Information System (ASFIS) List of Species for Fishery Statistics Purposes",
+        "qualitystatus": "unreviewed",
+        "AphiaID_Inherited": 137102,
+        "CategoryID": 13,
+        "children": [
+          {
+            "AphiaID": 137102,
+            "measurementTypeID": 24,
+            "measurementType": "Identifier",
+            "measurementValue": "KIW",
+            "source_id": 197354,
+            "reference": "FAO Fishery Fact Sheets Collections: Aquatic Sciences & Fisheries Information System (ASFIS) List of Species for Fishery Statistics Purposes",
+            "qualitystatus": "unreviewed",
+            "AphiaID_Inherited": 137102,
+            "CategoryID": null,
+            "children": []
+          }
+        ]
+      },
+      {
+        "AphiaID": 137102,
+        "measurementTypeID": 23,
+        "measurementType": "Species importance to society",
+        "measurementValue": "IUCN Red List",
+        "source_id": 127093,
+        "reference": "IUCN Red List of Threatened Species",
+        "qualitystatus": "unreviewed",
+        "AphiaID_Inherited": 137102,
+        "CategoryID": 13,
+        "children": [
+          {
+            "AphiaID": 137102,
+            "measurementTypeID": 1,
+            "measurementType": "IUCN Red List Category",
+            "measurementValue": "Data Deficient",
+            "source_id": 127093,
+            "reference": "IUCN Red List of Threatened Species",
+            "qualitystatus": "unreviewed",
+            "AphiaID_Inherited": 137102,
+            "CategoryID": 1,
+            "children": [
+              {
+                "AphiaID": 137102,
+                "measurementTypeID": 3,
+                "measurementType": "Year Assessed",
+                "measurementValue": "2017",
+                "source_id": 127093,
+                "reference": "IUCN Red List of Threatened Species",
+                "qualitystatus": "unreviewed",
+                "AphiaID_Inherited": 137102,
+                "CategoryID": null,
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "distribution": [
+      {
+        "locality": "European waters (ERMS scope)",
+        "locationID": "http://marineregions.org/mrgid/7130",
+        "higherGeography": "North Atlantic Ocean",
+        "higherGeographyID": "http://marineregions.org/mrgid/1912",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "North West Atlantic",
+        "locationID": "http://marineregions.org/mrgid/7135",
+        "higherGeography": "North Atlantic Ocean",
+        "higherGeographyID": "http://marineregions.org/mrgid/1912",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "North West Atlantic",
+        "locationID": "http://marineregions.org/mrgid/7135",
+        "higherGeography": "North Atlantic Ocean",
+        "higherGeographyID": "http://marineregions.org/mrgid/1912",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Mediterranean Sea",
+        "locationID": "http://marineregions.org/mrgid/1905",
+        "higherGeography": "Mediterranean Sea",
+        "higherGeographyID": "http://marineregions.org/mrgid/1905",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Kenyan Exclusive Economic Zone",
+        "locationID": "http://marineregions.org/mrgid/8349",
+        "higherGeography": "Kenya",
+        "higherGeographyID": "http://marineregions.org/mrgid/2118",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Tanzanian Exclusive Economic Zone",
+        "locationID": "http://marineregions.org/mrgid/8479",
+        "higherGeography": "Tanzania",
+        "higherGeographyID": "http://marineregions.org/mrgid/2205",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Mozambican Exclusive Economic Zone",
+        "locationID": "http://marineregions.org/mrgid/8347",
+        "higherGeography": "Mozambique",
+        "higherGeographyID": "http://marineregions.org/mrgid/2220",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Madagascar",
+        "locationID": "http://marineregions.org/mrgid/7963",
+        "higherGeography": "Madagascar",
+        "higherGeographyID": "http://marineregions.org/mrgid/7963",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Mauritian Exclusive Economic Zone",
+        "locationID": "http://marineregions.org/mrgid/8343",
+        "higherGeography": "Indian Ocean",
+        "higherGeographyID": "http://marineregions.org/mrgid/1904",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Seychellois Exclusive Economic Zone",
+        "locationID": "http://marineregions.org/mrgid/8337",
+        "higherGeography": "Seychelles",
+        "higherGeographyID": "http://marineregions.org/mrgid/2192",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Réunion Exclusive Economic Zone",
+        "locationID": "http://marineregions.org/mrgid/8338",
+        "higherGeography": "Indian Ocean",
+        "higherGeographyID": "http://marineregions.org/mrgid/1904",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Somali Exclusive Economic Zone",
+        "locationID": "http://marineregions.org/mrgid/8350",
+        "higherGeography": "Federal Republic of Somalia",
+        "higherGeographyID": "http://marineregions.org/mrgid/2187",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Comoran Exclusive Economic Zone",
+        "locationID": "http://marineregions.org/mrgid/8334",
+        "higherGeography": "Comoros",
+        "higherGeographyID": "http://marineregions.org/mrgid/2163",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Seychellois Exclusive Economic Zone",
+        "locationID": "http://marineregions.org/mrgid/8337",
+        "higherGeography": "Seychelles",
+        "higherGeographyID": "http://marineregions.org/mrgid/2192",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Antarctica",
+        "locationID": "http://marineregions.org/mrgid/8588",
+        "higherGeography": null,
+        "higherGeographyID": null,
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "checked"
+      },
+      {
+        "locality": "Subantarctic Waters",
+        "locationID": "http://marineregions.org/mrgid/17958",
+        "higherGeography": "Southern Ocean",
+        "higherGeographyID": "http://marineregions.org/mrgid/1907",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "checked"
+      },
+      {
+        "locality": "World Oceans",
+        "locationID": "http://marineregions.org/mrgid/1901",
+        "higherGeography": null,
+        "higherGeographyID": null,
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "checked"
+      },
+      {
+        "locality": "Gulf of Maine",
+        "locationID": "http://marineregions.org/mrgid/8940",
+        "higherGeography": "North Atlantic Ocean",
+        "higherGeographyID": "http://marineregions.org/mrgid/1912",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Belgian Exclusive Economic Zone",
+        "locationID": "http://marineregions.org/mrgid/3293",
+        "higherGeography": "North Sea",
+        "higherGeographyID": "http://marineregions.org/mrgid/2350",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "trusted"
+      },
+      {
+        "locality": "New Zealand Exclusive Economic Zone",
+        "locationID": "http://marineregions.org/mrgid/8455",
+        "higherGeography": "New Zealand",
+        "higherGeographyID": "http://marineregions.org/mrgid/2227",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Gulf of Mexico",
+        "locationID": "http://marineregions.org/mrgid/4288",
+        "higherGeography": "Gulf of Mexico",
+        "higherGeographyID": "http://marineregions.org/mrgid/4288",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Azores Exclusive Economic Zone",
+        "locationID": "http://marineregions.org/mrgid/8361",
+        "higherGeography": "North Atlantic Ocean",
+        "higherGeographyID": "http://marineregions.org/mrgid/1912",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Gulf of St. Lawrence",
+        "locationID": "http://marineregions.org/mrgid/4290",
+        "higherGeography": "Gulf of Saint Lawrence",
+        "higherGeographyID": "http://marineregions.org/mrgid/4290",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "St. Lawrence Estuary",
+        "locationID": "http://marineregions.org/mrgid/23554",
+        "higherGeography": "Gulf of Saint Lawrence",
+        "higherGeographyID": "http://marineregions.org/mrgid/4290",
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "unreviewed"
+      },
+      {
+        "locality": "Western Indian Ocean",
+        "locationID": "http://marineregions.org/mrgid/21773",
+        "higherGeography": null,
+        "higherGeographyID": null,
+        "recordStatus": "valid",
+        "typeStatus": null,
+        "establishmentMeans": null,
+        "invasiveness": null,
+        "occurrence": null,
+        "decimalLatitude": null,
+        "decimalLongitude": null,
+        "qualityStatus": "trusted"
+      }
+    ],
+    "synonyms": [
+      {
+        "AphiaID": 383836,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=383836",
+        "scientificname": "Delphinus duhameli",
+        "authority": "Lacépède, 1804",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137015,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Delphinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Delphinus duhameli Lacépède, 1804. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=383836 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:383836",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 380519,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=380519",
+        "scientificname": "Delphinus gladiator",
+        "authority": "Bonnaterre, 1789",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137015,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Delphinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Delphinus gladiator Bonnaterre, 1789. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=380519 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:380519",
+        "isMarine": 1,
+        "isBrackish": null,
+        "isFreshwater": null,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-01-16T06:39:12.160Z"
+      },
+      {
+        "AphiaID": 383852,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=383852",
+        "scientificname": "Delphinus grampus",
+        "authority": "Blainville, 1817",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137015,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Delphinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Delphinus grampus Blainville, 1817. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=383852 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:383852",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 148730,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=148730",
+        "scientificname": "Delphinus orca",
+        "authority": "Linnaeus, 1758",
+        "status": "unaccepted",
+        "unacceptreason": "basionym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137015,
+        "originalNameUsageID": 148730,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Delphinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Delphinus orca Linnaeus, 1758. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=148730 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:148730",
+        "isMarine": 1,
+        "isBrackish": null,
+        "isFreshwater": null,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2008-08-20T11:25:36.853Z"
+      },
+      {
+        "AphiaID": 384530,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384530",
+        "scientificname": "Delphinus orca ensidoratus",
+        "authority": "Kerr, 1792",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 230,
+        "rank": "Subspecies",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 383893,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Delphinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Delphinus orca ensidoratus Kerr, 1792. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384530 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384530",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T16:39:38.387Z"
+      },
+      {
+        "AphiaID": 383918,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=383918",
+        "scientificname": "Delphinus serra",
+        "authority": "Borowski, 1780",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137015,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Delphinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Delphinus serra Borowski, 1780. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=383918 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:383918",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 383939,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=383939",
+        "scientificname": "Delphinus victorini",
+        "authority": "Grill, 1858",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137015,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Delphinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Delphinus victorini Grill, 1858. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=383939 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:383939",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 148729,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=148729",
+        "scientificname": "Grampus orca",
+        "authority": "Iredale & Troughton, 1933",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137018,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Grampus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Grampus orca Iredale & Troughton, 1933. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=148729 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:148729",
+        "isMarine": 1,
+        "isBrackish": null,
+        "isFreshwater": null,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2008-08-20T11:25:36.853Z"
+      },
+      {
+        "AphiaID": 380526,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=380526",
+        "scientificname": "Grampus rectipinna",
+        "authority": "Scheffer, 1942",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137018,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Grampus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Grampus rectipinna Scheffer, 1942. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=380526 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:380526",
+        "isMarine": 1,
+        "isBrackish": null,
+        "isFreshwater": null,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-01-16T06:39:12.160Z"
+      },
+      {
+        "AphiaID": 718998,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=718998",
+        "scientificname": "Grampus vectipinna",
+        "authority": "Branson, 1971",
+        "status": "unaccepted",
+        "unacceptreason": "misspelling of rectipinna",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137018,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Grampus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Grampus vectipinna Branson, 1971. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=718998 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:718998",
+        "isMarine": 1,
+        "isBrackish": null,
+        "isFreshwater": null,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2013-02-11T20:40:59.767Z"
+      },
+      {
+        "AphiaID": 384039,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384039",
+        "scientificname": "Ophysia pacifica",
+        "authority": "Gray, 1870",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 383439,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Ophysia",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Ophysia pacifica Gray, 1870. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384039 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384039",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 384040,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384040",
+        "scientificname": "Orca africana",
+        "authority": "Gray, 1871",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca africana Gray, 1871. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384040 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384040",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 380523,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=380523",
+        "scientificname": "Orca antarctica",
+        "authority": "Fischer, 1876",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca antarctica Fischer, 1876. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=380523 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:380523",
+        "isMarine": 1,
+        "isBrackish": null,
+        "isFreshwater": null,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-01-16T06:39:12.160Z"
+      },
+      {
+        "AphiaID": 384041,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384041",
+        "scientificname": "Orca ater",
+        "authority": "Cope, 1869",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca ater Cope, 1869. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384041 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384041",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 384539,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384539",
+        "scientificname": "Orca ater fusca",
+        "authority": "Dall, 1874",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 230,
+        "rank": "Subspecies",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 384041,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca ater fusca Dall, 1874. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384539 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384539",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T16:39:38.387Z"
+      },
+      {
+        "AphiaID": 384042,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384042",
+        "scientificname": "Orca atra",
+        "authority": "Gray, 1871",
+        "status": "unaccepted",
+        "unacceptreason": "misspelling",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca atra Gray, 1871. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384042 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384042",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 380521,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=380521",
+        "scientificname": "Orca capensis",
+        "authority": "Gray, 1846",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca capensis Gray, 1846. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=380521 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:380521",
+        "isMarine": 1,
+        "isBrackish": null,
+        "isFreshwater": null,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-01-16T06:39:12.160Z"
+      },
+      {
+        "AphiaID": 384045,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384045",
+        "scientificname": "Orca eschrichtii",
+        "authority": "Reinhardt, 1866",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca eschrichtii Reinhardt, 1866. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384045 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384045",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 380525,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=380525",
+        "scientificname": "Orca glacialis",
+        "authority": "Berzin & Vladimirov, 1982",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca glacialis Berzin & Vladimirov, 1982. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=380525 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:380525",
+        "isMarine": 1,
+        "isBrackish": null,
+        "isFreshwater": null,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-01-16T06:39:12.160Z"
+      },
+      {
+        "AphiaID": 384046,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384046",
+        "scientificname": "Orca gladiator",
+        "authority": "Van Beneden & Gervais, 1869-1880",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca gladiator Van Beneden & Gervais, 1869-1880. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384046 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384046",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-12-31T18:14:43.750Z"
+      },
+      {
+        "AphiaID": 384540,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384540",
+        "scientificname": "Orca gladiator arcticus",
+        "authority": "Gervais, 1869-1871",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 230,
+        "rank": "Subspecies",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 384046,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca gladiator arcticus Gervais, 1869-1871. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384540 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384540",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T16:39:38.387Z"
+      },
+      {
+        "AphiaID": 384541,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384541",
+        "scientificname": "Orca gladiator australis",
+        "authority": "Gervais, 1869-1871",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 230,
+        "rank": "Subspecies",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 384046,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca gladiator australis Gervais, 1869-1871. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384541 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384541",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T16:39:38.387Z"
+      },
+      {
+        "AphiaID": 384542,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384542",
+        "scientificname": "Orca gladiator europaeus",
+        "authority": "Gervais, 1869-1871",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 230,
+        "rank": "Subspecies",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 384046,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca gladiator europaeus Gervais, 1869-1871. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384542 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384542",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T16:39:38.387Z"
+      },
+      {
+        "AphiaID": 384543,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384543",
+        "scientificname": "Orca gladiator tasmaniensis",
+        "authority": "Cabrera, 1961",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 230,
+        "rank": "Subspecies",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 384046,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca gladiator tasmaniensis Cabrera, 1961. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384543 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384543",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T16:39:38.387Z"
+      },
+      {
+        "AphiaID": 384048,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384048",
+        "scientificname": "Orca latirostris",
+        "authority": "Gray, 1870",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca latirostris Gray, 1870. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384048 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384048",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 384049,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384049",
+        "scientificname": "Orca megellanica",
+        "authority": "Burmeister, 1866",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca megellanica Burmeister, 1866. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384049 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384049",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 384050,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384050",
+        "scientificname": "Orca minor",
+        "authority": "Malm, 1871",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca minor Malm, 1871. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384050 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384050",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 384485,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384485",
+        "scientificname": "Orca orca",
+        "authority": "Lahille, 1914",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca orca Lahille, 1914. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384485 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384485",
+        "isMarine": 1,
+        "isBrackish": null,
+        "isFreshwater": null,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2010-03-08T22:06:53.190Z"
+      },
+      {
+        "AphiaID": 384544,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384544",
+        "scientificname": "Orca orca megallanicus",
+        "authority": null,
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 230,
+        "rank": "Subspecies",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 384485,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca orca megallanicus. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384544 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384544",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T16:39:38.387Z"
+      },
+      {
+        "AphiaID": 384052,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384052",
+        "scientificname": "Orca pacifica",
+        "authority": "Gray, 1870",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca pacifica Gray, 1870. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384052 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384052",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 384053,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384053",
+        "scientificname": "Orca rectipinna",
+        "authority": "Cope, 1869",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca rectipinna Cope, 1869. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384053 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384053",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 384054,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384054",
+        "scientificname": "Orca schlegelii",
+        "authority": "Lilljeborg, 1866",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca schlegelii Lilljeborg, 1866. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384054 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384054",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 384055,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384055",
+        "scientificname": "Orca stenorhyncha",
+        "authority": "Gray, 1870",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca stenorhyncha Gray, 1870. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384055 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384055",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 380522,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=380522",
+        "scientificname": "Orca tasmanica",
+        "authority": "Gray, 1871",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 380520,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orca",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orca tasmanica Gray, 1871. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=380522 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:380522",
+        "isMarine": 1,
+        "isBrackish": null,
+        "isFreshwater": null,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-01-16T06:39:12.160Z"
+      },
+      {
+        "AphiaID": 384060,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384060",
+        "scientificname": "Orcinus glacialis",
+        "authority": "Berzin & Vladimirov, 1982",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137021,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orcinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orcinus glacialis Berzin & Vladimirov, 1982. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384060 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384060",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      },
+      {
+        "AphiaID": 380524,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=380524",
+        "scientificname": "Orcinus nanus",
+        "authority": "Mikhalev, Ivashin, Savusin & Zelenaya, 1981",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137021,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orcinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orcinus nanus Mikhalev, Ivashin, Savusin & Zelenaya, 1981. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=380524 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:380524",
+        "isMarine": 1,
+        "isBrackish": null,
+        "isFreshwater": null,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-01-16T06:39:12.160Z"
+      },
+      {
+        "AphiaID": 384547,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384547",
+        "scientificname": "Orcinus orca capensis",
+        "authority": "Trouessart, 1904",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 230,
+        "rank": "Subspecies",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137102,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orcinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orcinus orca capensis Trouessart, 1904. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384547 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384547",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T16:39:38.387Z"
+      },
+      {
+        "AphiaID": 384548,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384548",
+        "scientificname": "Orcinus orca eschrichti",
+        "authority": "Trouessart, 1904",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 230,
+        "rank": "Subspecies",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137102,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orcinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orcinus orca eschrichti Trouessart, 1904. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384548 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384548",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T16:39:38.387Z"
+      },
+      {
+        "AphiaID": 384549,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384549",
+        "scientificname": "Orcinus orca megallanicus",
+        "authority": "Trouessart, 1904",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 230,
+        "rank": "Subspecies",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137102,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orcinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orcinus orca megallanicus Trouessart, 1904. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384549 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384549",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T16:39:38.387Z"
+      },
+      {
+        "AphiaID": 384078,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384078",
+        "scientificname": "Physeter microps",
+        "authority": "Fabricius, 1780",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 220,
+        "rank": "Species",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137032,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Physeteridae",
+        "genus": "Physeter",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Physeter microps Fabricius, 1780. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384078 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384078",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T14:31:36.587Z"
+      }
+    ],
+    "vernacular_names": [
+      {
+        "vernacular": "adluk",
+        "language_code": "iku",
+        "language": "Inuktitut"
+      },
+      {
+        "vernacular": "aguluk",
+        "language_code": "ale",
+        "language": "Aleut"
+      },
+      {
+        "vernacular": "ardlursark",
+        "language_code": "kal",
+        "language": "Kalaallisut"
+      },
+      {
+        "vernacular": "ardlyk",
+        "language_code": "kal",
+        "language": "Kalaallisut"
+      },
+      {
+        "vernacular": "baleia asesina",
+        "language_code": "por",
+        "language": "Portuguese"
+      },
+      {
+        "vernacular": "ballena asesina",
+        "language_code": "spa",
+        "language": "Spanish"
+      },
+      {
+        "vernacular": "ballena pinta",
+        "language_code": "spa",
+        "language": "Spanish"
+      },
+      {
+        "vernacular": "ballena quila",
+        "language_code": "spa",
+        "language": "Spanish"
+      },
+      {
+        "vernacular": "beom-gorae",
+        "language_code": "kor",
+        "language": "Korean"
+      },
+      {
+        "vernacular": "botskop",
+        "language_code": "nld",
+        "language": "Dutch"
+      },
+      {
+        "vernacular": "bovhidehval",
+        "language_code": "fao",
+        "language": "Faroese"
+      },
+      {
+        "vernacular": "bufeo de mascarilla",
+        "language_code": "spa",
+        "language": "Spanish"
+      },
+      {
+        "vernacular": "cahuel-huaique",
+        "language_code": "spa",
+        "language": "Spanish"
+      },
+      {
+        "vernacular": "delfin gigante",
+        "language_code": "spa",
+        "language": "Spanish"
+      },
+      {
+        "vernacular": "dorque",
+        "language_code": "fra",
+        "language": "French"
+      },
+      {
+        "vernacular": "dukulad",
+        "language_code": "ale",
+        "language": "Aleut"
+      },
+      {
+        "vernacular": "epaulard",
+        "language_code": "fra",
+        "language": "French"
+      },
+      {
+        "vernacular": "epée de mer",
+        "language_code": "fra",
+        "language": "French"
+      },
+      {
+        "vernacular": "espadarte",
+        "language_code": "spa",
+        "language": "Spanish"
+      },
+      {
+        "vernacular": "ezpalarta",
+        "language_code": "eus",
+        "language": "Basque"
+      },
+      {
+        "vernacular": "fann-fiskar-hydengen",
+        "language_code": "isl",
+        "language": "Icelandic"
+      },
+      {
+        "vernacular": "grampus",
+        "language_code": "eng",
+        "language": "English"
+      },
+      {
+        "vernacular": "großer Schwertwal",
+        "language_code": "deu",
+        "language": "German"
+      },
+      {
+        "vernacular": "haa-hirningur",
+        "language_code": "isl",
+        "language": "Icelandic"
+      },
+      {
+        "vernacular": "hahyrna",
+        "language_code": "isl",
+        "language": "Icelandic"
+      },
+      {
+        "vernacular": "hahyrningur",
+        "language_code": "isl",
+        "language": "Icelandic"
+      },
+      {
+        "vernacular": "huyding",
+        "language_code": "isl",
+        "language": "Icelandic"
+      },
+      {
+        "vernacular": "hvalhund",
+        "language_code": "nor",
+        "language": "Norwegian"
+      },
+      {
+        "vernacular": "innuatu",
+        "language_code": "kor",
+        "language": "Korean"
+      },
+      {
+        "vernacular": "kasatka",
+        "language_code": "rus",
+        "language": "Russian"
+      },
+      {
+        "vernacular": "katil balina",
+        "language_code": "tur",
+        "language": "Turkish"
+      },
+      {
+        "vernacular": "killer whale",
+        "language_code": "eng",
+        "language": "English"
+      },
+      {
+        "vernacular": "killer-trasher",
+        "language_code": "eng",
+        "language": "English"
+      },
+      {
+        "vernacular": "kosatka",
+        "language_code": "rus",
+        "language": "Russian"
+      },
+      {
+        "vernacular": "kosatka dravá",
+        "language_code": "ces",
+        "language": "Czech"
+      },
+      {
+        "vernacular": "kosаtkа",
+        "language_code": "bul",
+        "language": "Bulgarian"
+      },
+      {
+        "vernacular": "lleiddiad",
+        "language_code": "cym",
+        "language": "Welsh"
+      },
+      {
+        "vernacular": "löpare",
+        "language_code": "swe",
+        "language": "Swedish"
+      },
+      {
+        "vernacular": "machete",
+        "language_code": "spa",
+        "language": "Spanish"
+      },
+      {
+        "vernacular": "marzupla",
+        "language_code": "eus",
+        "language": "Basque"
+      },
+      {
+        "vernacular": "mesungesak",
+        "language_code": "ypk",
+        "language": "Yupik languages"
+      },
+      {
+        "vernacular": "moordvis",
+        "language_code": "afr",
+        "language": "Afrikaans"
+      },
+      {
+        "vernacular": "moscote",
+        "language_code": "spa",
+        "language": "Spanish"
+      },
+      {
+        "vernacular": "musonkjgyssiak",
+        "language_code": "ckt",
+        "language": "Chukot"
+      },
+      {
+        "vernacular": "nookur",
+        "language_code": "auq",
+        "language": "Anus"
+      },
+      {
+        "vernacular": "opare",
+        "language_code": "swe",
+        "language": "Swedish"
+      },
+      {
+        "vernacular": "orca",
+        "language_code": "eng",
+        "language": "English"
+      },
+      {
+        "vernacular": "orca",
+        "language_code": "spa",
+        "language": "Spanish"
+      },
+      {
+        "vernacular": "orca",
+        "language_code": "por",
+        "language": "Portuguese"
+      },
+      {
+        "vernacular": "Orca",
+        "language_code": "deu",
+        "language": "German"
+      },
+      {
+        "vernacular": "orca  ",
+        "language_code": "ita",
+        "language": "Italian"
+      },
+      {
+        "vernacular": "orca",
+        "language_code": "nld",
+        "language": "Dutch"
+      },
+      {
+        "vernacular": "orca",
+        "language_code": "cat",
+        "language": "Catalan"
+      },
+      {
+        "vernacular": "orca común",
+        "language_code": "spa",
+        "language": "Spanish"
+      },
+      {
+        "vernacular": "orca gwryw",
+        "language_code": "cym",
+        "language": "Welsh"
+      },
+      {
+        "vernacular": "orca verdadera",
+        "language_code": "spa",
+        "language": "Spanish"
+      },
+      {
+        "vernacular": "orka",
+        "language_code": "lit",
+        "language": "Lithuanian"
+      },
+      {
+        "vernacular": "orka",
+        "language_code": "pol",
+        "language": "Polish"
+      },
+      {
+        "vernacular": "orka",
+        "language_code": "slv",
+        "language": "Slovenian"
+      },
+      {
+        "vernacular": "orka",
+        "language_code": "nld",
+        "language": "Dutch"
+      },
+      {
+        "vernacular": "orka",
+        "language_code": "eus",
+        "language": "Basque"
+      },
+      {
+        "vernacular": "ornswin",
+        "language_code": "dan",
+        "language": "Danish"
+      },
+      {
+        "vernacular": "orque",
+        "language_code": "fra",
+        "language": "French"
+      },
+      {
+        "vernacular": "orque épaulard",
+        "language_code": "fra",
+        "language": "French"
+      },
+      {
+        "vernacular": "orque gladiateur",
+        "language_code": "fra",
+        "language": "French"
+      },
+      {
+        "vernacular": "paus pemangsa",
+        "language_code": "ind",
+        "language": "Indonesian"
+      },
+      {
+        "vernacular": "pictwale",
+        "language_code": "gla",
+        "language": "Scottish Gaelic"
+      },
+      {
+        "vernacular": "plawan phechakhat",
+        "language_code": "tha",
+        "language": "Thai"
+      },
+      {
+        "vernacular": "roaz-de-bandeira",
+        "language_code": "por",
+        "language": "Portuguese"
+      },
+      {
+        "vernacular": "sadshi",
+        "language_code": "jpn",
+        "language": "Japanese"
+      },
+      {
+        "vernacular": "sakamata",
+        "language_code": "jpn",
+        "language": "Japanese"
+      },
+      {
+        "vernacular": "Schwertwal",
+        "language_code": "deu",
+        "language": "German"
+      },
+      {
+        "vernacular": "seguni",
+        "language_code": "ind",
+        "language": "Indonesian"
+      },
+      {
+        "vernacular": "shachi",
+        "language_code": "jpn",
+        "language": "Japanese"
+      },
+      {
+        "vernacular": "spackhuggare",
+        "language_code": "swe",
+        "language": "Swedish"
+      },
+      {
+        "vernacular": "späckhuggare",
+        "language_code": "swe",
+        "language": "Swedish"
+      },
+      {
+        "vernacular": "spaekhogger",
+        "language_code": "dan",
+        "language": "Danish"
+      },
+      {
+        "vernacular": "spaekhogger",
+        "language_code": "nor",
+        "language": "Norwegian"
+      },
+      {
+        "vernacular": "spækhugger",
+        "language_code": "dan",
+        "language": "Danish"
+      },
+      {
+        "vernacular": "spekkhoggar",
+        "language_code": "nno",
+        "language": "Norwegian Nynorsk"
+      },
+      {
+        "vernacular": "spekkhogger",
+        "language_code": "nob",
+        "language": "Norwegian Bokmål"
+      },
+      {
+        "vernacular": "spekkhugger",
+        "language_code": "nor",
+        "language": "Norwegian"
+      },
+      {
+        "vernacular": "starhyn ning",
+        "language_code": "nor",
+        "language": "Norwegian"
+      },
+      {
+        "vernacular": "staurhval",
+        "language_code": "nor",
+        "language": "Norwegian"
+      },
+      {
+        "vernacular": "stourvaga",
+        "language_code": "nor",
+        "language": "Norwegian"
+      },
+      {
+        "vernacular": "stourvagn",
+        "language_code": "nor",
+        "language": "Norwegian"
+      },
+      {
+        "vernacular": "svaerdval",
+        "language_code": "dan",
+        "language": "Danish"
+      },
+      {
+        "vernacular": "svärdfisk",
+        "language_code": "swe",
+        "language": "Swedish"
+      },
+      {
+        "vernacular": "svarthval",
+        "language_code": "dan",
+        "language": "Danish"
+      },
+      {
+        "vernacular": "sverdfiscur",
+        "language_code": "isl",
+        "language": "Icelandic"
+      },
+      {
+        "vernacular": "sword grampus",
+        "language_code": "eng",
+        "language": "English"
+      },
+      {
+        "vernacular": "swordfish",
+        "language_code": "eng",
+        "language": "English"
+      },
+      {
+        "vernacular": "taka",
+        "language_code": "jpn",
+        "language": "Japanese"
+      },
+      {
+        "vernacular": "takamatsu",
+        "language_code": "jpn",
+        "language": "Japanese"
+      },
+      {
+        "vernacular": "tandthoye",
+        "language_code": "dan",
+        "language": "Danish"
+      },
+      {
+        "vernacular": "trozona mpamond",
+        "language_code": "mlg",
+        "language": "Malagasy"
+      },
+      {
+        "vernacular": "tunnlik tumlare",
+        "language_code": "swe",
+        "language": "Swedish"
+      },
+      {
+        "vernacular": "vaghund",
+        "language_code": "nor",
+        "language": "Norwegian"
+      },
+      {
+        "vernacular": "van hund",
+        "language_code": "nor",
+        "language": "Norwegian"
+      },
+      {
+        "vernacular": "zwaardwalvis",
+        "language_code": "nld",
+        "language": "Dutch"
+      },
+      {
+        "vernacular": "Όρκα",
+        "language_code": "ell",
+        "language": "Modern Greek (1453-)"
+      },
+      {
+        "vernacular": "или кит убийца",
+        "language_code": "rus",
+        "language": "Russian"
+      },
+      {
+        "vernacular": "косатка",
+        "language_code": "rus",
+        "language": "Russian"
+      },
+      {
+        "vernacular": "Косатка",
+        "language_code": "ukr",
+        "language": "Ukrainian"
+      },
+      {
+        "vernacular": "Косатка",
+        "language_code": "bul",
+        "language": "Bulgarian"
+      },
+      {
+        "vernacular": "シャチ",
+        "language_code": "jpn",
+        "language": "Japanese"
+      }
+    ],
+    "literature_sources": [
+      {
+        "source_id": 42,
+        "use": "additional source",
+        "reference": "Integrated Taxonomic Information System (ITIS). ",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=42",
+        "link": "http://www.itis.gov",
+        "fulltext": null,
+        "doi": null
+      },
+      {
+        "source_id": 1406,
+        "use": "basis of record",
+        "reference": "van der Land, J. (2001). Tetrapoda, in: Costello, M.J. et al. (Ed.) (2001). European register of marine species: a check-list of the marine species in Europe and a bibliography of guides to their identification. Collection Patrimoines Naturels, 50: pp. 375-376",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=1406",
+        "link": null,
+        "fulltext": null,
+        "doi": null
+      },
+      {
+        "source_id": 2938,
+        "use": "additional source",
+        "reference": "Carwardine, M., E. Hoyt, R. E. Fordyce and P. Gill. 1998. Whales, dolphins and porpoises. Time-Life Books. Nature Company Guides, USA. 288 p.",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=2938",
+        "link": null,
+        "fulltext": null,
+        "doi": null
+      },
+      {
+        "source_id": 3077,
+        "use": "additional source",
+        "reference": "Animal Diversity Web. University of Michigan Museum of Zoology. ",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=3077",
+        "link": "http://animaldiversity.ummz.umich.edu/site/index.html",
+        "fulltext": null,
+        "doi": null
+      },
+      {
+        "source_id": 43151,
+        "use": "additional source",
+        "reference": "Mead, J. G.; Brownell, R. L. Jr. (2005). Cetacea. In Wilson, D.E. & D.M. Reeder (eds). Mammal Species of the World. A Taxonomic and Geographic Reference (3rd ed), Johns Hopkins University Press, 2,142 pp. 723--743.",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=43151",
+        "link": "http://www.bucknell.edu/msw3/",
+        "fulltext": null,
+        "doi": null
+      },
+      {
+        "source_id": 126167,
+        "use": "additional source",
+        "reference": "Rice, D. W. (1998). Marine mammals of the world. Systematics and distribution. Society for Marine Mammalogy Special Publication. 4.",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=126167",
+        "link": "http://www.marinemammalscience.org/wp-content/uploads/2014/09/MarineMammalsOfTheWorld.pdf",
+        "fulltext": null,
+        "doi": null
+      },
+      {
+        "source_id": 127087,
+        "use": "additional source",
+        "reference": "Hershkovitz, P. (1966). Catalog of Living Whales. Bulletin of the United States National Museum. (246): 1-259.",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=127087",
+        "link": null,
+        "fulltext": null,
+        "doi": "10.5479/si.03629236.246"
+      },
+      {
+        "source_id": 127090,
+        "use": "additional source",
+        "reference": "Jefferson, T. A., M. A. Webber and R. L. Pitman. (2008). Marine mammals of the world. Academic Press, Amsterdam.",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=127090",
+        "link": null,
+        "fulltext": null,
+        "doi": null
+      },
+      {
+        "source_id": 127093,
+        "use": "additional source",
+        "reference": "IUCN Red List of Threatened Species",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=127093",
+        "link": "http://www.iucnredlist.org",
+        "fulltext": null,
+        "doi": null
+      },
+      {
+        "source_id": 127107,
+        "use": "additional source",
+        "reference": "Perrin, W.F.; Würsig, B.; Thewissen, J.G.M. (2009). Encyclopedia of marine mammals. Second edition. Academic Press: London. ISBN 978-0-12-373553-9. xxix, 1316 pp.",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=127107",
+        "link": null,
+        "fulltext": null,
+        "doi": null
+      },
+      {
+        "source_id": 129839,
+        "use": "additional source",
+        "reference": "Heyning, J. E. and M. E. Dahlheim. (1988). Orcinus orca. Mammalian Species 304:1--9.",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=129839",
+        "link": null,
+        "fulltext": null,
+        "doi": null
+      },
+      {
+        "source_id": 132602,
+        "use": "additional source",
+        "reference": "King, C.M.; Roberts, C.D.; Bell, B.D.; Fordyce, R.E.; Nicoll, R.S.; Worthy, T.H.; Paulin, C.D.; Hitchmough, R.A.; Keyes, I.W.; Baker, A.N.; Stewart, A.L.; Hiller, N.; McDowall, R.M.; Holdaway, R.N.; McPhee, R.P.; Schwarzhans, W.W.; Tennyson, A.J.D.; Rust, S.; Macadie, I. (2009). Phylum Chordata: lancelets, fishes, amphibians, reptiles, birds, mammals. in: Gordon, D.P. (Ed.) (2009). New Zealand inventory of biodiversity: 1. Kingdom Animalia: Radiata, Lophotrochozoa, Deuterostomia. pp. 431-554.",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=132602",
+        "link": null,
+        "fulltext": null,
+        "doi": null
+      },
+      {
+        "source_id": 141263,
+        "use": "additional source",
+        "reference": "Schmidly, D. J. and B. Würsig. 2009. Mammals (Vertebrata: Mammalia) of the Gulf of Mexico, Pp. 1343–1352 in Felder, D.L. and D.K. Camp (eds.), Gulf of Mexico–Origins, Waters, and Biota. Biodiversity. Texas A&M Press, College Station, Texas.",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=141263",
+        "link": null,
+        "fulltext": null,
+        "doi": null
+      },
+      {
+        "source_id": 152417,
+        "use": "additional source",
+        "reference": "Liu, J.Y. [Ruiyu] (ed.). (2008). [Checklist of marine biota of China seas]. China Science Press. 1267 pp.",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=152417",
+        "link": null,
+        "fulltext": null,
+        "doi": null
+      },
+      {
+        "source_id": 452925,
+        "use": "ecology source",
+        "reference": "Looby, A.; Erbe, C.; Bravo, S.; Cox, K.; Davies, H. L.; Di Iorio, L.; Jézéquel, Y.; Juanes, F.; Martin, C. W.; Mooney, T. A.; Radford, C.; Reynolds, L. K.; Rice, A. N.; Riera, A.; Rountree, R.; Spriel, B.; Stanley, J.; Vela, S.; Parsons, M. J. G. (2023). Global inventory of species categorized by known underwater sonifery. Scientific Data. 10(1).",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=452925",
+        "link": null,
+        "fulltext": "https://www.marinespecies.org/aphia.php?p=sourceget&id=452925",
+        "doi": "10.1038/s41597-023-02745-4"
+      },
+      {
+        "source_id": 152430,
+        "use": "context source (Deepsea)",
+        "reference": "Intergovernmental Oceanographic Commission (IOC) of UNESCO. The Ocean Biogeographic Information System (OBIS)",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=152430",
+        "link": "http://www.iobis.org/",
+        "fulltext": null,
+        "doi": null
+      },
+      {
+        "source_id": 505931,
+        "use": "context source (PeRMS)",
+        "reference": "Reyes, J. (2009). Ballenas, delfines y otros cetáceos del Perú. Una fuente de información. Lima- Perú. Squema-Ediciones. 160 pp.",
+        "page": null,
+        "url": "https://www.marinespecies.org/aphia.php?p=sourcedetails&id=505931",
+        "link": null,
+        "fulltext": null,
+        "doi": null
+      }
+    ],
+    "child_taxa": [
+      {
+        "AphiaID": 384547,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384547",
+        "scientificname": "Orcinus orca capensis",
+        "authority": "Trouessart, 1904",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 230,
+        "rank": "Subspecies",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137102,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orcinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orcinus orca capensis Trouessart, 1904. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384547 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384547",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T16:39:38.387Z"
+      },
+      {
+        "AphiaID": 384548,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384548",
+        "scientificname": "Orcinus orca eschrichti",
+        "authority": "Trouessart, 1904",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 230,
+        "rank": "Subspecies",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137102,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orcinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orcinus orca eschrichti Trouessart, 1904. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384548 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384548",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T16:39:38.387Z"
+      },
+      {
+        "AphiaID": 384549,
+        "url": "https://www.marinespecies.org/aphia.php?p=taxdetails&id=384549",
+        "scientificname": "Orcinus orca megallanicus",
+        "authority": "Trouessart, 1904",
+        "status": "unaccepted",
+        "unacceptreason": "synonym",
+        "taxonRankID": 230,
+        "rank": "Subspecies",
+        "valid_AphiaID": 137102,
+        "valid_name": "Orcinus orca",
+        "valid_authority": "(Linnaeus, 1758)",
+        "parentNameUsageID": 137102,
+        "originalNameUsageID": null,
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Cetartiodactyla",
+        "family": "Delphinidae",
+        "genus": "Orcinus",
+        "citation": "Fordyce, E.; Perrin, W.F. (2026). World Cetacea Database. Orcinus orca megallanicus Trouessart, 1904. Accessed through: World Register of Marine Species at: https://www.marinespecies.org/aphia.php?p=taxdetails&id=384549 on 2026-02-17",
+        "lsid": "urn:lsid:marinespecies.org:taxname:384549",
+        "isMarine": 1,
+        "isBrackish": 0,
+        "isFreshwater": 0,
+        "isTerrestrial": 0,
+        "isExtinct": null,
+        "match_type": "exact",
+        "modified": "2009-03-05T16:39:38.387Z"
+      }
+    ],
+    "external_ids": [
+      "180469"
+    ],
+    "attribute_definitions": [
+      {
+        "measurementTypeID": 4,
+        "measurementType": "Functional group",
+        "CategoryID": 7,
+        "children": [
+          {
+            "measurementTypeID": 12,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 7,
+        "measurementType": "Fossil range",
+        "CategoryID": 2,
+        "children": []
+      },
+      {
+        "measurementTypeID": 13,
+        "measurementType": "Paraphyletic group",
+        "CategoryID": 9,
+        "children": []
+      },
+      {
+        "measurementTypeID": 14,
+        "measurementType": "Ecological interactions",
+        "CategoryID": 10,
+        "children": [
+          {
+            "measurementTypeID": 57,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          },
+          {
+            "measurementTypeID": 58,
+            "measurementType": "Host",
+            "CategoryID": null,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 15,
+        "measurementType": "Body size",
+        "CategoryID": null,
+        "children": [
+          {
+            "measurementTypeID": 17,
+            "measurementType": "Unit",
+            "CategoryID": 11,
+            "children": []
+          },
+          {
+            "measurementTypeID": 18,
+            "measurementType": "Type",
+            "CategoryID": 14,
+            "children": []
+          },
+          {
+            "measurementTypeID": 19,
+            "measurementType": "Dimension",
+            "CategoryID": 15,
+            "children": []
+          },
+          {
+            "measurementTypeID": 20,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          },
+          {
+            "measurementTypeID": 21,
+            "measurementType": "Sex",
+            "CategoryID": 12,
+            "children": []
+          },
+          {
+            "measurementTypeID": 22,
+            "measurementType": "Locality (MRGID)",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 42,
+            "measurementType": "Corresponding width",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 43,
+            "measurementType": "Corresponding length",
+            "CategoryID": null,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 23,
+        "measurementType": "Species importance to society",
+        "CategoryID": 13,
+        "children": [
+          {
+            "measurementTypeID": 1,
+            "measurementType": "IUCN Red List Category",
+            "CategoryID": 1,
+            "children": [
+              {
+                "measurementTypeID": 2,
+                "measurementType": "Criteria",
+                "CategoryID": null,
+                "children": []
+              },
+              {
+                "measurementTypeID": 3,
+                "measurementType": "Year Assessed",
+                "CategoryID": null,
+                "children": []
+              }
+            ]
+          },
+          {
+            "measurementTypeID": 24,
+            "measurementType": "Identifier",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 25,
+            "measurementType": "OSPAR Region where species is under threat and/or in decline",
+            "CategoryID": 16,
+            "children": []
+          },
+          {
+            "measurementTypeID": 26,
+            "measurementType": "Habitats Directive Annex",
+            "CategoryID": 17,
+            "children": []
+          },
+          {
+            "measurementTypeID": 27,
+            "measurementType": "Birds Directive Annex",
+            "CategoryID": 18,
+            "children": []
+          },
+          {
+            "measurementTypeID": 28,
+            "measurementType": "CITES Annex",
+            "CategoryID": 19,
+            "children": []
+          },
+          {
+            "measurementTypeID": 29,
+            "measurementType": "HELCOM core biodiversity indicators",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 30,
+            "measurementType": "Mediterranean proposed indicators - Western Mediterranean",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 31,
+            "measurementType": "Mediterranean proposed indicators - Adriatic Sea",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 32,
+            "measurementType": "Mediterranean proposed indicators - Aegean-Levantine Sea",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 33,
+            "measurementType": "Mediterranean proposed indicators - Ionian Sea",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 34,
+            "measurementType": "Mediterranean proposed indicators - Mediterranean Sea",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 35,
+            "measurementType": "OSPAR candidate indicators: Bay of Biscay and the Iberian Coast",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 36,
+            "measurementType": "OSPAR candidate indicators: Celtic Seas",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 37,
+            "measurementType": "OSPAR candidate indicators: Greater North Sea including outside EU",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 38,
+            "measurementType": "OSPAR candidate indicators: North Sea",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 39,
+            "measurementType": "OSPAR common indicators",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 40,
+            "measurementType": "OSPAR common indicators: Greater North Sea including outside EU",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 41,
+            "measurementType": "Black Sea proposed indicators",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 44,
+            "measurementType": "OSPAR common indicators: Bay of Biscay and Iberian Coast",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 45,
+            "measurementType": "OSPAR common indicators: Celtic Seas",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 46,
+            "measurementType": "OSPAR common indicators: Greater North Sea",
+            "CategoryID": null,
+            "children": []
+          },
+          {
+            "measurementTypeID": 131,
+            "measurementType": "HELCOM Red List Category",
+            "CategoryID": 1,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 47,
+        "measurementType": "Supporting structure & enclosure",
+        "CategoryID": 20,
+        "children": [
+          {
+            "measurementTypeID": 48,
+            "measurementType": "Structure",
+            "CategoryID": 21,
+            "children": [
+              {
+                "measurementTypeID": 49,
+                "measurementType": "Composition",
+                "CategoryID": 22,
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 52,
+        "measurementType": "AMBI ecological group",
+        "CategoryID": 24,
+        "children": []
+      },
+      {
+        "measurementTypeID": 55,
+        "measurementType": "Body size (qualitative)",
+        "CategoryID": 25,
+        "children": [
+          {
+            "measurementTypeID": 56,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          },
+          {
+            "measurementTypeID": 132,
+            "measurementType": "Sex",
+            "CategoryID": 12,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 61,
+        "measurementType": "Plant habit",
+        "CategoryID": 27,
+        "children": []
+      },
+      {
+        "measurementTypeID": 62,
+        "measurementType": "Development",
+        "CategoryID": 28,
+        "children": []
+      },
+      {
+        "measurementTypeID": 63,
+        "measurementType": "Mobility",
+        "CategoryID": 29,
+        "children": [
+          {
+            "measurementTypeID": 64,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 65,
+        "measurementType": "Brooding",
+        "CategoryID": 30,
+        "children": []
+      },
+      {
+        "measurementTypeID": 66,
+        "measurementType": "Wave exposure",
+        "CategoryID": 31,
+        "children": [
+          {
+            "measurementTypeID": 91,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 67,
+        "measurementType": "Environmental position",
+        "CategoryID": 32,
+        "children": [
+          {
+            "measurementTypeID": 92,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 68,
+        "measurementType": "Seasonality",
+        "CategoryID": 33,
+        "children": [
+          {
+            "measurementTypeID": 93,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          },
+          {
+            "measurementTypeID": 112,
+            "measurementType": "Locality (MRGID)",
+            "CategoryID": null,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 69,
+        "measurementType": "Tolerance to pollutants",
+        "CategoryID": 34,
+        "children": [
+          {
+            "measurementTypeID": 94,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 70,
+        "measurementType": "Zonation",
+        "CategoryID": 35,
+        "children": [
+          {
+            "measurementTypeID": 95,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          },
+          {
+            "measurementTypeID": 153,
+            "measurementType": "Locality (MRGID)",
+            "CategoryID": null,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 71,
+        "measurementType": "Calcification",
+        "CategoryID": 36,
+        "children": [
+          {
+            "measurementTypeID": 96,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 72,
+        "measurementType": "Life span",
+        "CategoryID": 37,
+        "children": [
+          {
+            "measurementTypeID": 97,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 73,
+        "measurementType": "Body shape",
+        "CategoryID": 38,
+        "children": [
+          {
+            "measurementTypeID": 98,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 74,
+        "measurementType": "Thallus vertical space used",
+        "CategoryID": 39,
+        "children": [
+          {
+            "measurementTypeID": 99,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 76,
+        "measurementType": "Cytomorphology",
+        "CategoryID": 41,
+        "children": [
+          {
+            "measurementTypeID": 88,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 78,
+        "measurementType": "Gametophyte arrangement",
+        "CategoryID": 42,
+        "children": [
+          {
+            "measurementTypeID": 100,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 79,
+        "measurementType": "Asexual reproduction",
+        "CategoryID": 43,
+        "children": [
+          {
+            "measurementTypeID": 101,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          },
+          {
+            "measurementTypeID": 120,
+            "measurementType": "Locality (MRGID)",
+            "CategoryID": null,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 80,
+        "measurementType": "Dispersion mode",
+        "CategoryID": 44,
+        "children": [
+          {
+            "measurementTypeID": 102,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 81,
+        "measurementType": "Reproductive frequency",
+        "CategoryID": 45,
+        "children": [
+          {
+            "measurementTypeID": 103,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 82,
+        "measurementType": "Gamete type",
+        "CategoryID": 46,
+        "children": [
+          {
+            "measurementTypeID": 104,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 83,
+        "measurementType": "Generation time",
+        "CategoryID": 47,
+        "children": [
+          {
+            "measurementTypeID": 105,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 84,
+        "measurementType": "Life cycle",
+        "CategoryID": 48,
+        "children": [
+          {
+            "measurementTypeID": 106,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 85,
+        "measurementType": "Spawning",
+        "CategoryID": 49,
+        "children": [
+          {
+            "measurementTypeID": 107,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 87,
+        "measurementType": "Macroalgal blooming",
+        "CategoryID": 50,
+        "children": [
+          {
+            "measurementTypeID": 90,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          },
+          {
+            "measurementTypeID": 109,
+            "measurementType": "Locality (MRGID)",
+            "CategoryID": null,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 127,
+        "measurementType": "Vulnerable Marine Ecosystem (VME) indicative taxon",
+        "CategoryID": 61,
+        "children": [
+          {
+            "measurementTypeID": 128,
+            "measurementType": "VME Region",
+            "CategoryID": 52,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 130,
+        "measurementType": "Sociability",
+        "CategoryID": 53,
+        "children": []
+      },
+      {
+        "measurementTypeID": 144,
+        "measurementType": "Species exhibits underwater soniferous behaviour",
+        "CategoryID": 55,
+        "children": [
+          {
+            "measurementTypeID": 145,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 146,
+        "measurementType": "Irradiance preference",
+        "CategoryID": 56,
+        "children": []
+      },
+      {
+        "measurementTypeID": 147,
+        "measurementType": "Modes of reproduction",
+        "CategoryID": 57,
+        "children": []
+      },
+      {
+        "measurementTypeID": 154,
+        "measurementType": "Nomenclature code",
+        "CategoryID": 58,
+        "children": []
+      },
+      {
+        "measurementTypeID": 155,
+        "measurementType": "Etymology classification",
+        "CategoryID": 59,
+        "children": []
+      },
+      {
+        "measurementTypeID": 158,
+        "measurementType": "IUCN Habitats Classification Scheme (version 3.1)",
+        "CategoryID": 60,
+        "children": []
+      },
+      {
+        "measurementTypeID": 160,
+        "measurementType": "Trophic level",
+        "CategoryID": 62,
+        "children": [
+          {
+            "measurementTypeID": 161,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          },
+          {
+            "measurementTypeID": 162,
+            "measurementType": "Food source",
+            "CategoryID": null,
+            "children": []
+          }
+        ]
+      },
+      {
+        "measurementTypeID": 164,
+        "measurementType": "Feeding method",
+        "CategoryID": 63,
+        "children": [
+          {
+            "measurementTypeID": 165,
+            "measurementType": "Life stage",
+            "CategoryID": 8,
+            "children": []
+          },
+          {
+            "measurementTypeID": 166,
+            "measurementType": "Food source",
+            "CategoryID": null,
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}
