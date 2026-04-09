@@ -41,7 +41,17 @@ class MarineResearchParams(BaseModel):
     )
 
 
-AGENT_DESCRIPTION = "Marine species research assistant using WoRMS database"
+AGENT_DESCRIPTION = """\
+Searches the World Register of Marine Species (WoRMS, https://marinespecies.org/) database to retrieve data and data statistics. This information only relates to marine species,
+
+Provides the following types of information:
+- Retrieve species occurrence data and metadata
+- Count species occurrence data and metadata matching some criteria (e.g., by collector name)
+- Taxonomic information including classification, synonyms, and vernacular names
+- Species traits (attributes like body size, etc.)
+- IUCN conservation status
+- References to scientific literature
+"""
 
 
 class WoRMSReActAgent(IChatBioAgent):
